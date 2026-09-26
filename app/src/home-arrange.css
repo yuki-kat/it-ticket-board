@@ -1,0 +1,20 @@
+/* The "Arrange card" popup on the Home page. Taken from the add-on styles in index.html. */
+.insight-move-overlay{position:fixed;z-index:1300;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgb(15 31 39 / 74%);backdrop-filter:blur(4px)}
+.insight-move-page{position:relative;width:min(850px,94vw);max-height:90vh;overflow:auto;padding:30px;border:1px solid #d2e0e4;border-radius:15px;background:#f7faf9;color:#294754;box-shadow:0 28px 85px rgb(0 0 0 / 38%);animation:insight-page-in .19s ease-out}
+@keyframes insight-page-in{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.insight-move-page header{display:flex;justify-content:space-between;gap:20px;margin-bottom:20px}
+.insight-move-page h2{margin:5px 0 5px;font-size:25px}
+.insight-move-page header p{margin:0;color:#748a94;font-size:11px}
+.insight-move-close{flex:none;width:36px;height:36px;border:1px solid #d1e0e4;border-radius:50%;background:#fff;color:#355e6d;font-size:22px;cursor:pointer}
+.insight-move-preview .home-chart-card{width:100%;min-height:210px;pointer-events:none;box-shadow:0 8px 25px rgb(35 78 94 / 10%)}
+.insight-move-question{margin:22px 0 10px;color:#365663;font-size:12px;font-weight:750}
+.insight-move-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.insight-move-options button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 13px;border:1px solid #cfdee2;border-radius:8px;background:#fff;color:#356577;font-size:11px;font-weight:750;cursor:pointer}
+.insight-move-options button:hover:not(:disabled){border-color:#77a8b6;background:#edf7f9}
+.insight-move-options button:disabled{opacity:.38;cursor:not-allowed}
+.insight-move-options button span{font-size:17px}
+.insight-move-page footer{display:flex;justify-content:flex-end;margin-top:20px}
+.insight-move-page footer button{min-height:37px;padding:0 17px;border:0;border-radius:7px;background:#264e5f;color:#fff;font-weight:750;cursor:pointer}
+@media(max-width:580px){.insight-move-page{padding:23px 17px}.insight-move-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.insight-move-preview .home-chart-card{cursor:default!important}
+.insight-move-page:focus { outline: none; }
