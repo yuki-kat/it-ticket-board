@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { canSignInHere, cloud, currentSession, sendSignInLink, signOut } from './cloud'
+import { canSignInHere, cloud, currentSession, sendSignInLink, signOut, uploadBackup } from './cloud'
+import { createBackup } from './backup'
 import './backup.css'
 
 /** Settings section: sign in with an emailed link. Data still lives in this browser until it is moved to the database. */
@@ -9,6 +10,7 @@ export default function AccountSection() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [upload, setUpload] = useState('')
   const available = canSignInHere()
 
   useEffect(() => {
@@ -28,11 +30,23 @@ export default function AccountSection() {
     setMessage(error ? `Could not send the link: ${error}` : `Link sent to ${email.trim()}. Open it on this device to finish signing in.`)
   }
 
+  const copyToAccount = async () => {
+    setBusy(true)
+    setUpload('')
+    const result = await uploadBackup(createBackup())
+    setBusy(false)
+    setUpload(result.ok
+      ? `Copied to your account: ${result.counts.tickets} tickets, ${result.counts.deleted_tickets} deleted, ${result.counts.assets} assets, ${result.counts.stock_items} stock items, ${result.counts.settings} settings. Nothing was changed in this browser.`
+      : `Could not copy: ${result.error}`)
+  }
+
   return <section className="settings-section account-settings">
     <h3>Account</h3>
     {!available && <p data-account-unavailable>Sign-in works when the board is opened from a web address, not from a file on your computer.</p>}
     {available && session && <>
       <p>Signed in as <b data-account-email>{session.user.email}</b>. Your tickets are still saved in this browser; moving them to your account comes next.</p>
+      <div className="backup-actions"><button type="button" className="primary-button" data-account-upload disabled={busy} onClick={() => void copyToAccount()}>Copy this browser’s data to my account</button></div>
+      {upload && <div className="import-note" role="status" data-account-upload-message>{upload}</div>}
       <div className="backup-actions"><button type="button" className="text-button" data-account-signout onClick={() => void signOut().then(() => setSession(null))}>Sign out</button></div>
     </>}
     {available && !session && <>
