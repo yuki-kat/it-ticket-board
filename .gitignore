@@ -1,2 +1,4 @@
 .DS_Store
 *.backup-*.html
+# Created automatically by an editor extension
+.snapshots/
