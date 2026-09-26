@@ -14,7 +14,9 @@ import { applyScreenPattern, loadScreenPattern, SCREEN_PATTERNS, type ScreenPatt
 import ViewPicker, { VIEW_GROUPS } from './ViewPicker'
 import './quick-settings.css'
 import './screen-pattern.css'
-import { ExploreLauncher, PopoutActions, TicketPopout } from './HomePopouts'
+import { PopoutActions, TicketPopout } from './HomePopouts'
+import ExplorePage, { type ExploreQueue } from './ExplorePage'
+import { parseRoute, routeHash, type ExploreKey, type PageId } from './route'
 import { ArrangeInsight, InsightCard, InsightDetail, loadInsightOrder, moveInsight, saveInsightOrder, type DetailKey, type InsightContext, type InsightKey } from './HomeInsights'
 import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
@@ -393,7 +395,10 @@ function App() {
   const [groupFilter, setGroupFilter] = useState('All groups')
   const [assigneeFilter, setAssigneeFilter] = useState('All assignees')
   const [metricFilter, setMetricFilter] = useState<MetricFilter>('all')
-  const [page, setPage] = useState<'home' | 'board' | 'inventory'>('home')
+  // The page, and the Explore page's chosen queue and ticket, start from the address (see route.ts).
+  const [page, setPage] = useState<PageId>(() => parseRoute(window.location.hash).page)
+  const [exploreQueue, setExploreQueue] = useState<ExploreKey | undefined>(() => parseRoute(window.location.hash).queue)
+  const [exploreTicketId, setExploreTicketId] = useState<string | undefined>(() => parseRoute(window.location.hash).ticket)
   const [screenPattern, setScreenPattern] = useState<ScreenPattern>(loadScreenPattern)
   useEffect(() => { applyScreenPattern(screenPattern) }, [screenPattern])
   const [showViewPicker, setShowViewPicker] = useState(false)
@@ -437,6 +442,24 @@ function App() {
     const match = window.location.hash.match(/^#ticket=(.+)$/)
     return match ? decodeURIComponent(match[1]) : ''
   }, [])
+  // Each page change becomes a history entry, so Back and Forward move between pages and a refresh stays put.
+  // (Not on the full-page ticket record opened in a new tab, whose address is #ticket=….)
+  useEffect(() => {
+    if (standaloneTicketId) return
+    const target = routeHash({ page, queue: exploreQueue, ticket: exploreTicketId })
+    const current = window.location.hash
+    if (current === target || (!current && target === '#/home')) return
+    window.location.hash = target
+  }, [page, exploreQueue, exploreTicketId, standaloneTicketId])
+  useEffect(() => {
+    if (standaloneTicketId) return
+    const follow = () => {
+      const route = parseRoute(window.location.hash)
+      setPage(route.page); setExploreQueue(route.queue); setExploreTicketId(route.ticket)
+    }
+    window.addEventListener('hashchange', follow)
+    return () => window.removeEventListener('hashchange', follow)
+  }, [standaloneTicketId])
   const viewBeforeMatrix = useRef<CardSize>('small')
   const boardByBeforeMatrix = useRef<BoardBy>('State')
 
@@ -715,7 +738,8 @@ function App() {
     if (useList) setCardSize('list')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const goToPage = (target: 'home' | 'board' | 'inventory') => {
+  const openExplore = () => { setExploreQueue(undefined); setExploreTicketId(undefined); setPage('explore'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const goToPage = (target: PageId) => {
     if (target === 'board') { showTickets(); return }
     if (target === 'inventory') setInventoryFocusId('')
     setPage(target)
@@ -741,12 +765,12 @@ function App() {
 
   return <div className={`app-shell view-${cardSize}`}>
     <header className="topbar">
-      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
+      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
-        <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> Settings</button>
+        <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> <span className="topbar-label">Settings</span></button>
         <div className="header-tools" ref={toolsMenuRef}>
-          <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu"><Menu size={16} /> Tools <ChevronDown size={13} /></button>
+          <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu" aria-label="Tools"><Menu size={16} /> <span className="topbar-label">Tools</span> <ChevronDown size={13} /></button>
           {showToolsMenu && <div className="header-tools-menu" id="header-tools-menu" aria-label="Tools">
             <span className="header-tools-heading">INVENTORY</span>
             <button type="button" onClick={() => runInventoryCommand('add-asset')}><Plus size={16} /><span>Add asset<small>Create a tracked device record</small></span></button>
@@ -770,12 +794,16 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowModel(true) }}><Layers size={16} /><span>Task model<small>How the mock workflow is structured</small></span></button>
           </div>}
         </div>
-        {page === 'inventory' ? <button type="button" className="primary-button" onClick={() => runInventoryCommand('add-asset')} aria-label="Add asset"><Plus size={16} /> Add asset</button> : <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> New task</button>}
+        {/* Inventory has its own Add asset / Add stock item button beside its heading. */}
+        {page !== 'inventory' && <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> <span className="topbar-label">New task</span></button>}
       </div>
     </header>
-    <QuickPageNav page={page} onChange={goToPage} />
+    <QuickPageNav page={page === 'explore' ? 'home' : page} onChange={goToPage} />
     <DebugPanel />
-    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} searchTicket={openRelatedTicket} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : <main className="main-content">
+    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} searchTicket={openRelatedTicket} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} openExplore={openExplore} /> : page === 'explore' ? <ExplorePage queues={exploreQueuesFor(tickets, clock)} tickets={tickets} queue={exploreQueue} ticketId={exploreTicketId}
+      onSelectQueue={(queue) => { setExploreQueue(queue); setExploreTicketId(undefined) }} onSelectTicket={setExploreTicketId}
+      onOpenQueue={(queue) => showTickets(EXPLORE_FILTERS[queue], true)} onOpenAll={() => showTickets('all', true)} onOpenRecord={setSelectedTicketId} onHome={() => goToPage('home')}
+      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : <main className="main-content">
       <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
       <div className="prototype-note"><span className="prototype-dot" /><b>Sync: live</b><span>Email intake: mock · 0 new</span><span>{tickets.length} cards on the board, {open.length} open. SLA clocks count calendar time.</span><button onClick={() => setShowModel(true)}>How this maps <ArrowRight size={13} /></button></div>
       <section className="summary-strip" aria-label="Task summary">
@@ -856,14 +884,14 @@ function App() {
     {showImport && <Overlay className="form-overlay" onClose={() => setShowImport(false)}><section className="form-panel import-panel" role="dialog" aria-modal="true" aria-labelledby="import-title"><div className="panel-header"><div><div className="eyebrow">EMAIL INTAKE · LOCAL DEMO</div><h2 id="import-title">Create a task from email</h2></div><button className="close-button" onClick={() => setShowImport(false)} aria-label="Close email import"><X size={19} /></button></div><p className="panel-intro">Paste the email text. The board will suggest fields from labels such as Subject, Issue, Requester, Affected user, Priority, and Assignment group. You can review and edit everything before creating the task.</p><label className="field email-paste-field">Email text<textarea autoFocus value={emailText} onChange={(event) => { setEmailText(event.target.value); setImportError('') }} placeholder={'From: Yuki Katayama <yuki@example.com>\nSubject: VPN sign-in issue\n\nIssue: VPN sign-in failing for remote staff\nRequester: Yuki Katayama\nAffected user: Yuki Katayama\nPriority: P2\nImpact: Remote access is unavailable.'} rows={14} /></label><div className="import-note">Email text stays in this browser. Import only extracts ticket details; it does not open links, follow instructions, or send messages.</div>{importError && <div className="form-error" role="alert">{importError}</div>}<div className="form-footer"><button className="text-button" onClick={() => setShowImport(false)}>Cancel</button><button className="primary-button" onClick={importEmail}><Mail size={15} /> Review ticket fields</button></div></section></Overlay>}
 
     {showForm && <Overlay className="form-overlay" onClose={() => setShowForm(false)}><section className="form-panel" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="panel-header"><div><div className="eyebrow">TASK INTAKE · LOCAL DEMO</div><h2 id="form-title">Create a task record</h2></div><button className="close-button" onClick={() => setShowForm(false)} aria-label="Close form"><X size={19} /></button></div><p className="panel-intro">Choose a child record type. Shared task fields are included automatically in this mock board.</p>{importedFromEmail && <div className="import-review-note"><Mail size={14} /><span><b>Imported from email.</b> Review the suggested fields and update anything missing before creating the ticket.</span></div>}
-      <div className="form-grid"><label className="field">Record type<select value={form.recordType} onChange={(event) => updateForm('recordType', event.target.value)}>{recordTypes.map((type) => <option key={type} value={type}>{type} · {tableNames[type]}</option>)}</select></label><label className="field">Priority / severity<select value={form.severity} onChange={(event) => updateForm('severity', event.target.value)}>{severityRows.map((row) => <option key={row.level}>{row.level}</option>)}</select></label><label className="field">Task number <span>Optional</span><input value={form.id} onChange={(event) => updateForm('id', event.target.value)} placeholder="Auto-assigned if blank" /></label><label className="field">Created by<input value={form.createdBy} onChange={(event) => updateForm('createdBy', event.target.value)} placeholder="Person entering this ticket" /></label><label className="field">Department<select value={form.department} onChange={(event) => updateForm('department', event.target.value)}>{departments.map((department) => <option key={department}>{department}</option>)}</select></label><label className="field">Requester<input value={form.requester} onChange={(event) => updateForm('requester', event.target.value)} placeholder="Person who reported it" /></label><label className="field">Affected user<input value={form.affectedUser} onChange={(event) => updateForm('affectedUser', event.target.value)} placeholder="Person impacted by the issue" /></label><label className="field">Affected user email <span>Optional</span><input type="email" value={form.affectedUserEmail} onChange={(event) => updateForm('affectedUserEmail', event.target.value)} placeholder="Used for resolution email drafts" /></label><label className="field">Assigned to<input value={form.assignee} onChange={(event) => updateForm('assignee', event.target.value)} placeholder="Task owner" /></label><label className="field full">Short description <em>*</em><input autoFocus value={form.title} onChange={(event) => updateForm('title', event.target.value)} placeholder="What needs attention?" /></label><label className="field full">Description<textarea value={form.description} onChange={(event) => updateForm('description', event.target.value)} placeholder="Impact, symptoms, and what has been tried" rows={3} /></label><label className="field">Assignment group<select value={form.assignmentGroup || suggestGroup(form.recordType, form.severity, groupText)} onChange={(event) => updateForm('assignmentGroup', event.target.value)}>{assignmentGroups.map((group) => <option key={group}>{group}</option>)}</select><small className="field-hint">Suggested by a demo assignment rule · you can change it</small></label><label className="field">Linked asset <span>Optional</span><select value={form.assetId} onChange={(event) => updateForm('assetId', event.target.value)}><option value="">No linked asset</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.id} · {asset.name}{asset.assignedTo ? ' · ' + asset.assignedTo : ''}</option>)}</select></label><label className="field full">Next due <span>Optional</span><input type="datetime-local" value={form.dueAt} onChange={(event) => updateForm('dueAt', event.target.value)} /></label><label className="field full">Tags <span>Optional · separate with commas</span><input value={form.tagsText} onChange={(event) => updateForm('tagsText', event.target.value)} placeholder="VPN, payroll, follow-up…" /></label><label className="field full">Work notes <span>Optional</span><textarea value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} placeholder="Internal notes or next action" rows={2} /></label></div>
+      <div className="form-grid"><label className="field full">Short description <em>*</em><input autoFocus value={form.title} onChange={(event) => updateForm('title', event.target.value)} placeholder="What needs attention?" /></label><label className="field">Record type<select value={form.recordType} onChange={(event) => updateForm('recordType', event.target.value)}>{recordTypes.map((type) => <option key={type} value={type}>{type} · {tableNames[type]}</option>)}</select></label><label className="field">Priority / severity<select value={form.severity} onChange={(event) => updateForm('severity', event.target.value)}>{severityRows.map((row) => <option key={row.level}>{row.level}</option>)}</select></label><label className="field">Task number <span>Optional</span><input value={form.id} onChange={(event) => updateForm('id', event.target.value)} placeholder="Auto-assigned if blank" /></label><label className="field">Created by<input value={form.createdBy} onChange={(event) => updateForm('createdBy', event.target.value)} placeholder="Person entering this ticket" /></label><label className="field">Department<select value={form.department} onChange={(event) => updateForm('department', event.target.value)}>{departments.map((department) => <option key={department}>{department}</option>)}</select></label><label className="field">Requester<input value={form.requester} onChange={(event) => updateForm('requester', event.target.value)} placeholder="Person who reported it" /></label><label className="field">Affected user<input value={form.affectedUser} onChange={(event) => updateForm('affectedUser', event.target.value)} placeholder="Person impacted by the issue" /></label><label className="field">Affected user email <span>Optional</span><input type="email" value={form.affectedUserEmail} onChange={(event) => updateForm('affectedUserEmail', event.target.value)} placeholder="Used for resolution email drafts" /></label><label className="field">Assigned to<input value={form.assignee} onChange={(event) => updateForm('assignee', event.target.value)} placeholder="Task owner" /></label><label className="field full">Description<textarea value={form.description} onChange={(event) => updateForm('description', event.target.value)} placeholder="Impact, symptoms, and what has been tried" rows={3} /></label><label className="field">Assignment group<select value={form.assignmentGroup || suggestGroup(form.recordType, form.severity, groupText)} onChange={(event) => updateForm('assignmentGroup', event.target.value)}>{assignmentGroups.map((group) => <option key={group}>{group}</option>)}</select><small className="field-hint">Suggested by a demo assignment rule · you can change it</small></label><label className="field">Linked asset <span>Optional</span><select value={form.assetId} onChange={(event) => updateForm('assetId', event.target.value)}><option value="">No linked asset</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.id} · {asset.name}{asset.assignedTo ? ' · ' + asset.assignedTo : ''}</option>)}</select></label><label className="field full">Next due <span>Optional</span><input type="datetime-local" value={form.dueAt} onChange={(event) => updateForm('dueAt', event.target.value)} /></label><label className="field full">Tags <span>Optional · separate with commas</span><input value={form.tagsText} onChange={(event) => updateForm('tagsText', event.target.value)} placeholder="VPN, payroll, follow-up…" /></label><label className="field full">Work notes <span>Optional</span><textarea value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} placeholder="Internal notes or next action" rows={2} /></label></div>
       <div className="triage-panel"><div className="triage-head"><div className="triage-icon"><Sparkles size={15} /></div><div><b>Triage suggestion</b><span>MOCK · KEYWORD RULES</span></div></div>{form.title.trim() || form.description.trim() ? <><p>{currentSuggestion.reason}</p><div className="triage-tags"><span>{currentSuggestion.recordType}</span><span>{currentSuggestion.severity.split(' – ')[0]}</span><span>{currentSuggestion.group}</span></div><button onClick={() => setForm((current) => ({ ...current, recordType: currentSuggestion.recordType, severity: currentSuggestion.severity, assignmentGroup: currentSuggestion.group }))}>Apply suggestion <ArrowRight size={13} /></button></> : <p>Add a short description to see a sample classification suggestion.</p>}</div>
       {formError && <div className="form-error" role="alert">{formError}</div>}<div className="form-footer"><button className="text-button" onClick={() => setShowForm(false)}>Cancel</button><button className="primary-button" onClick={addTicket}><Check size={16} /> Create task</button></div></section></Overlay>}
   </div>
 }
 
-function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openReports, openSettings, widgets }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; searchTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets }) {
-  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'arrange'; kind: InsightKey; columns: number } | { type: 'explore' } | null
+function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openReports, openSettings, widgets, openExplore }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; searchTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets; openExplore: () => void }) {
+  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'arrange'; kind: InsightKey; columns: number } | null
   const [popup, setPopup] = useState<HomePopup>(null)
   const [insightOrder, setInsightOrder] = useState<InsightKey[]>(loadInsightOrder)
   useEffect(() => { saveInsightOrder(insightOrder) }, [insightOrder])
@@ -900,13 +928,6 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
   ]
   const kpiContent = (item: typeof kpiCards[number]) => <><span className={`home-kpi-icon ${item.tone}`}>{item.icon}</span><span className="home-kpi-label">{item.label}</span><strong>{item.count}</strong><span className="home-kpi-action">{item.action} <ArrowRight size={14} /></span></>
   const openQueue = (filter: MetricFilter) => { closePopup(); showTickets(filter, true) }
-  const exploreQueues = [
-    { key: 'active', label: 'Active tickets', hint: 'All unresolved work', count: open.length, onChoose: () => openQueue('active') },
-    { key: 'priority', label: 'Priority tickets', hint: 'Open P1 and P2 work', count: highPriority.length, onChoose: () => openQueue('high-priority') },
-    { key: 'overdue', label: 'Past SLA', hint: 'Resolution target breached', count: overdue.length, onChoose: () => openQueue('overdue') },
-    { key: 'escalated', label: 'Escalated', hint: 'Tickets raised beyond Tier 1', count: escalated.length, onChoose: () => openQueue('escalated') },
-    { key: 'all', label: 'All tickets', hint: 'Open the complete ticket workspace', onChoose: () => openQueue('all') },
-  ]
   const openKpi = popup?.type === 'kpi' ? kpiCards.find((item) => item.filter === popup.filter) : undefined
   const openAttention = popup?.type === 'attention' ? attentionQueues.find((item) => item.filter === popup.filter) : undefined
 
@@ -919,7 +940,7 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
   }
   const visibleInsights = insightOrder.filter((key) => widgets[key])
   return <main className="main-content home-content">
-    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={() => setPopup({ type: 'explore' })}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
+    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={openExplore}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
     <div className="home-section-heading"><div><span className="eyebrow">AT A GLANCE</span><h2>Ticket overview</h2></div><p>Based on the tickets saved in this browser</p></div>
     <section className="home-kpi-grid" aria-label="Ticket totals">
       {kpiCards.map((item) => <button className="home-kpi" key={item.filter} onClick={() => setPopup({ type: 'kpi', filter: item.filter })}>{kpiContent(item)}</button>)}
@@ -941,7 +962,6 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
     {popup?.type === 'insight' && <InsightDetail kind={popup.kind} ctx={ctx} onClose={closePopup} onOpenQueue={openQueue} onOpenTicket={(id) => { closePopup(); searchTicket(id) }} onArrange={() => setPopup({ type: 'arrange', kind: popup.kind, columns: measureColumns() })} />}
     {popup?.type === 'arrange' && <ArrangeInsight kind={popup.kind} ctx={ctx} visible={visibleInsights} columns={popup.columns} onClose={closePopup}
       onMove={(direction) => { const next = moveInsight(insightOrder, visibleInsights, popup.kind, direction, popup.columns); if (next) setInsightOrder(next); closePopup() }} />}
-    {popup?.type === 'explore' && <ExploreLauncher queues={exploreQueues} onClose={closePopup} />}
   </main>
 }
 
@@ -1317,17 +1337,51 @@ function TimelineView({ tickets, openTicket }: { tickets: TicketItem[]; openTick
   return <section className="operation-view" id="board"><ViewHeader title="Timeline View" subtitle="Recorded ticket changes and creation times, newest first." action={<label className="timeline-toggle"><input type="checkbox" checked={showTargets} onChange={(event) => setShowTargets(event.target.checked)} /> Show planned deadlines</label>} /><div className="timeline-list">{events.length ? events.map((event, index) => <button key={`${event.ticket.id}-${event.label}-${index}`} className={event.planned ? 'planned' : ''} onClick={() => openTicket(event.ticket.id)}><span className={`timeline-marker ${sevClass(event.ticket.severity)}`} /><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(event.date)}</time><div><b>{event.label}</b><span>{event.ticket.id} · {event.ticket.title}</span><small>{event.detail}</small></div></button>) : <div className="view-empty">No recorded activity.</div>}</div></section>
 }
 
-function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketItem; now: number; linkedAssetId?: string }) {
+/** State, priority and resolution SLA across the top of a ticket record. */
+function RecordStatusStrip({ ticket, now }: { ticket: TicketItem; now: number }) {
   const sla = slaTime(ticket, now)
+  return <div className="record-status-strip">
+    <div><span>State</span><b>{ticket.status}</b></div>
+    <div><span>Priority</span><b>{ticket.severity}</b></div>
+    <div><span>Resolution SLA</span><b className={sla.breached && ticket.status !== 'Resolved' ? 'record-breached' : ''}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</b></div>
+  </div>
+}
+
+/** The four queues on the Explore page, and the Tickets-page filter each one opens. */
+const EXPLORE_FILTERS: Record<ExploreKey, MetricFilter> = { active: 'active', priority: 'high-priority', overdue: 'overdue', escalated: 'escalated' }
+function exploreQueuesFor(tickets: TicketItem[], now: number): ExploreQueue<TicketItem>[] {
+  const open = tickets.filter((ticket) => ticket.status !== 'Resolved')
+  return [
+    { key: 'active', label: 'Active tickets', hint: 'All unresolved work', tickets: open },
+    { key: 'priority', label: 'Priority tickets', hint: 'Open P1 and P2 work', tickets: open.filter((ticket) => ticket.severity.startsWith('P1') || ticket.severity.startsWith('P2')) },
+    { key: 'overdue', label: 'Past SLA', hint: 'Resolution target breached', tickets: open.filter((ticket) => slaTime(ticket, now).breached) },
+    { key: 'escalated', label: 'Escalated', hint: 'Tickets raised beyond Tier 1', tickets: open.filter((ticket) => ticket.status === 'Escalated') },
+  ]
+}
+
+/** The ticket summary in step 3 of the Explore page; "Open full record" shows everything else. */
+function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number }) {
+  const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
+  return <div className="explore-ticket-summary">
+    <RecordStatusStrip ticket={ticket} now={now} />
+    <div className="record-form-grid">
+      <div className="record-field"><span>Type</span><b>{ticket.recordType}</b></div>
+      <div className="record-field"><span>Assigned to</span><b>{ticket.assignee || 'Unassigned'}</b></div>
+      <div className="record-field"><span>Assignment group</span><b>{ticket.assignmentGroup || 'Unassigned'}</b></div>
+      <div className="record-field"><span>Requested by</span><b>{ticket.requester || 'Not recorded'}</b></div>
+      <div className="record-field"><span>Department</span><b>{ticket.department || 'Field Services'}</b></div>
+      <div className="record-field"><span>Created</span><b>{created}</b></div>
+    </div>
+    <section className="record-section"><h3>Description</h3><p>{ticket.description || 'No description recorded.'}</p></section>
+  </div>
+}
+
+function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketItem; now: number; linkedAssetId?: string }) {
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
   return <>
-    <div className="record-status-strip">
-      <div><span>State</span><b>{ticket.status}</b></div>
-      <div><span>Priority</span><b>{ticket.severity}</b></div>
-      <div><span>Resolution SLA</span><b className={sla.breached && ticket.status !== 'Resolved' ? 'record-breached' : ''}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</b></div>
-    </div>
+    <RecordStatusStrip ticket={ticket} now={now} />
     <div className="record-form-grid">
       <div className="record-field"><span>Number</span><b>{ticket.id}</b></div>
       <div className="record-field"><span>Task type / table</span><b>{ticket.recordType} · {tableNames[ticket.recordType]}</b></div>
@@ -1419,7 +1473,7 @@ function ListView({ tickets, now, openTicket, toggleStar, selectedIds, onSelecti
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
         <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button></div></td>
-        <td><a className="list-title list-title-link" href={`#ticket=${encodeURIComponent(ticket.id)}`} target="_blank" rel="noopener noreferrer" title={`Open ${ticket.id} in a new tab`}>{ticket.title}</a><span className="list-type">{ticket.recordType} · {tableNames[ticket.recordType]}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
+        <td><a className="list-title list-title-link" href={`#ticket=${encodeURIComponent(ticket.id)}`} target="_blank" rel="noopener noreferrer" title={`Open ${ticket.id} in a new tab`}>{ticket.title}</a><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>
         <td>{ticket.assignee || 'Unassigned'}</td>

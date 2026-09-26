@@ -66,7 +66,9 @@ File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets
 
 ## What is in the source
 
-- **Home** (`HomePopouts.tsx`, `HomeInsights.tsx`): the Ticket overview and Needs attention cards and their popups, the Explore tickets launcher, and the Operations insights: eight cards, their Settings switches, a detail popup for each, and "Arrange card" with its saved order.
+- **Home** (`HomePopouts.tsx`, `HomeInsights.tsx`): the Ticket overview and Needs attention cards and their popups, and the Operations insights: eight cards, their Settings switches, a detail popup for each, and "Arrange card" with its saved order.
+- **Explore tickets** (`ExplorePage.tsx`): its own page, opened from Home. Choose a queue, pick a ticket, see its summary; side by side on a wide screen, one step at a time on a phone.
+- **Page addresses** (`route.ts`): each page has its own address after the `#` (`#/home`, `#/tickets`, `#/inventory`, `#/explore/priority/OPS-101`), so Back and Forward move between pages and a refresh or bookmark opens the same page. It is still one file.
 - **Tickets** (`App.tsx`): the list, split, Kanban and other views, the "All Views" picker (`ViewPicker.tsx`), saved views, tabs, and exports (CSV and Excel).
 - **Inventory** (`InventoryPage.tsx`): assets and stock, device health with a demo "Sync from Action1", and exports.
 - **Around the edges:** `Overlay.tsx` (the round × in the corner and Escape to close every dialog, top one first), `QuickPageNav.tsx` (the previous/next page arrows), `screenPattern.ts` (background patterns), `debug.ts` and `DebugPanel.tsx` (the debug log).
@@ -75,7 +77,7 @@ Saved data uses the same storage keys as the old page, so nothing is lost when m
 
 ## Automated tests
 
-The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: the Home totals and their queues, every popup (opening, the four ways of closing, keyboard use, focus), the Explore tickets launcher, the Operations insights and arranging (including saved order), Home settings, opening a ticket, Inventory device health, every export (the downloaded files are checked, including the two-sheet Excel workbook), the extras around the edges, and the debug log. Each test starts with a fresh browser profile, so nothing depends on your saved tickets.
+The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: the Home totals and their queues, every popup (opening, the four ways of closing, keyboard use, focus), the Explore tickets page and the page addresses (Back, Forward, refresh), the Operations insights and arranging (including saved order), Home settings, opening a ticket, Inventory device health, every export (the downloaded files are checked, including the two-sheet Excel workbook), the extras around the edges, and the debug log. Each test starts with a fresh browser profile, so nothing depends on your saved tickets.
 
 ```bash
 cd tests && npm ci && npm test
