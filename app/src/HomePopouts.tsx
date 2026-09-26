@@ -10,13 +10,15 @@ type PopoutProps = {
   onClose: () => void
   children?: ReactNode
   actions?: ReactNode
+  overlayClassName?: string
+  dialogClassName?: string
 }
 
 /**
  * The enlarged popup used on the Home page. Closes with the × button, a click outside the panel,
  * or Escape, and puts focus back on whatever opened it.
  */
-export function TicketPopout({ eyebrow, title, titleId, description, onClose, children, actions }: PopoutProps) {
+export function TicketPopout({ eyebrow, title, titleId, description, onClose, children, actions, overlayClassName, dialogClassName }: PopoutProps) {
   const dialog = useRef<HTMLElement>(null)
   const close = useRef(onClose)
   close.current = onClose
@@ -38,8 +40,8 @@ export function TicketPopout({ eyebrow, title, titleId, description, onClose, ch
   }, [])
 
   return createPortal(
-    <div className="ticket-card-popout" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section ref={dialog} className="ticket-card-popout-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
+    <div className={overlayClassName ? `ticket-card-popout ${overlayClassName}` : 'ticket-card-popout'} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section ref={dialog} className={dialogClassName ? `ticket-card-popout-dialog ${dialogClassName}` : 'ticket-card-popout-dialog'} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <button className="ticket-card-popout-close" type="button" aria-label="Close popup" onClick={onClose}>×</button>
         <div className="eyebrow">{eyebrow}</div>
         <h2 id={titleId}>{title}</h2>

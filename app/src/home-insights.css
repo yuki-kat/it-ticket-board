@@ -1,0 +1,49 @@
+/* Operations insights on the Home page: the four extra cards (SLA health, Escalation workload,
+   Assignment coverage, Resolution rate), the click target on each card, and the detail popup.
+   Taken from the add-on styles in index.html. */
+.extended-insight-card{min-height:235px}
+.extended-insight-body{display:flex;flex-direction:column;justify-content:center;min-height:145px}
+.extended-insight-metric{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:16px}
+.extended-insight-metric strong{color:#294d5d;font-size:38px;line-height:1}
+.extended-insight-metric span{max-width:155px;color:#758b95;font-size:10px;line-height:1.45;text-align:right}
+.extended-insight-track{height:9px;overflow:hidden;border-radius:5px;background:#e8eef0}
+.extended-insight-track i{display:block;height:100%;border-radius:inherit;background:#4d91a3}
+.extended-insight-track.amber i{background:#d69a43}
+.extended-insight-track.coral i{background:#cf6b61}
+.extended-insight-track.green i{background:#69a27d}
+.extended-insight-legend{display:flex;justify-content:space-between;margin-top:8px;color:#81939b;font-size:9px}
+.extended-insight-note{margin-top:15px;padding-top:12px;border-top:1px solid #e6edef;color:#708791;font-size:10px;line-height:1.45}
+.home-chart-card{position:relative}
+.insight-click-target{position:absolute;z-index:8;inset:0;width:100%;height:100%;padding:0;border:0;border-radius:inherit;background:transparent;cursor:pointer}
+.insight-click-target:focus-visible{outline:3px solid #4d91a3;outline-offset:3px}
+.home-chart-card:has(.insight-click-target):hover{border-color:#9dc1cc;box-shadow:0 10px 28px rgb(34 77 93 / 13%)}
+.home-chart-grid>.home-chart-card:not(.home-recent-card){cursor:pointer!important}
+.insight-detail-dialog{width:min(760px,94vw);max-height:92vh;overflow:auto}
+.insight-detail-preview .home-chart-card{width:100%;min-height:0;margin:0;cursor:default!important;box-shadow:0 7px 25px rgb(34 77 93 / 10%)}
+.insight-detail-preview .insight-click-target{display:none}
+.insight-segment{margin-inline:-6px;padding-inline:6px;border-radius:7px;cursor:pointer;transition:background .15s ease}
+.insight-segment:hover{background:#eef6f8}
+.insight-segment:focus-visible{outline:2px solid #4d91a3;outline-offset:1px}
+.insight-segment[aria-pressed="true"]{background:#e1eff3;box-shadow:inset 3px 0 0 #2f7186}
+.insight-detail-hint{margin:8px 0 0;color:#6f8791;font-size:10px}
+.insight-detail-tickets{margin-top:16px;padding:14px 16px;border:1px solid #dce7ea;border-radius:10px;background:#fff}
+.insight-detail-tickets:empty{display:none}
+.insight-detail-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.insight-detail-head strong{color:#294754;font-size:13px}
+.insight-detail-head span{color:#7a8f98;font-size:10px}
+.insight-detail-tickets ul{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.insight-detail-tickets li button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 9px;border:1px solid transparent;border-radius:7px;background:none;color:#365662;text-align:left;cursor:pointer}
+.insight-detail-tickets li button:hover{border-color:#cfe0e5;background:#f3f9fa}
+.insight-detail-tickets li button:focus-visible{outline:2px solid #4d91a3}
+.insight-detail-tickets li i{flex:none;width:8px;height:8px;border-radius:50%;background:#8aa4ad}
+.insight-detail-tickets li i.p1{background:#db6763}
+.insight-detail-tickets li i.p2{background:#e0a64a}
+.insight-detail-tickets li i.p3{background:#4d91a3}
+.insight-detail-tickets li i.p4{background:#9aaab0}
+.insight-detail-tickets li span{flex:1;min-width:0}
+.insight-detail-tickets li b{display:block;overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.insight-detail-tickets li small{display:block;margin-top:2px;color:#7f939b;font-size:9px}
+.insight-detail-tickets li em{flex:none;color:#2f7186;font-size:10px;font-style:normal;font-weight:700}
+.insight-detail-more,.insight-detail-empty{margin:8px 0 0;color:#7a8f98;font-size:10px}
+.insight-detail-dialog .ticket-card-popout-actions{align-items:center}
+.insight-detail-arrange{margin-right:auto;border:1px dashed #b9cfd6;background:#f4f9fa;color:#3d6878}
