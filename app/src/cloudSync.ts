@@ -2,13 +2,14 @@
 //
 // The app keeps working from its own lists (and the browser's storage), exactly as before. While sync is on:
 // - every change is sent to the database about a second after it is made;
-// - the database is read every 30 seconds, and when the window gets focus or comes back online, so
-//   colleagues' changes arrive;
-// - with no connection, changes wait in the browser and are sent when it is back.
+// - the database is read every 30 seconds while the page is visible, and when the window gets focus or comes
+//   back online, so colleagues' changes arrive;
+// - with no connection, changes wait in the browser and are sent when it is back;
+// - someone who is removed from the workspace stops syncing, and keeps the board in their browser as it is.
 // The rules for combining the two sides are in syncLogic.ts. See "Sync" in the README.
 
 import { useEffect, useRef, useSyncExternalStore } from 'react'
-import { cloud, currentSession, type Workspace } from './cloud'
+import { cloud, type Workspace } from './cloud'
 import { BEFORE_RESTORE_KEY, createBackup } from './backup'
 import {
   baseFromRows, changesToSend, emptyBase, fingerprint, idOf, looksOffline, mergeList, SYNC_STATE_KEY, TABLES,
@@ -16,6 +17,7 @@ import {
 } from './syncLogic'
 
 export type SyncPhase = 'off' | 'saving' | 'saved' | 'offline' | 'error'
+/** `message` explains an offline or error phase, or (phase 'off') why syncing stopped by itself. */
 export type SyncStatus = { phase: SyncPhase; workspaceName: string; lastSyncedAt: string; message: string }
 export type StartMode = 'upload' | 'empty' | 'download'
 
@@ -82,12 +84,21 @@ async function run(kind: 'push' | 'full') {
   if (running) { queued = queued === 'full' || kind === 'full' ? 'full' : 'push'; return }
   running = true
   try {
-    const session = await currentSession()
+    // The browser knows it has no connection: wait for it to come back (the "online" event) without trying.
+    if (!navigator.onLine) { wentOffline(); return }
+    const { data, error } = await cloud().auth.getSession()
     if (!saved) return
-    if (!session) { setStatus({ phase: 'error', message: 'You are signed out. Sign in again to keep syncing.' }); return }
-    if (session.user.id !== saved.userId) { stopSync(); return }
+    const session = data.session
+    if (!session) {
+      // An expired sign-in is renewed over the network, so a renewal that could not connect means "offline",
+      // not "signed out".
+      if (error && looksOffline(error.message)) wentOffline()
+      else setStatus({ phase: 'error', message: 'You are signed out. Sign in again to keep syncing.' })
+      return
+    }
+    if (session.user.id !== saved.userId) { stopSync(`You signed in as someone else, so this browser stopped syncing with ${saved.workspaceName}.`); return }
     const sent = await push(session.user.id)
-    if (sent && kind === 'full') await pull()
+    if (sent && kind === 'full') await pull(session.user.id)
   } finally {
     running = false
     const next = queued
@@ -96,14 +107,40 @@ async function run(kind: 'push' | 'full') {
   }
 }
 
+/** No connection: changes wait here. Tried again in a while, and as soon as the browser is back online. */
+function wentOffline() {
+  setStatus({ phase: 'offline', message: 'No connection. Changes are kept in this browser and sent when the connection is back.' })
+  window.clearTimeout(retryTimer)
+  retryTimer = window.setTimeout(() => schedule('full'), RETRY_AFTER)
+}
+
 function failed(message: string) {
-  if (looksOffline(message)) {
-    setStatus({ phase: 'offline', message: 'No connection. Changes are kept in this browser and sent when the connection is back.' })
-    window.clearTimeout(retryTimer)
-    retryTimer = window.setTimeout(() => schedule('full'), RETRY_AFTER)
-  } else {
-    setStatus({ phase: 'error', message })
+  if (looksOffline(message)) wentOffline()
+  else setStatus({ phase: 'error', message })
+}
+
+/** Whether this person is still a member of the workspace, or the error that stopped the check. */
+async function isMember(workspaceId: string, userId: string): Promise<boolean | string> {
+  const { data, error } = await cloud().from('workspace_members').select('user_id').eq('workspace_id', workspaceId).eq('user_id', userId)
+  return error ? error.message : Boolean(data?.length)
+}
+
+/** Stops syncing because this person can no longer see the workspace (removed from it, or it was deleted). */
+const lostAccess = (workspaceName: string) =>
+  stopSync(`You are no longer a member of ${workspaceName}, so this browser stopped syncing with it. The board here is kept as it was.`)
+
+/**
+ * A change was not accepted. Without a connection it waits; if this person was removed from the workspace,
+ * syncing stops; anything else is shown as a problem.
+ */
+async function refused(message: string, workspaceId: string, userId: string) {
+  if (!looksOffline(message)) {
+    const member = await isMember(workspaceId, userId)
+    const current = saved
+    if (!current || current.workspaceId !== workspaceId) return
+    if (member === false) { lostAccess(current.workspaceName); return }
   }
+  failed(message)
 }
 
 /** Sends what changed here since the base. Returns false if it could not. */
@@ -122,7 +159,7 @@ async function push(userId: string): Promise<boolean> {
       const chunk = upserts.slice(start, start + CHUNK)
       const rows = chunk.map((record) => ({ workspace_id: workspaceId, id: idOf(record, spec.key), owner: userId, data: record, updated_at: now }))
       const { error } = await cloud().from(spec.table).upsert(rows, { onConflict: 'workspace_id,id' })
-      if (error) { failed(error.message); return false }
+      if (error) { await refused(error.message, workspaceId, userId); return false }
       if (!saved) return false
       for (const record of chunk) saved.base[spec.table][idOf(record, spec.key)] = fingerprint(record)
       writeSaved()
@@ -132,7 +169,7 @@ async function push(userId: string): Promise<boolean> {
     for (let start = 0; start < deletes.length; start += CHUNK) {
       const ids = deletes.slice(start, start + CHUNK)
       const { error } = await cloud().from(spec.table).delete().eq('workspace_id', workspaceId).in('id', ids)
-      if (error) { failed(error.message); return false }
+      if (error) { await refused(error.message, workspaceId, userId); return false }
       if (!saved) return false
       for (const id of ids) delete saved.base[spec.table][id]
       writeSaved()
@@ -183,12 +220,21 @@ function applyLists(updates: Record<ListName, Updater>): Promise<void> {
   return done
 }
 
-async function pull() {
+async function pull(userId: string) {
   if (!saved) return
   const workspaceId = saved.workspaceId
   const rows = await fetchWorkspace(workspaceId)
   if ('error' in rows) { failed(rows.error); return }
   if (!saved || saved.workspaceId !== workspaceId) return
+  // Nothing at all where there used to be records: either everything was deleted, or this person can no longer
+  // see the workspace (removed from it, or it was deleted). Only the first may empty the board here.
+  if (TABLES.every((spec) => !rows[spec.table].length) && TABLES.some((spec) => Object.keys(saved!.base[spec.table]).length)) {
+    const member = await isMember(workspaceId, userId)
+    const current = saved
+    if (!current || current.workspaceId !== workspaceId) return
+    if (typeof member === 'string') { failed(member); return }
+    if (!member) { lostAccess(current.workspaceName); return }
+  }
   const base = saved.base
   await applyLists(perList((spec) => (current) => mergeList(current, spec, base[spec.table], rows[spec.table])))
   if (!saved || saved.workspaceId !== workspaceId) return
@@ -202,7 +248,7 @@ async function pull() {
  * - upload: this browser's board is copied into the (empty) workspace.
  * - empty: this browser starts with an empty board; the workspace stays empty.
  * - download: this browser shows the workspace's board instead of what it has now.
- * What the browser has now is first kept as a safety copy (Backup and restore → Put back).
+ * What the browser has now is first kept as a safety copy (Backup and restore → Put it back).
  */
 export async function startSync(workspace: Workspace, userId: string, mode: StartMode): Promise<string | null> {
   if (!adapter) return 'The board is not ready yet. Try again in a moment.'
@@ -223,14 +269,17 @@ export async function startSync(workspace: Workspace, userId: string, mode: Star
   return status.phase === 'error' ? status.message : null
 }
 
-/** Stops syncing in this browser. The board stays as it is here; the workspace is not changed. */
-export function stopSync() {
+/**
+ * Stops syncing in this browser. The board stays as it is here; the workspace is not changed.
+ * `reason` is shown in Settings → Account when syncing stopped by itself.
+ */
+export function stopSync(reason = '') {
   saved = null
   queued = null
   window.clearTimeout(pushTimer)
   window.clearTimeout(retryTimer)
   try { localStorage.removeItem(SYNC_STATE_KEY) } catch { /* nothing to remove */ }
-  setStatus({ phase: 'off', workspaceName: '', lastSyncedAt: '', message: '' })
+  setStatus({ phase: 'off', workspaceName: '', lastSyncedAt: '', message: reason })
 }
 
 /**
@@ -253,7 +302,8 @@ export function useCloudSync(lists: SyncLists, replace: Adapter['replace']) {
     adapter = { lists: () => latest.current, replace: (list, update) => replaceRef.current(list, update) }
     const full = () => schedule('full')
     const visible = () => { if (document.visibilityState === 'visible') full() }
-    const poll = window.setInterval(full, POLL_EVERY)
+    // A hidden page is not read in the background; it catches up when it is shown again.
+    const poll = window.setInterval(() => { if (document.visibilityState !== 'hidden') full() }, POLL_EVERY)
     window.addEventListener('focus', full)
     window.addEventListener('online', full)
     document.addEventListener('visibilitychange', visible)
