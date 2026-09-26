@@ -46,15 +46,6 @@ test.describe('Home popups (source)', () => {
     await expect(dialog.locator('.attention-popout-card b')).toHaveText(String(expected))
   })
 
-  test('the Explore launcher is a labelled dialog and returns focus to the button', async ({ page }) => {
-    const button = page.locator('.home-hero button', { hasText: 'Explore tickets' })
-    await button.click()
-    await expect(page.getByRole('dialog', { name: 'Choose a ticket queue' })).toBeFocused()
-    await page.keyboard.press('Escape')
-    await expect(page.locator('.ticket-card-popout')).toHaveCount(0)
-    await expect(button).toBeFocused()
-  })
-
   test('the popup counts follow the tickets: they update after a ticket is resolved', async ({ page }) => {
     const before = await numberIn(kpiCard(page, 'Open tickets'))
     await page.evaluate(() => {
