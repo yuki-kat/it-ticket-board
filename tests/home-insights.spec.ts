@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { insightCard, kpiCard, numberIn, openApp, openInsight } from '../helpers'
+import { insightCard, kpiCard, numberIn, openApp, openInsight } from './helpers'
 
 // Checks for the React version of the Operations insights.
 
