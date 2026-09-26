@@ -2,20 +2,22 @@
 
 The ticket board packaged as a desktop app for **Windows** (`.exe` installer) and **Mac** (`.dmg`, Apple Silicon and Intel), built in the cloud by GitHub Actions.
 
-**Status: parked.** This lives on the `desktop-app` branch and is not merged into `main`. The build only runs on `main`, so nothing is built until this branch is merged.
+**Status:** merged into `main` on 26 Sep 2026. Installers are built by hand, not automatically (see below).
 
 ## How it works
 
 - The app page is the repo's own `../index.html`. `scripts/copyApp.js` copies it into `desktop/app/` before every build or local run, so there's only one file to edit and the desktop app always matches it. (`desktop/app/` isn't committed.)
 - `main.js` opens that page in a desktop window. Links to websites and email open in your normal browser or mail app.
 - `scripts/afterPackSign.js` ad-hoc signs the Mac app so Apple Silicon Macs will open it.
-- `../.github/workflows/build.yml` builds both installers whenever `index.html` or `desktop/` changes on `main`, or when you click **Run workflow** on the Actions tab. `--publish=never` stops electron-builder trying to create a GitHub release.
+- `../.github/workflows/build.yml` builds both installers when you click **Run workflow** on the Actions tab. It does not run on every change: each build makes about 300 MB of installers, and GitHub's free storage runs out quickly (the first automatic build on `main` failed for that reason). The installers are deleted after 7 days. `--publish=never` stops electron-builder trying to create a GitHub release.
 
-## Picking it up again
+## Building the installers
 
-1. Open a pull request from `desktop-app` into `main` and merge it. The first build starts automatically, taking about 5–10 minutes.
-2. Open the **Actions** tab, click the run's **title**, and download `mac-installer` and `windows-installer` from **Artifacts** under the flowchart. Each is a `.zip` containing the installer.
+1. Open the repo's **Actions** tab, click **Build desktop app**, then **Run workflow**. It takes about 5–10 minutes.
+2. Click the run's **title** and download `mac-installer` and `windows-installer` from **Artifacts** under the flowchart. Each is a `.zip` containing the installer. Save them somewhere safe: GitHub deletes them after 7 days.
 3. Bump `"version"` in `desktop/package.json` whenever you release a new installer.
+
+If a run fails with "Artifact storage quota has been hit", delete old artifacts on GitHub (Actions → the run → Artifacts, or in other repos) and try again; usage is recalculated every 6–12 hours.
 
 ## First launch: one security prompt
 
