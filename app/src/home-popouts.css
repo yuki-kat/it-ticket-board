@@ -36,3 +36,23 @@
   .explore-queue-grid .all-tickets { grid-column: auto; }
 }
 .ticket-card-popout-dialog:focus { outline: none; }
+
+/* Explore tickets, popups 2 and 3: a queue's tickets, then one ticket's summary. Back sits on the left. */
+.explore-step-dialog{width:min(640px,94vw);max-height:92vh;overflow:auto}
+.explore-step-dialog .ticket-card-popout-actions{align-items:center}
+.explore-step-dialog .explore-back{margin-right:auto;border:1px solid #cedde2;background:#fff;color:#52717e}
+.explore-step-dialog .explore-back:hover{background:#f1f7f9}
+.explore-ticket-summary .record-form-grid{margin-bottom:14px}
+.explore-ticket-summary .record-section{margin:0}
+@media (max-width: 520px) {
+  .explore-step-dialog { padding: 24px 18px 20px; }
+  .explore-step-dialog .ticket-card-popout-actions { flex-wrap: wrap; }
+  .explore-step-dialog .ticket-card-popout-open { flex: 1 1 100%; }
+  /* Keep the summary in columns on a phone (the full record stacks every field). */
+  .explore-ticket-summary .record-status-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .explore-ticket-summary .record-status-strip > div { min-height: 0; padding: 11px 10px; border-right: 1px solid #e4ebed; border-bottom: 0; }
+  .explore-ticket-summary .record-status-strip > div:last-child { border-right: 0; }
+  .explore-ticket-summary .record-status-strip b { font-size: 12px; }
+  .explore-ticket-summary .record-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .explore-ticket-summary .record-field { min-height: 0; padding: 10px 11px; }
+}

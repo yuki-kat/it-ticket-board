@@ -15,7 +15,7 @@ import ViewPicker, { VIEW_GROUPS } from './ViewPicker'
 import './quick-settings.css'
 import './screen-pattern.css'
 import { ExploreLauncher, PopoutActions, TicketPopout } from './HomePopouts'
-import { ArrangeInsight, InsightCard, InsightDetail, loadInsightOrder, moveInsight, saveInsightOrder, type DetailKey, type InsightContext, type InsightKey } from './HomeInsights'
+import { ArrangeInsight, InsightCard, InsightDetail, loadInsightOrder, moveInsight, QUEUE_LABELS, saveInsightOrder, TicketList, type DetailKey, type InsightContext, type InsightKey, type QueueFilter } from './HomeInsights'
 import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
 import { exportCsv } from './lib/exportCsv'
@@ -864,7 +864,8 @@ function App() {
 }
 
 function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openReports, openSettings, widgets }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; searchTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets }) {
-  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'arrange'; kind: InsightKey; columns: number } | { type: 'explore' } | null
+  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'arrange'; kind: InsightKey; columns: number } | { type: 'explore' } | { type: 'explore-queue'; queue: ExploreKey } | { type: 'explore-ticket'; queue: ExploreKey; id: string } | null
+  type ExploreKey = 'active' | 'priority' | 'overdue' | 'escalated'
   const [popup, setPopup] = useState<HomePopup>(null)
   const [insightOrder, setInsightOrder] = useState<InsightKey[]>(loadInsightOrder)
   useEffect(() => { saveInsightOrder(insightOrder) }, [insightOrder])
@@ -901,13 +902,22 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
   ]
   const kpiContent = (item: typeof kpiCards[number]) => <><span className={`home-kpi-icon ${item.tone}`}>{item.icon}</span><span className="home-kpi-label">{item.label}</span><strong>{item.count}</strong><span className="home-kpi-action">{item.action} <ArrowRight size={14} /></span></>
   const openQueue = (filter: MetricFilter) => { closePopup(); showTickets(filter, true) }
+  // Explore tickets is a chain of three popups: (1) choose a queue, (2) that queue's tickets, (3) one ticket's summary.
+  // Back steps through them; "All tickets" still goes straight to the Tickets page.
+  const exploreChoices: Record<ExploreKey, { label: string; hint: string; filter: QueueFilter; tickets: TicketItem[] }> = {
+    active: { label: 'Active tickets', hint: 'All unresolved work', filter: 'active', tickets: open },
+    priority: { label: 'Priority tickets', hint: 'Open P1 and P2 work', filter: 'high-priority', tickets: highPriority },
+    overdue: { label: 'Past SLA', hint: 'Resolution target breached', filter: 'overdue', tickets: overdue },
+    escalated: { label: 'Escalated', hint: 'Tickets raised beyond Tier 1', filter: 'escalated', tickets: escalated },
+  }
   const exploreQueues = [
-    { key: 'active', label: 'Active tickets', hint: 'All unresolved work', count: open.length, onChoose: () => openQueue('active') },
-    { key: 'priority', label: 'Priority tickets', hint: 'Open P1 and P2 work', count: highPriority.length, onChoose: () => openQueue('high-priority') },
-    { key: 'overdue', label: 'Past SLA', hint: 'Resolution target breached', count: overdue.length, onChoose: () => openQueue('overdue') },
-    { key: 'escalated', label: 'Escalated', hint: 'Tickets raised beyond Tier 1', count: escalated.length, onChoose: () => openQueue('escalated') },
+    ...(Object.keys(exploreChoices) as ExploreKey[]).map((key) => ({ key, label: exploreChoices[key].label, hint: exploreChoices[key].hint, count: exploreChoices[key].tickets.length, onChoose: () => setPopup({ type: 'explore-queue', queue: key }) })),
     { key: 'all', label: 'All tickets', hint: 'Open the complete ticket workspace', onChoose: () => openQueue('all') },
   ]
+  const exploreStep = popup?.type === 'explore-queue' || popup?.type === 'explore-ticket' ? popup : null
+  const exploreChoice = exploreStep ? exploreChoices[exploreStep.queue] : undefined
+  const exploreIds = new Set(exploreChoice?.tickets.map((ticket) => ticket.id))
+  const exploreTicket = exploreStep?.type === 'explore-ticket' ? tickets.find((ticket) => ticket.id === exploreStep.id) : undefined
   const openKpi = popup?.type === 'kpi' ? kpiCards.find((item) => item.filter === popup.filter) : undefined
   const openAttention = popup?.type === 'attention' ? attentionQueues.find((item) => item.filter === popup.filter) : undefined
 
@@ -943,6 +953,14 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
     {popup?.type === 'arrange' && <ArrangeInsight kind={popup.kind} ctx={ctx} visible={visibleInsights} columns={popup.columns} onClose={closePopup}
       onMove={(direction) => { const next = moveInsight(insightOrder, visibleInsights, popup.kind, direction, popup.columns); if (next) setInsightOrder(next); closePopup() }} />}
     {popup?.type === 'explore' && <ExploreLauncher queues={exploreQueues} onClose={closePopup} />}
+    {exploreStep?.type === 'explore-queue' && exploreChoice && <TicketPopout eyebrow="EXPLORE TICKETS" title={exploreChoice.label} titleId="explore-queue-title" description="Select a ticket to see its details, or open the whole queue." onClose={closePopup} dialogClassName="explore-step-dialog"
+      actions={<div className="ticket-card-popout-actions"><button className="explore-back" type="button" onClick={() => setPopup({ type: 'explore' })}>← Back</button><button className="ticket-card-popout-cancel" type="button" onClick={closePopup}>Close</button><button className="ticket-card-popout-open" type="button" onClick={() => openQueue(exploreChoice.filter)}>{QUEUE_LABELS[exploreChoice.filter]}</button></div>}>
+      <div className="insight-detail-tickets"><TicketList segment={{ label: exploreChoice.hint, queue: exploreChoice.filter, match: (ticket) => exploreIds.has(ticket.id) }} ctx={ctx} onOpenTicket={(id) => setPopup({ type: 'explore-ticket', queue: exploreStep.queue, id })} /></div>
+    </TicketPopout>}
+    {exploreStep?.type === 'explore-ticket' && exploreTicket && <TicketPopout eyebrow="TICKET DETAILS" title={exploreTicket.id} titleId="explore-ticket-title" description={exploreTicket.title} onClose={closePopup} dialogClassName="explore-step-dialog"
+      actions={<div className="ticket-card-popout-actions"><button className="explore-back" type="button" onClick={() => setPopup({ type: 'explore-queue', queue: exploreStep.queue })}>← Back</button><button className="ticket-card-popout-cancel" type="button" onClick={closePopup}>Close</button><button className="ticket-card-popout-open" type="button" onClick={() => { closePopup(); openTicket(exploreTicket.id) }}>Open full record</button></div>}>
+      <ExploreTicketSummary ticket={exploreTicket} now={now} />
+    </TicketPopout>}
   </main>
 }
 
@@ -1318,17 +1336,39 @@ function TimelineView({ tickets, openTicket }: { tickets: TicketItem[]; openTick
   return <section className="operation-view" id="board"><ViewHeader title="Timeline View" subtitle="Recorded ticket changes and creation times, newest first." action={<label className="timeline-toggle"><input type="checkbox" checked={showTargets} onChange={(event) => setShowTargets(event.target.checked)} /> Show planned deadlines</label>} /><div className="timeline-list">{events.length ? events.map((event, index) => <button key={`${event.ticket.id}-${event.label}-${index}`} className={event.planned ? 'planned' : ''} onClick={() => openTicket(event.ticket.id)}><span className={`timeline-marker ${sevClass(event.ticket.severity)}`} /><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(event.date)}</time><div><b>{event.label}</b><span>{event.ticket.id} · {event.ticket.title}</span><small>{event.detail}</small></div></button>) : <div className="view-empty">No recorded activity.</div>}</div></section>
 }
 
-function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketItem; now: number; linkedAssetId?: string }) {
+/** State, priority and resolution SLA across the top of a ticket record. */
+function RecordStatusStrip({ ticket, now }: { ticket: TicketItem; now: number }) {
   const sla = slaTime(ticket, now)
+  return <div className="record-status-strip">
+    <div><span>State</span><b>{ticket.status}</b></div>
+    <div><span>Priority</span><b>{ticket.severity}</b></div>
+    <div><span>Resolution SLA</span><b className={sla.breached && ticket.status !== 'Resolved' ? 'record-breached' : ''}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</b></div>
+  </div>
+}
+
+/** The short summary in the third Explore tickets popup; "Open full record" shows everything else. */
+function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number }) {
+  const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
+  return <div className="explore-ticket-summary">
+    <RecordStatusStrip ticket={ticket} now={now} />
+    <div className="record-form-grid">
+      <div className="record-field"><span>Type</span><b>{ticket.recordType}</b></div>
+      <div className="record-field"><span>Assigned to</span><b>{ticket.assignee || 'Unassigned'}</b></div>
+      <div className="record-field"><span>Assignment group</span><b>{ticket.assignmentGroup || 'Unassigned'}</b></div>
+      <div className="record-field"><span>Requested by</span><b>{ticket.requester || 'Not recorded'}</b></div>
+      <div className="record-field"><span>Department</span><b>{ticket.department || 'Field Services'}</b></div>
+      <div className="record-field"><span>Created</span><b>{created}</b></div>
+    </div>
+    <section className="record-section"><h3>Description</h3><p>{ticket.description || 'No description recorded.'}</p></section>
+  </div>
+}
+
+function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketItem; now: number; linkedAssetId?: string }) {
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
   return <>
-    <div className="record-status-strip">
-      <div><span>State</span><b>{ticket.status}</b></div>
-      <div><span>Priority</span><b>{ticket.severity}</b></div>
-      <div><span>Resolution SLA</span><b className={sla.breached && ticket.status !== 'Resolved' ? 'record-breached' : ''}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</b></div>
-    </div>
+    <RecordStatusStrip ticket={ticket} now={now} />
     <div className="record-form-grid">
       <div className="record-field"><span>Number</span><b>{ticket.id}</b></div>
       <div className="record-field"><span>Task type / table</span><b>{ticket.recordType} · {tableNames[ticket.recordType]}</b></div>

@@ -185,10 +185,10 @@ export function InsightCard({ kind, ...props }: CardProps & { kind: InsightKey }
 // ---------------------------------------------------------------------------------------------
 // Detail popup
 
-type Segment = { label: string; queue: QueueFilter; match: (ticket: InsightTicket) => boolean }
+export type Segment = { label: string; queue: QueueFilter; match: (ticket: InsightTicket) => boolean }
 type DetailConfig = { queue: QueueFilter; hint?: string; segmentFor?: (key: string) => Segment; whole?: Segment }
 
-const QUEUE_LABELS: Record<QueueFilter, string> = {
+export const QUEUE_LABELS: Record<QueueFilter, string> = {
   all: 'Open all tickets', active: 'Open active tickets', 'high-priority': 'Open P1 / P2 tickets', overdue: 'Open past-SLA tickets', escalated: 'Open escalated tickets',
   'escalation-due': 'Open escalation-due tickets', unassigned: 'Open unassigned tickets', waiting: 'Open waiting-on-user tickets', resolved: 'Open closed tickets',
 }
@@ -217,7 +217,8 @@ function detailConfig(kind: DetailKey, ctx: InsightContext): DetailConfig {
 
 const MAX_LISTED = 6
 
-function TicketList({ segment, ctx, onOpenTicket }: { segment: Segment; ctx: InsightContext; onOpenTicket: (id: string) => void }) {
+/** Up to six tickets of a segment, most urgent first. Also used by the Explore tickets popups. */
+export function TicketList({ segment, ctx, onOpenTicket }: { segment: Segment; ctx: InsightContext; onOpenTicket: (id: string) => void }) {
   const matches = ctx.tickets.filter(segment.match).sort((a, b) => a.severity.localeCompare(b.severity) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   return <>
     <div className="insight-detail-head"><strong>{segment.label}</strong><span>{matches.length} ticket{matches.length === 1 ? '' : 's'}</span></div>
