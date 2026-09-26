@@ -7,3 +7,10 @@
 .backup-compare div { display: grid; gap: 2px; }
 .backup-compare span { opacity: 0.8; font-size: 13px; }
 .backup-confirm .form-footer { flex-wrap: wrap; }
+
+/* Account: the workspace's team list */
+.account-team { display: grid; gap: 6px; margin: 6px 0 10px; padding: 0; list-style: none; }
+.account-team li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #dfe8eb; border-radius: 8px; background: #fbfcfc; font-size: 12px; }
+.account-team li span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.account-team li i { color: #7a8f98; font-size: 11px; font-style: normal; }
+.account-settings h4 { margin: 14px 0 4px; font-size: 13px; }

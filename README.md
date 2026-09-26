@@ -47,6 +47,17 @@ The app is hosted on Vercel, connected to this repo (Vercel project **app**, roo
 2. In Supabase: Authentication → URL Configuration. Set **Site URL** to that address and add it under **Redirect URLs**. To sign in on pull request previews too, also add `https://app-git-*-yuki-0306.vercel.app/**`.
 3. Optional, until you're ready for other people: in Supabase, turn off **Allow new users to sign up**, so only accounts that already exist can sign in (you can invite people from the Supabase dashboard).
 
+## Database and workspaces (Supabase)
+
+The database is set up by two files in `supabase/`. Run each once, in order, in Supabase: **SQL Editor → New query → paste the file → Run**. Both are safe to run again.
+
+1. `schema.sql`: the tables for tickets, deleted tickets, assets, stock and personal settings.
+2. `002_workspaces.sql`: **company workspaces**. Tickets, assets and stock belong to a workspace (a company or IT team) instead of one person, so several IT staff can share them. Existing data is kept: anyone who already has data gets a workspace called "My workspace", as its admin.
+
+Roles: an **admin** can invite people, change roles and remove members; an **agent** can work with the workspace's tickets, assets and stock. A workspace always keeps at least one admin. Access is enforced by the database's row level security, not by the app, so a member can never see another workspace's data.
+
+In the app, **Settings → Account** shows your workspace, your role and the team. Admins invite colleagues by email; they join automatically the first time they sign in with that email. Someone signing in with no workspace and no invite gets their own workspace. Screen pattern, Home layout and saved views stay personal.
+
 ## Backup and restore
 
 **Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from such a file. Restoring shows what is in the file next to what is in the browser, checks the file first (a bad file changes nothing), replaces the tickets, assets, stock and settings, and keeps the replaced data under one key so the last restore can be undone.
