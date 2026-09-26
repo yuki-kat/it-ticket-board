@@ -1,7 +1,9 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { TicketPopout } from './HomePopouts'
+import { createPortal } from 'react-dom'
+import { TicketPopout, usePopoutBehaviour } from './HomePopouts'
 import './home-insights.css'
+import './home-arrange.css'
 
 /** The parts of a ticket that the insight cards need. */
 export type InsightTicket = { id: string; title: string; status: string; severity: string; assignee: string; createdAt: string }
@@ -221,7 +223,7 @@ function TicketList({ segment, ctx, onOpenTicket }: { segment: Segment; ctx: Ins
 }
 
 /** The enlarged popup for a card: the card itself, a list of the tickets behind it, and a button to open that queue. */
-export function InsightDetail({ kind, ctx, onClose, onOpenQueue, onOpenTicket }: { kind: DetailKey; ctx: InsightContext; onClose: () => void; onOpenQueue: (filter: QueueFilter) => void; onOpenTicket: (id: string) => void }) {
+export function InsightDetail({ kind, ctx, onClose, onOpenQueue, onOpenTicket, onArrange }: { kind: DetailKey; ctx: InsightContext; onClose: () => void; onOpenQueue: (filter: QueueFilter) => void; onOpenTicket: (id: string) => void; onArrange: () => void }) {
   const [selected, setSelected] = useState<string | null>(null)
   const config = detailConfig(kind, ctx)
   const info = CARD_INFO[kind]
@@ -229,6 +231,7 @@ export function InsightDetail({ kind, ctx, onClose, onOpenQueue, onOpenTicket }:
   const queue = segment?.queue ?? config.queue
   return <TicketPopout overlayClassName="insight-detail-overlay" dialogClassName="insight-detail-dialog" eyebrow="OPERATIONS INSIGHTS" title={info.title} titleId="insight-detail-title" description={info.subtitle(ctx)} onClose={onClose}
     actions={<div className="ticket-card-popout-actions">
+      <button className="insight-detail-arrange" type="button" onClick={onArrange}>Arrange card</button>
       <button className="ticket-card-popout-cancel" type="button" onClick={onClose}>Close</button>
       <button className="ticket-card-popout-open" type="button" onClick={() => onOpenQueue(queue)}>{QUEUE_LABELS[queue]}</button>
     </div>}>
@@ -238,4 +241,84 @@ export function InsightDetail({ kind, ctx, onClose, onOpenQueue, onOpenTicket }:
     </div>
     <div className="insight-detail-tickets" aria-live="polite">{segment && <TicketList segment={segment} ctx={ctx} onOpenTicket={onOpenTicket} />}</div>
   </TicketPopout>
+}
+
+// ---------------------------------------------------------------------------------------------
+// Order of the cards, and the "Arrange card" popup
+
+export const INSIGHT_ORDER_KEY = 'ops-kanban-home-insight-order-v1'
+export type MoveDirection = 'left' | 'right' | 'up' | 'down' | 'first' | 'last'
+
+// The order is saved the way the compiled page saved it (a card's title, or its short name for the
+// four extra cards), so a browser that used the page keeps its arrangement.
+const identity = (key: InsightKey): string => (EXTRA_INSIGHT_KEYS as readonly string[]).includes(key) ? key : CARD_INFO[key].title
+
+/** The saved order of all eight cards. Unknown entries are ignored and cards missing from it go last. */
+export function loadInsightOrder(): InsightKey[] {
+  let saved: unknown = []
+  try { saved = JSON.parse(localStorage.getItem(INSIGHT_ORDER_KEY) || '[]') } catch { /* use the default order */ }
+  const byIdentity = new Map(INSIGHT_KEYS.map((key) => [identity(key), key]))
+  const order: InsightKey[] = []
+  if (Array.isArray(saved)) for (const item of saved) {
+    const key = byIdentity.get(String(item))
+    if (key && !order.includes(key)) order.push(key)
+  }
+  return [...order, ...INSIGHT_KEYS.filter((key) => !order.includes(key))]
+}
+
+export function saveInsightOrder(order: InsightKey[]) {
+  localStorage.setItem(INSIGHT_ORDER_KEY, JSON.stringify(order.map(identity)))
+}
+
+/** Which moves make sense for the card at `index` among `count` visible cards laid out in `columns` columns. */
+export function availableMoves(index: number, count: number, columns: number): Record<MoveDirection, boolean> {
+  return { left: index > 0, right: index < count - 1, up: index - columns >= 0, down: index + columns < count, first: index > 0, last: index < count - 1 }
+}
+
+/**
+ * The new order of all cards after moving `key` among the `visible` ones, or null if it cannot move.
+ * Cards that are switched off keep their place in the order for when they come back.
+ */
+export function moveInsight(order: InsightKey[], visible: InsightKey[], key: InsightKey, direction: MoveDirection, columns: number): InsightKey[] | null {
+  const index = visible.indexOf(key)
+  if (index < 0) return null
+  const target = { left: index - 1, right: index + 1, up: index - columns, down: index + columns, first: 0, last: visible.length - 1 }[direction]
+  const next = Math.max(0, Math.min(visible.length - 1, target))
+  if (next === index) return null
+  const rest = order.filter((item) => item !== key)
+  const at = rest.indexOf(visible[next])
+  rest.splice(next < index ? at : at + 1, 0, key)
+  return rest
+}
+
+const MOVE_BUTTONS: { direction: MoveDirection; content: ReactNode }[] = [
+  { direction: 'left', content: <><span>←</span> Left</> },
+  { direction: 'right', content: <>Right <span>→</span></> },
+  { direction: 'up', content: <><span>↑</span> Up</> },
+  { direction: 'down', content: <><span>↓</span> Down</> },
+  { direction: 'first', content: <><span>⇤</span> Move first</> },
+  { direction: 'last', content: <>Move last <span>⇥</span></> },
+]
+
+/** The popup that asks where a card should go (left, right, up, down, first or last). */
+export function ArrangeInsight({ kind, ctx, visible, columns, onMove, onClose }: { kind: InsightKey; ctx: InsightContext; visible: InsightKey[]; columns: number; onMove: (direction: MoveDirection) => void; onClose: () => void }) {
+  const dialog = usePopoutBehaviour(onClose)
+  const available = availableMoves(visible.indexOf(kind), visible.length, columns)
+  return createPortal(
+    <div className="insight-move-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section ref={dialog} className="insight-move-page" role="dialog" aria-modal="true" aria-labelledby="insight-move-title" tabIndex={-1}>
+        <header>
+          <div><div className="eyebrow">ARRANGE OPERATIONS INSIGHTS</div><h2 id="insight-move-title">{CARD_INFO[kind].title}</h2><p>Choose where you would like this card to move.</p></div>
+          <button className="insight-move-close" type="button" aria-label="Close" onClick={onClose}>×</button>
+        </header>
+        <div className="insight-move-preview"><InsightCard kind={kind} ctx={ctx} /></div>
+        <div className="insight-move-question">Where would you like to move this card?</div>
+        <div className="insight-move-options">
+          {MOVE_BUTTONS.map(({ direction, content }) => <button key={direction} type="button" data-move={direction} disabled={!available[direction]} onClick={() => onMove(direction)}>{content}</button>)}
+        </div>
+        <footer><button type="button" onClick={onClose}>Cancel</button></footer>
+      </section>
+    </div>,
+    document.body,
+  )
 }

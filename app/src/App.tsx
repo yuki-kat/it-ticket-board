@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Package, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import { ExploreLauncher, PopoutActions, TicketPopout } from './HomePopouts'
-import { InsightCard, InsightDetail, INSIGHT_KEYS, type DetailKey, type InsightContext } from './HomeInsights'
+import { ArrangeInsight, InsightCard, InsightDetail, loadInsightOrder, moveInsight, saveInsightOrder, type DetailKey, type InsightContext, type InsightKey } from './HomeInsights'
 import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
 import { exportCsv } from './lib/exportCsv'
@@ -822,8 +822,18 @@ function App() {
 }
 
 function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openReports, openSettings, widgets }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; searchTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets }) {
-  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'explore' } | null
+  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'arrange'; kind: InsightKey; columns: number } | { type: 'explore' } | null
   const [popup, setPopup] = useState<HomePopup>(null)
+  const [insightOrder, setInsightOrder] = useState<InsightKey[]>(loadInsightOrder)
+  useEffect(() => { saveInsightOrder(insightOrder) }, [insightOrder])
+  const chartGrid = useRef<HTMLElement>(null)
+  // How many cards sit side by side right now (two on a wide screen, one on a phone); Up and Down move by this many.
+  const measureColumns = () => {
+    const cards = Array.from(chartGrid.current?.children ?? []).filter((element) => element.classList.contains('home-chart-card'))
+    if (cards.length < 2) return 1
+    const top = cards[0].getBoundingClientRect().top
+    return Math.max(1, cards.filter((element) => Math.abs(element.getBoundingClientRect().top - top) < 8).length)
+  }
   const closePopup = () => setPopup(null)
   const open = tickets.filter((ticket) => ticket.status !== 'Resolved')
   const closed = tickets.filter((ticket) => ticket.status === 'Resolved')
@@ -866,6 +876,7 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
     showTickets: (filter) => showTickets(filter, true),
     openTicket,
   }
+  const visibleInsights = insightOrder.filter((key) => widgets[key])
   return <main className="main-content home-content">
     <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={() => setPopup({ type: 'explore' })}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
     <div className="home-section-heading"><div><span className="eyebrow">AT A GLANCE</span><h2>Ticket overview</h2></div><p>Based on the tickets saved in this browser</p></div>
@@ -874,8 +885,8 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
     </section>
     <section className="home-action-strip" aria-label="Other ticket queues"><span>NEEDS ATTENTION</span>{attentionQueues.map((item) => <button key={item.filter} onClick={() => setPopup({ type: 'attention', filter: item.filter })}>{item.icon} {item.label} <b>{item.count}</b></button>)}</section>
     <div className="home-section-heading home-insights-heading"><div><span className="eyebrow">CURRENT PICTURE</span><h2>Operations insights</h2></div><div className="home-insights-actions"><button className="home-reports-link" onClick={openSettings}><Settings2 size={15} /> Customize home</button><button className="home-reports-link" onClick={openReports}><BarChart3 size={15} /> Open reports <ArrowRight size={14} /></button></div></div>
-    <section className="home-chart-grid" aria-label="Ticket charts">
-      {INSIGHT_KEYS.filter((key) => widgets[key]).map((key) => <InsightCard key={key} kind={key} ctx={ctx} onOpen={key === 'recent' ? undefined : () => setPopup({ type: 'insight', kind: key })} />)}
+    <section className="home-chart-grid" aria-label="Ticket charts" ref={chartGrid}>
+      {visibleInsights.map((key) => <InsightCard key={key} kind={key} ctx={ctx} onOpen={key === 'recent' ? undefined : () => setPopup({ type: 'insight', kind: key })} />)}
       {!Object.values(widgets).some(Boolean) && <div className="home-charts-empty"><BarChart3 size={22} /><b>No charts selected</b><p>Choose the charts you want on Home.</p><button onClick={openSettings}>Open settings</button></div>}
     </section>
     {openKpi && <TicketPopout eyebrow="TICKET OVERVIEW" title={openKpi.label} titleId="ticket-card-popout-title" description="Current total based on the tickets stored in this workspace." onClose={closePopup}
@@ -886,7 +897,9 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
       actions={<PopoutActions onClose={closePopup} onOpen={() => openQueue(openAttention.filter)} />}>
       <div className="ticket-card-popout-preview"><div className="attention-popout-card" aria-hidden="true">{openAttention.icon} {openAttention.label} <b>{openAttention.count}</b></div></div>
     </TicketPopout>}
-    {popup?.type === 'insight' && <InsightDetail kind={popup.kind} ctx={ctx} onClose={closePopup} onOpenQueue={openQueue} onOpenTicket={(id) => { closePopup(); searchTicket(id) }} />}
+    {popup?.type === 'insight' && <InsightDetail kind={popup.kind} ctx={ctx} onClose={closePopup} onOpenQueue={openQueue} onOpenTicket={(id) => { closePopup(); searchTicket(id) }} onArrange={() => setPopup({ type: 'arrange', kind: popup.kind, columns: measureColumns() })} />}
+    {popup?.type === 'arrange' && <ArrangeInsight kind={popup.kind} ctx={ctx} visible={visibleInsights} columns={popup.columns} onClose={closePopup}
+      onMove={(direction) => { const next = moveInsight(insightOrder, visibleInsights, popup.kind, direction, popup.columns); if (next) setInsightOrder(next); closePopup() }} />}
     {popup?.type === 'explore' && <ExploreLauncher queues={exploreQueues} onClose={closePopup} />}
   </main>
 }

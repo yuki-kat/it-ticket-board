@@ -15,10 +15,10 @@ type PopoutProps = {
 }
 
 /**
- * The enlarged popup used on the Home page. Closes with the × button, a click outside the panel,
- * or Escape, and puts focus back on whatever opened it.
+ * What every popup does: move focus into it, close on Escape, and put focus back on whatever opened it.
+ * Returns the ref to attach to the dialog element.
  */
-export function TicketPopout({ eyebrow, title, titleId, description, onClose, children, actions, overlayClassName, dialogClassName }: PopoutProps) {
+export function usePopoutBehaviour(onClose: () => void) {
   const dialog = useRef<HTMLElement>(null)
   const close = useRef(onClose)
   close.current = onClose
@@ -38,6 +38,16 @@ export function TicketPopout({ eyebrow, title, titleId, description, onClose, ch
       opener?.focus()
     }
   }, [])
+
+  return dialog
+}
+
+/**
+ * The enlarged popup used on the Home page. Closes with the × button, a click outside the panel,
+ * or Escape, and puts focus back on whatever opened it.
+ */
+export function TicketPopout({ eyebrow, title, titleId, description, onClose, children, actions, overlayClassName, dialogClassName }: PopoutProps) {
+  const dialog = usePopoutBehaviour(onClose)
 
   return createPortal(
     <div className={overlayClassName ? `ticket-card-popout ${overlayClassName}` : 'ticket-card-popout'} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
