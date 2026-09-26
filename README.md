@@ -33,6 +33,20 @@ You need Node.js (version 22) and, for the tests, Google Chrome.
 4. Commit **both** the source and the rebuilt `index.html`, push, and open a pull request. GitHub rebuilds the page from the source and **fails the pull request if `index.html` is out of date**, so a forgotten rebuild can't slip through.
 5. Merge into `main` once the **Browser tests** check is green. `main` always holds a working version.
 
+## Hosting (Netlify)
+
+The app is published on Netlify's free plan straight from this private repo. `netlify.toml` tells Netlify to publish **only `index.html`**; the source, tests, `legacy/` and `supabase/` are never put online. Every merge into `main` updates the live site, and every pull request gets its own preview address.
+
+Sign-in (Settings → Account) only works on the hosted site, not on a double-clicked `index.html`, because the sign-in email has to link back to a web address.
+
+**One-time setup:**
+
+1. Sign up at [netlify.com](https://www.netlify.com) with your GitHub account (free).
+2. Add a new site by importing an existing project from GitHub, and allow Netlify access to **only** the `it-ticket-board` repo. Leave the build settings as Netlify fills them in from `netlify.toml`, and deploy.
+3. Optionally rename the site (Site configuration → Change site name) to get a nicer `<name>.netlify.app` address.
+4. In Supabase: Authentication → URL Configuration. Set **Site URL** to the Netlify address, and add it under **Redirect URLs**. To sign in on pull request previews too, also add `https://deploy-preview-*--<name>.netlify.app/**`.
+5. Optional, until you're ready for other people: in Supabase, turn off **Allow new users to sign up**, so only accounts that already exist can sign in (you can invite people from the Supabase dashboard).
+
 ## Backup and restore
 
 **Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from such a file. Restoring shows what is in the file next to what is in the browser, checks the file first (a bad file changes nothing), replaces the tickets, assets, stock and settings, and keeps the replaced data under one key so the last restore can be undone.

@@ -1,0 +1,14 @@
+# Hosting on Netlify. Only the built page is published: the source (app/), tests, legacy/ and
+# supabase/ stay private in the repo. index.html is already built and checked by the Browser tests
+# on every pull request, so Netlify just copies it rather than building it again.
+[build]
+  command = "mkdir -p site && cp index.html site/index.html"
+  publish = "site"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
