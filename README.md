@@ -34,6 +34,12 @@ You need Node.js (version 22) and, for the tests, Google Chrome.
 4. Commit **both** the source and the rebuilt `index.html`, push, and open a pull request. GitHub rebuilds the page from the source and **fails the pull request if `index.html` is out of date**, so a forgotten rebuild can't slip through.
 5. Merge into `main` once the **Browser tests** check is green. `main` always holds a working version.
 
+## Backup and restore
+
+**Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from such a file. Restoring shows what is in the file next to what is in the browser, checks the file first (a bad file changes nothing), replaces the tickets, assets, stock and settings, and keeps the replaced data under one key so the last restore can be undone.
+
+File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets, deletedTickets, assets, stock }, settings }`. `records` are the plain lists, ready to import into a database later; `settings` are the remaining saved preferences as text. The code is in `app/src/backup.ts`.
+
 ## What is in the source
 
 - **Home** (`HomePopouts.tsx`, `HomeInsights.tsx`): the Ticket overview and Needs attention cards and their popups, the Explore tickets launcher, and the Operations insights: eight cards, their Settings switches, a detail popup for each, and "Arrange card" with its saved order.

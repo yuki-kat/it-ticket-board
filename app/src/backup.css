@@ -1,0 +1,9 @@
+.backup-settings .backup-counts { font-weight: 600; margin: 6px 0 2px; }
+.backup-settings .backup-last { opacity: 0.75; font-size: 13px; }
+.backup-settings .backup-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.backup-settings .backup-problems { margin-top: 10px; }
+.backup-settings .backup-problems ul { margin: 6px 0 0; padding-left: 18px; }
+.backup-compare { display: grid; gap: 8px; margin: 12px 0; }
+.backup-compare div { display: grid; gap: 2px; }
+.backup-compare span { opacity: 0.8; font-size: 13px; }
+.backup-confirm .form-footer { flex-wrap: wrap; }
