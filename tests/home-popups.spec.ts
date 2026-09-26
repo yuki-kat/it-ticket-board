@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { attentionButton, kpiCard, numberIn, openApp } from '../helpers'
+import { attentionButton, kpiCard, numberIn, openApp } from './helpers'
 
 // Checks that only make sense for the React version of the Home popups.
 

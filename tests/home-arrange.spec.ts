@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { insightCard, insightOrder, openApp, openInsight } from '../helpers'
+import { insightCard, insightOrder, openApp, openInsight } from './helpers'
 
 // Checks for the React version of "Arrange card". The order is kept under the same key, in the same format, as the compiled page.
 
