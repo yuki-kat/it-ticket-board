@@ -25,6 +25,12 @@
 .insight-segment:hover{background:#eef6f8}
 .insight-segment:focus-visible{outline:2px solid #4d91a3;outline-offset:1px}
 .insight-segment[aria-pressed="true"]{background:#e1eff3;box-shadow:inset 3px 0 0 #2f7186}
+.insight-arc{cursor:pointer;transition:stroke-width .15s ease}
+.insight-arc:hover,.insight-arc.selected{stroke-width:28px}
+.insight-hour{fill:transparent;cursor:pointer;outline:none}
+.insight-hour:hover{fill:rgba(47,113,134,.08)}
+.insight-hour:focus-visible{fill:rgba(47,113,134,.12);stroke:#4d91a3;stroke-width:2px}
+.insight-hour[aria-pressed="true"]{fill:rgba(47,113,134,.16)}
 .insight-detail-hint{margin:8px 0 0;color:#6f8791;font-size:10px}
 .insight-detail-tickets{margin-top:16px;padding:14px 16px;border:1px solid #dce7ea;border-radius:10px;background:#fff}
 .insight-detail-tickets:empty{display:none}

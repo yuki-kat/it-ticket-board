@@ -1,0 +1,83 @@
+/* The Explore tickets page: queues | tickets | details side by side, one step at a time on a narrow screen. */
+.explore-crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #7a8f98; font-size: 12px; }
+.explore-crumbs button { padding: 0; border: 0; background: none; color: #2f7186; font: inherit; font-weight: 700; cursor: pointer; }
+.explore-crumbs button:hover { text-decoration: underline; }
+.explore-heading { margin-bottom: 20px; }
+.explore-heading p { margin-top: 6px; color: #647b85; font-size: 13px; }
+
+.explore-columns { display: grid; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
+.explore-col { min-width: 0; padding: 18px; border: 1px solid #e2e9ed; border-radius: 11px; background: #fff; box-shadow: 0 2px 8px rgb(23 52 67 / 3%); }
+.explore-col h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: #1e3d4b; font-size: 15px; }
+.explore-col h2 > span { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: #e7f2f5; color: #2f7186; font-size: 11px; }
+.explore-col h2:focus { outline: none; }
+.explore-col ul { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.explore-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.explore-col-head em { flex: none; color: #647b85; font-size: 11px; font-style: normal; }
+
+/* 1. Queues */
+.explore-queues li button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 58px; padding: 10px 12px; border: 1px solid #d8e5e8; border-radius: 9px; background: #fff; color: #365662; text-align: left; cursor: pointer; }
+.explore-queues li button:hover { border-color: #8cb6c2; background: #f3f9fa; }
+.explore-queues li button span { font-size: 12px; font-weight: 750; }
+.explore-queues li button small { display: block; margin-top: 3px; color: #6f858e; font-size: 10px; font-weight: 500; }
+.explore-queues li button b { display: grid; place-items: center; flex: none; min-width: 32px; height: 32px; border-radius: 50%; background: #edf5f7; color: #2e7085; font-size: 13px; }
+.explore-queues li button[aria-current="true"] { border-color: #264e5f; background: #264e5f; color: #fff; }
+.explore-queues li button[aria-current="true"] small { color: #d3e0e4; }
+.explore-queues li button[aria-current="true"] b { background: #fff; color: #264e5f; }
+.explore-all, .explore-open-queue { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 0; border: 0; background: none; color: #2f7186; font-size: 12px; font-weight: 700; cursor: pointer; }
+.explore-all:hover, .explore-open-queue:hover { text-decoration: underline; }
+
+/* 2. The queue's tickets */
+.explore-list ul { max-height: min(62vh, 640px); overflow-y: auto; }
+.explore-list li button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 1px solid transparent; border-radius: 8px; background: none; color: #365662; text-align: left; cursor: pointer; }
+.explore-list li button:hover { border-color: #cfe0e5; background: #f3f9fa; }
+.explore-list li button[aria-current="true"] { border-color: #9ec2cc; background: #e7f2f5; box-shadow: inset 3px 0 0 #2f7186; }
+.explore-list li i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #9aaab0; }
+.explore-list li i.p1 { background: #db6763; }
+.explore-list li i.p2 { background: #e0a64a; }
+.explore-list li i.p3 { background: #4d91a3; }
+.explore-list li span { flex: 1; min-width: 0; }
+.explore-list li b { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.explore-list li small { display: block; margin-top: 3px; color: #6f858e; font-size: 10px; }
+.explore-list li svg { flex: none; color: #9fb3ba; }
+.explore-empty, .explore-placeholder p { margin: 12px 0 0; color: #647b85; font-size: 12px; }
+.explore-placeholder h2 { color: #647b85; }
+
+/* 3. The ticket's summary */
+.explore-detail-head h2 { margin-top: 4px; font-size: 22px; }
+.explore-detail-head p { margin-top: 4px; color: #5d7580; font-size: 13px; }
+.explore-ticket-summary { margin-top: 14px; }
+.explore-ticket-summary .record-form-grid { margin-bottom: 14px; }
+.explore-ticket-summary .record-section { margin: 0; }
+.explore-detail-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+/* The "back one step" buttons are only needed when the steps are shown one at a time. */
+.explore-step-back { display: none; }
+
+/* Medium screens: queues and tickets side by side, details underneath. */
+@media (max-width: 1180px) {
+  .explore-columns { grid-template-columns: minmax(210px, 250px) minmax(0, 1fr); }
+  .explore-detail { grid-column: 1 / -1; }
+}
+
+/* Narrow screens: one step at a time. */
+@media (max-width: 900px) {
+  .explore-columns { grid-template-columns: minmax(0, 1fr); }
+  .explore-detail { grid-column: auto; }
+  .explore-page[data-step="1"] .explore-list, .explore-page[data-step="1"] .explore-detail,
+  .explore-page[data-step="2"] .explore-queues, .explore-page[data-step="2"] .explore-detail,
+  .explore-page[data-step="3"] .explore-queues, .explore-page[data-step="3"] .explore-list { display: none; }
+  .explore-step-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; padding: 8px 12px; border: 1px solid #cedde2; border-radius: 7px; background: #fff; color: #52717e; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .explore-list ul { max-height: none; overflow: visible; }
+  .explore-detail-actions .primary-button { width: 100%; }
+}
+
+/* Phones: keep the summary in columns (the full record stacks every field). */
+@media (max-width: 600px) {
+  .explore-col { padding: 14px; }
+  .explore-ticket-summary .record-status-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .explore-ticket-summary .record-status-strip > div { min-height: 0; padding: 11px 10px; border-right: 1px solid #e4ebed; border-bottom: 0; }
+  .explore-ticket-summary .record-status-strip > div:last-child { border-right: 0; }
+  .explore-ticket-summary .record-status-strip b { font-size: 12px; }
+  .explore-ticket-summary .record-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .explore-ticket-summary .record-field { min-height: 0; padding: 10px 11px; }
+}

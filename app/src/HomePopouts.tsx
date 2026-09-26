@@ -74,18 +74,3 @@ export function PopoutActions({ onClose, onOpen, openLabel = 'Open matching tick
     <button className="ticket-card-popout-open" type="button" onClick={onOpen}>{openLabel}</button>
   </div>
 }
-
-export type ExploreQueue = { key: string; label: string; hint: string; count?: number; onChoose: () => void }
-
-/** The "Explore tickets" launcher: pick a ticket queue and go straight to it. */
-export function ExploreLauncher({ queues, onClose }: { queues: ExploreQueue[]; onClose: () => void }) {
-  return <TicketPopout eyebrow="TICKET WORKSPACE" title="Choose a ticket queue" titleId="explore-queues-title" description="Open the queue that matches what you need to work on." onClose={onClose}
-    actions={<div className="ticket-card-popout-actions"><button className="ticket-card-popout-cancel" type="button" onClick={onClose}>Close</button></div>}>
-    <div className="explore-queue-grid">
-      {queues.map((queue) => <button key={queue.key} data-queue={queue.key} className={queue.key === 'all' ? 'all-tickets' : undefined} type="button" onClick={queue.onChoose}>
-        <span>{queue.label}<small>{queue.hint}</small></span>
-        <b>{queue.count ?? '→'}</b>
-      </button>)}
-    </div>
-  </TicketPopout>
-}
