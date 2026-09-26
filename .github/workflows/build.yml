@@ -1,0 +1,45 @@
+name: Build desktop app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'desktop/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch: {}
+
+defaults:
+  run:
+    working-directory: desktop
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run dist:mac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-installer
+          path: desktop/release/*.dmg
+          if-no-files-found: error
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: desktop/release/*.exe
+          if-no-files-found: error
