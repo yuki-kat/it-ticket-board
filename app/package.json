@@ -62,7 +62,6 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
-    "html-inline": "^1.2.0",
     "oxlint": "^1.81.0",
     "parcel": "^2.16.4",
     "parcel-resolver-tspaths": "^0.0.9",
