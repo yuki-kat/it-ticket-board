@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { goTo, kpiCard, openApp } from '../helpers'
+import { goTo, kpiCard, openApp } from './helpers'
 
 // Where the React source improves on the compiled page.
 

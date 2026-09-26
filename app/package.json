@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:page": "npm run build && node scripts/inlinePage.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

@@ -29,7 +29,7 @@ The installers aren't signed with a paid certificate, so each operating system a
 ## Things to know
 
 - The desktop app keeps its own saved data, separate from any browser.
-- Excel export needs internet. Everything else works offline.
+- Everything works offline, including the Excel export.
 - **Ctrl + Shift + D** shows the debug log.
 - The build uses Electron's default icon for now.
 
