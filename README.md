@@ -19,9 +19,8 @@ Add `?debug` to the end of the page address, or press **Ctrl + Shift + D**, to s
 
 ## The React source (`app/`)
 
-`app/` holds the React + TypeScript source the page was originally compiled from, recovered from the Codex workspace on 26 Sep 2026. It builds cleanly, but it is **one round behind** `index.html`. It is missing:
+`app/` holds the React + TypeScript source the page was originally compiled from, recovered from the Codex workspace on 26 Sep 2026. It builds cleanly, but it is still **behind** `index.html`. Already brought across: Inventory device health (Healthy, Monitor, At Risk, Critical) and the demo "Sync from Action1". Still missing:
 
-- the Inventory device-health column, filter and badges, and the demo "Sync from Action1";
 - keyword-based ticket routing (VPN, laptop, printer…);
 - the email reminder when a ticket has no affected-user email;
 - the add-on scripts listed above.

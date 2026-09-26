@@ -132,3 +132,46 @@
 .inventory-split-groups h3 { display:flex; justify-content:space-between; margin:0; padding:11px; border-bottom:1px solid #e8eef0; background:#f8fbfb; color:#345361; font-size:11px; }
 .inventory-split-groups h3 span { color:#8ca1a9; }
 @media (max-width:700px) { .inventory-split { grid-template-columns:1fr; }.inventory-split-pane { max-height:420px; }.inventory-split-pane + .inventory-split-pane { border-left:0; border-top:1px solid #e3ebed; }.inventory-split-options { align-items:stretch; }.inventory-split-options strong { width:100%; }.inventory-split-options label { flex:1 1 145px; align-items:flex-start; flex-direction:column; }.inventory-split-options select { width:100%; }.inventory-split-options > button { align-self:flex-end; } }
+
+/* Device health and the demo Action1 sync */
+.inventory-health-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 74px; min-height: 22px; padding: 3px 8px; border-radius: 5px; background: #edf2f4; color: #667d87; font-size: 10px; font-weight: 750; white-space: nowrap; }
+.inventory-health-badge.healthy { background: #eaf5ee; color: #458464; }
+.inventory-health-badge.monitor { background: #fff7d8; color: #8a681f; }
+.inventory-health-badge.at-risk { background: #fff0df; color: #b46b32; }
+.inventory-health-badge.critical { background: #fdebea; color: #b84e4a; }
+.device-health-legend { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; color: #7b8e97; font-size: 10px; }
+.device-health-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.device-health-legend i { width: 7px; height: 7px; border-radius: 50%; background: #76a486; }
+.device-health-legend .monitor i { background: #d0a93e; }
+.device-health-legend .at-risk i { background: #d98245; }
+.device-health-legend .critical i { background: #cf5d59; }
+.inventory-toolbar { align-items: flex-start; gap: 12px; }
+.inventory-controls { gap: 8px; }
+.inventory-controls > select, .inventory-controls > button, .inventory-controls > label, .inventory-action1-sync { min-height: 35px; margin: 0; }
+.inventory-action1-sync { display: inline-flex; align-items: center; gap: 7px; }
+.inventory-action1-sync-button { display: inline-flex; align-items: center; gap: 6px; height: 35px; padding: 0 12px; border: 1px solid #bdd2da; border-radius: 6px; background: #f2f8f9; color: #347189; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.inventory-action1-sync-button:hover:not(:disabled) { border-color: #99c1cc; background: #e9f5f8; }
+.inventory-action1-sync-button:disabled { opacity: .65; cursor: not-allowed; }
+.inventory-action1-spinner { flex: none; width: 11px; height: 11px; border: 2px solid #bdd2da; border-top-color: #347189; border-radius: 50%; }
+.inventory-action1-spinner.spinning { animation: inventory-action1-spin .7s linear infinite; }
+@keyframes inventory-action1-spin { to { transform: rotate(360deg); } }
+.inventory-action1-sync-status { color: #647b86; font-size: 10px; white-space: nowrap; }
+.inventory-action1-sync-status.error { color: #b3432b; }
+.inventory-action1-sync-status.muted { color: #8297a1; }
+.inventory-list-caption { min-height: 49px; align-items: center; }
+.inventory-table:not(.stock-table) { min-width: 1378px; table-layout: fixed; }
+.inventory-table:not(.stock-table) th, .inventory-table:not(.stock-table) td { box-sizing: border-box; padding: 11px 12px; vertical-align: middle; }
+.inventory-table:not(.stock-table) tbody tr { height: 64px; }
+.inventory-table th.inventory-col-even, .inventory-table td.inventory-col-even { width: 150px; }
+.inventory-table td.inventory-col-even { white-space: normal; }
+.inventory-table:not(.stock-table) th:nth-child(1), .inventory-table:not(.stock-table) td:nth-child(1) { width: 116px; }
+.inventory-table:not(.stock-table) th:nth-child(2), .inventory-table:not(.stock-table) td:nth-child(2) { width: 220px; }
+.inventory-table:not(.stock-table) th:nth-child(3), .inventory-table:not(.stock-table) td:nth-child(3) { width: 145px; }
+.inventory-table:not(.stock-table) th:nth-child(4), .inventory-table:not(.stock-table) td:nth-child(4) { width: 102px; }
+.inventory-table:not(.stock-table) th:nth-child(5), .inventory-table:not(.stock-table) td:nth-child(5) { width: 135px; }
+.inventory-table:not(.stock-table) th:nth-child(6), .inventory-table:not(.stock-table) td:nth-child(6) { width: 150px; padding-left: 36px; padding-right: 12px; text-align: center; }
+.inventory-table:not(.stock-table) th:nth-child(7), .inventory-table:not(.stock-table) td:nth-child(7) { width: 138px; }
+.inventory-table:not(.stock-table) th:nth-child(8), .inventory-table:not(.stock-table) td:nth-child(8) { width: 178px; }
+.inventory-table:not(.stock-table) th:nth-child(9), .inventory-table:not(.stock-table) td:nth-child(9) { width: 125px; }
+.inventory-table:not(.stock-table) th:nth-child(10), .inventory-table:not(.stock-table) td:nth-child(10) { width: 105px; text-align: center; }
+@media (max-width: 900px) { .inventory-toolbar { align-items: stretch; }.inventory-controls { justify-content: flex-start; }.device-health-legend { width: 100%; margin: 7px 0 0; flex-wrap: wrap; } }
