@@ -37,3 +37,23 @@
   .main-content > .page-heading { flex-wrap: wrap; gap: 12px; }
   .main-content > .page-heading .date-chip { order: 1; }
 }
+
+/* Tickets page, phones: the nine numbers become one row that scrolls sideways, so the ticket list
+   starts on the first screen instead of below a full screen of tiles. */
+@media (max-width: 600px) {
+  .main-content .summary-strip { display: flex; gap: 0; padding: 0; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .main-content .summary-strip::-webkit-scrollbar { display: none; }
+  .main-content .summary-strip .metric, .main-content .summary-strip .metric:last-child { flex: 0 0 128px; min-height: 64px; padding: 10px; border: 0; border-right: 1px solid #edf0ef; border-radius: 0; scroll-snap-align: start; }
+  .main-content .summary-strip .metric-icon { width: 30px; height: 30px; }
+}
+
+/* Home: the hero no longer repeats the open-ticket count the first overview card shows. */
+.home-hero { min-height: 0; padding-block: 28px; }
+.home-hero-visual { display: none; }
+
+/* Home: the four single-number insight cards are shorter; their note stays in the popup. */
+.home-chart-grid > .extended-insight-card { min-height: 0; }
+.home-chart-grid > .extended-insight-card .extended-insight-body { min-height: 0; margin-top: 14px; }
+.home-chart-grid > .extended-insight-card .extended-insight-metric strong { font-size: 32px; }
+.home-chart-grid > .extended-insight-card .extended-insight-note { display: none; }
+
