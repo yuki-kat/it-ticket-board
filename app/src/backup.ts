@@ -3,6 +3,8 @@
 // The file is JSON: the tickets, deleted tickets, assets and stock as plain lists (the part that matters, and
 // what a later import into a database will read), plus the settings. See "Backup and restore" in the README.
 
+import { SYNC_STATE_KEY, WORKSPACE_KEY } from './syncLogic'
+
 export const BACKUP_APP = 'it-ticket-board'
 export const BACKUP_FORMAT = 1
 
@@ -17,7 +19,8 @@ export const BEFORE_RESTORE_KEY = 'it-ticket-kanban-before-restore-v1'
 
 // Everything the app saves starts with one of these. Settings are found by prefix, so a setting added later is included automatically.
 const SETTINGS_PREFIXES = ['it-ticket-kanban-', 'ops-kanban-']
-const NOT_SETTINGS = new Set<string>([...Object.values(DATA_KEYS), LAST_BACKUP_KEY, BEFORE_RESTORE_KEY, 'ops-kanban-debug-v1'])
+// The sync's own state and the chosen workspace belong to this browser's connection, not to the data.
+const NOT_SETTINGS = new Set<string>([...Object.values(DATA_KEYS), LAST_BACKUP_KEY, BEFORE_RESTORE_KEY, SYNC_STATE_KEY, WORKSPACE_KEY, 'ops-kanban-debug-v1'])
 const isSetting = (key: string) => SETTINGS_PREFIXES.some((prefix) => key.startsWith(prefix)) && !NOT_SETTINGS.has(key)
 
 export type BackupRecords = { tickets: unknown[]; deletedTickets: unknown[]; assets: unknown[]; stock: unknown[] }
@@ -93,10 +96,12 @@ export function parseBackup(text: string): ParsedBackup {
 
 /**
  * Puts a backup into this browser, replacing what is there (settings too). The data being replaced is first kept
- * in one place, so the last restore can be undone. The page must be reloaded afterwards.
+ * in one place, so the last restore can be undone. If this browser syncs with a workspace, the sync is stopped
+ * first, so the restored data is not sent to the workspace. The page must be reloaded afterwards.
  */
 export function applyBackup(backup: BackupFile, storage: Storage = localStorage) {
   try { storage.setItem(BEFORE_RESTORE_KEY, JSON.stringify(createBackup(storage))) } catch { /* no room to keep it: restore anyway */ }
+  storage.removeItem(SYNC_STATE_KEY)
   const old: string[] = []
   for (let index = 0; index < storage.length; index++) { const key = storage.key(index); if (key && isSetting(key)) old.push(key) }
   old.forEach((key) => storage.removeItem(key))
@@ -105,6 +110,22 @@ export function applyBackup(backup: BackupFile, storage: Storage = localStorage)
   storage.setItem(DATA_KEYS.assets, JSON.stringify(backup.records.assets))
   storage.setItem(DATA_KEYS.stock, JSON.stringify(backup.records.stock))
   for (const [key, value] of Object.entries(backup.settings)) if (isSetting(key)) storage.setItem(key, value)
+}
+
+/** The data kept from before the last restore, or before sync started, if there is any. */
+export function previousData(storage: Storage = localStorage): BackupFile | null {
+  const text = storage.getItem(BEFORE_RESTORE_KEY)
+  if (!text) return null
+  const parsed = parseBackup(text)
+  return parsed.ok ? parsed.backup : null
+}
+
+/** Puts back the data from before the last restore or sync start. What is here now becomes the new "previous". */
+export function putBackPrevious(storage: Storage = localStorage): boolean {
+  const previous = previousData(storage)
+  if (!previous) return false
+  applyBackup(previous, storage)
+  return true
 }
 
 const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
