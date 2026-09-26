@@ -92,19 +92,35 @@ function zip(parts: { name: string; data: Uint8Array }[]): Uint8Array {
   return bytes
 }
 
-export function exportXlsx(filename: string, sheetName: string, headers: string[], rows: CsvValue[][]): void {
-  const name = (sheetName.replace(/[\\/*?:\[\]]/g, '').slice(0, 31) || 'Sheet1')
+export type XlsxSheet = { name: string; headers: string[]; rows: CsvValue[][] }
+
+function sheetXml(headers: string[], rows: CsvValue[][]): string {
   const data = [headers, ...rows]
   const sheetRows = data.map((row, index) => `<row r="${index + 1}">${row.map((value, cellIndex) => cell(value, index + 1, cellIndex)).join('')}</row>`).join('')
   const widths = headers.map((header, index) => `<col min="${index + 1}" max="${index + 1}" width="${Math.min(45, Math.max(12, header.length + 3))}" customWidth="1"/>`).join('')
   const range = `A1:${column(headers.length - 1)}${data.length}`
-  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="${range}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${widths}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="${range}"/></worksheet>`
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="${range}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${widths}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="${range}"/></worksheet>`
+}
+
+/** Downloads one .xlsx workbook with a sheet for each entry in `sheets`. */
+export function exportXlsxWorkbook(filename: string, sheets: XlsxSheet[]): void {
+  const used = new Set<string>()
+  const names = sheets.map((sheet, index) => {
+    const base = sheet.name.replace(/[\\/*?:\[\]]/g, '').slice(0, 31) || `Sheet${index + 1}`
+    let name = base
+    for (let copy = 2; used.has(name.toLowerCase()); copy++) name = `${base.slice(0, 28)} ${copy}`
+    used.add(name.toLowerCase())
+    return name
+  })
+  const overrides = sheets.map((_, index) => `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+  const sheetTags = names.map((name, index) => `<sheet name="${xml(name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`).join('')
+  const relationships = sheets.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`).join('')
   const parts = [
-    { name: '[Content_Types].xml', data: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>') },
+    { name: '[Content_Types].xml', data: encoder.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${overrides}</Types>`) },
     { name: '_rels/.rels', data: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>') },
-    { name: 'xl/workbook.xml', data: encoder.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xml(name)}" sheetId="1" r:id="rId1"/></sheets></workbook>`) },
-    { name: 'xl/_rels/workbook.xml.rels', data: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>') },
-    { name: 'xl/worksheets/sheet1.xml', data: encoder.encode(sheet) },
+    { name: 'xl/workbook.xml', data: encoder.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetTags}</sheets></workbook>`) },
+    { name: 'xl/_rels/workbook.xml.rels', data: encoder.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relationships}</Relationships>`) },
+    ...sheets.map((sheet, index) => ({ name: `xl/worksheets/sheet${index + 1}.xml`, data: encoder.encode(sheetXml(sheet.headers, sheet.rows)) })),
   ]
   const workbook = zip(parts)
   const url = URL.createObjectURL(new Blob([workbook as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
@@ -115,4 +131,8 @@ export function exportXlsx(filename: string, sheetName: string, headers: string[
   link.click()
   link.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export function exportXlsx(filename: string, sheetName: string, headers: string[], rows: CsvValue[][]): void {
+  exportXlsxWorkbook(filename, [{ name: sheetName, headers, rows }])
 }

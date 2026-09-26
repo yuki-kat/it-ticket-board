@@ -55,8 +55,8 @@ test.describe('Inventory device health', () => {
   })
 
   // Known bug in the compiled index.html: its saved data still says "Needs attention" / "Offline",
-  // so these filters find nothing. It is fixed in the React source (app/), and this test will
-  // be switched on when index.html is built from app/.
+  // so these filters find nothing. It is fixed in the React source (app/) and tested there in
+  // tests/source/inventory.spec.ts. Switch this one on when index.html is built from app/.
   test.fixme('filtering by At Risk lists the At Risk devices', async ({ page }) => {
     const atRisk = await page.locator('.inventory-health-badge', { hasText: 'At Risk' }).count()
     expect(atRisk).toBeGreaterThan(0)

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Box, Check, Clock3, Link2, Package, Pencil, Plus, RotateCcw, Search, ShieldAlert, Star, Trash2, Wrench, X } from 'lucide-react'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
-import { exportCsv } from './lib/exportCsv'
-import { exportXlsx } from './lib/exportXlsx'
+import { exportCsv, type CsvValue } from './lib/exportCsv'
+import { exportXlsx, exportXlsxWorkbook } from './lib/exportXlsx'
 
 export type AssetStatus = 'Available' | 'Assigned' | 'In Repair' | 'Retired' | 'Lost'
 export type DeviceHealth = 'Healthy' | 'At Risk' | 'Critical'
@@ -92,6 +92,26 @@ export function normalizeHealth(value: unknown): DeviceHealth {
   if (value === 'At Risk' || value === 'Needs attention') return 'At Risk'
   if (value === 'Critical' || value === 'Offline') return 'Critical'
   return 'Healthy'
+}
+// A device is "warranty soon" when its warranty ends within the next 60 days.
+export const isWarrantySoon = (asset: AssetItem) => asset.status !== 'Retired' && asset.status !== 'Lost' && !!asset.warrantyEnd && asset.warrantyEnd >= new Date().toISOString().slice(0, 10) && new Date(asset.warrantyEnd).getTime() - Date.now() <= 60 * 86_400_000
+export const assetHealthLevel = (asset: AssetItem): HealthLevel => asset.health === 'Healthy' && isWarrantySoon(asset) ? 'Monitor' : asset.health
+
+export const ASSET_EXPORT_HEADERS = ['Asset ID', 'Item', 'Category', 'Status', 'Assigned to', 'Department', 'Location', 'Manufacturer', 'Model', 'Serial number', 'Condition', 'Device health', 'Assigned date', 'Expected return', 'Purchase date', 'Warranty ends', 'Tags', 'Linked tickets', 'Notes']
+export const STOCK_EXPORT_HEADERS = ['Stock ID', 'Item', 'Category', 'On hand', 'Minimum', 'Stock level', 'Location', 'Tags', 'Last updated']
+export const assetExportRows = (assets: AssetItem[], tickets: TicketReference[]): CsvValue[][] => assets.map((asset) => [asset.id, asset.name, asset.category, asset.status, asset.assignedTo, asset.department, asset.location, asset.manufacturer, asset.model, asset.serial, asset.condition, assetHealthLevel(asset), asset.assignedAt, asset.expectedReturnAt, asset.purchaseDate, asset.warrantyEnd, (asset.tags || []).join('; '), [...new Set([...asset.linkedTicketIds, ...tickets.filter((ticket) => ticket.assetId === asset.id).map((ticket) => ticket.id)])].join('; '), asset.notes])
+export const stockExportRows = (stock: StockItem[]): CsvValue[][] => stock.map((item) => [item.sku, item.name, item.category, item.quantity, item.minimum, item.quantity === 0 ? 'Out of stock' : item.quantity <= item.minimum ? 'Low stock' : 'In stock', item.location, (item.tags || []).join('; '), item.updatedAt])
+
+/** Exports every asset and every stock item (not just the filtered ones): two CSV files, or one Excel workbook with an Assets and a Stock sheet. */
+export function exportAllInventory(format: 'csv' | 'xlsx', assets: AssetItem[], stock: StockItem[], tickets: TicketReference[]) {
+  const date = new Date().toISOString().slice(0, 10)
+  const assetRows = assetExportRows(assets, tickets)
+  const stockRows = stockExportRows(stock)
+  if (format === 'xlsx') exportXlsxWorkbook(`inventory-${date}.xlsx`, [{ name: 'Assets', headers: ASSET_EXPORT_HEADERS, rows: assetRows }, { name: 'Stock', headers: STOCK_EXPORT_HEADERS, rows: stockRows }])
+  else {
+    exportCsv(`inventory-assets-${date}.csv`, ASSET_EXPORT_HEADERS, assetRows)
+    exportCsv(`inventory-stock-${date}.csv`, STOCK_EXPORT_HEADERS, stockRows)
+  }
 }
 // Demo only: simulates an Action1 device-health lookup. There is no live Action1 connection.
 function mockAction1HealthCheck(items: AssetItem[]): Promise<{ serial: string; health: DeviceHealth }[]> {
@@ -215,9 +235,9 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   const selected = assets.find((asset) => asset.id === selectedId)
   const stockSelected = stock.find((item) => item.sku === selectedSku)
   const today = new Date().toISOString().slice(0, 10)
-  const warrantySoon = (asset: AssetItem) => asset.status !== 'Retired' && asset.status !== 'Lost' && !!asset.warrantyEnd && asset.warrantyEnd >= today && new Date(asset.warrantyEnd).getTime() - Date.now() <= 60 * 86_400_000
+  const warrantySoon = isWarrantySoon
   // A healthy device whose warranty ends within 60 days is shown as Monitor.
-  const healthLevel = (asset: AssetItem): HealthLevel => asset.health === 'Healthy' && warrantySoon(asset) ? 'Monitor' : asset.health
+  const healthLevel = assetHealthLevel
   const healthBadge = (asset: AssetItem) => { const level = healthLevel(asset); return <span className={'inventory-health-badge ' + healthClass(level)} title={healthDescriptions[level]}>{level}</span> }
   const counts = { available: assets.filter((asset) => asset.status === 'Available').length, assigned: assets.filter((asset) => asset.status === 'Assigned').length, repair: assets.filter((asset) => asset.status === 'In Repair').length, warranty: assets.filter(warrantySoon).length, low: stock.filter((item) => item.quantity <= item.minimum).length }
   const assetCategories = useMemo(() => [...new Set(assets.map((asset) => asset.category))].sort(), [assets])
@@ -233,13 +253,14 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   const exportCurrentInventory = (format: 'csv' | 'xlsx') => {
     const date = new Date().toISOString().slice(0, 10)
     if (tab === 'assets') {
-      const rows = (viewMode === 'attention' ? filteredAssets.filter((asset) => asset.status === 'In Repair' || asset.status === 'Lost' || warrantySoon(asset)) : filteredAssets).map((asset) => [asset.id, asset.name, asset.category, asset.status, asset.assignedTo, asset.department, asset.location, asset.manufacturer, asset.model, asset.serial, asset.condition, healthLevel(asset), asset.assignedAt, asset.expectedReturnAt, asset.purchaseDate, asset.warrantyEnd, (asset.tags || []).join('; '), [...new Set([...asset.linkedTicketIds, ...tickets.filter((ticket) => ticket.assetId === asset.id).map((ticket) => ticket.id)])].join('; '), asset.notes])
-      const headers = ['Asset ID', 'Item', 'Category', 'Status', 'Assigned to', 'Department', 'Location', 'Manufacturer', 'Model', 'Serial number', 'Condition', 'Device health', 'Assigned date', 'Expected return', 'Purchase date', 'Warranty ends', 'Tags', 'Linked tickets', 'Notes']
+      const visible = viewMode === 'attention' ? filteredAssets.filter((asset) => asset.status === 'In Repair' || asset.status === 'Lost' || warrantySoon(asset)) : filteredAssets
+      const rows = assetExportRows(visible, tickets)
+      const headers = ASSET_EXPORT_HEADERS
       if (format === 'xlsx') exportXlsx(`inventory-assets-${date}.xlsx`, 'Assets', headers, rows)
       else exportCsv(`inventory-assets-${date}.csv`, headers, rows)
     } else {
-      const rows = filteredStock.map((item) => [item.sku, item.name, item.category, item.quantity, item.minimum, item.quantity === 0 ? 'Out of stock' : item.quantity <= item.minimum ? 'Low stock' : 'In stock', item.location, (item.tags || []).join('; '), item.updatedAt])
-      const headers = ['Stock ID', 'Item', 'Category', 'On hand', 'Minimum', 'Stock level', 'Location', 'Tags', 'Last updated']
+      const rows = stockExportRows(filteredStock)
+      const headers = STOCK_EXPORT_HEADERS
       if (format === 'xlsx') exportXlsx(`inventory-stock-${date}.xlsx`, 'Stock', headers, rows)
       else exportCsv(`inventory-stock-${date}.csv`, headers, rows)
     }
