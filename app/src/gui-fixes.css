@@ -57,3 +57,16 @@
 .home-chart-grid > .extended-insight-card .extended-insight-metric strong { font-size: 32px; }
 .home-chart-grid > .extended-insight-card .extended-insight-note { display: none; }
 
+
+/* New task form. With plain 1fr columns a long option in "Linked asset" made the grid wider than the panel,
+   so the panel scrolled sideways and cut fields off; these columns can shrink. Labels and their "*" or
+   "Optional" also stay on one line instead of stacking. */
+.form-panel .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 650px) { .form-panel .form-grid { grid-template-columns: minmax(0, 1fr); } }
+.form-panel .field { display: block; min-width: 0; }
+.form-panel .field input, .form-panel .field select, .form-panel .field textarea { display: block; width: 100%; min-width: 0; margin-top: 6px; }
+.form-panel .field .field-hint { display: block; margin-top: 5px; }
+
+/* Side panels: the round × in the screen corner closes them and stays in view while scrolling, so the
+   panel's own ×, which it sat on top of, is hidden. */
+.form-overlay .panel-header .close-button, .ticket-record-panel .record-header-actions .close-button { display: none; }
