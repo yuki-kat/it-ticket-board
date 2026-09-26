@@ -57,6 +57,28 @@ test.describe('Operations insights', () => {
     for (const meta of await page.locator('.insight-detail-tickets li small').allInnerTexts()) expect(meta).toContain('P2')
   })
 
+  test('a donut arc selects the same priority as its legend row', async ({ page }) => {
+    await openInsight(page, 'Open tickets by priority')
+    const arc = page.locator('.insight-arc').first()
+    const priority = await arc.getAttribute('data-priority')
+    // The arc is a stroked ring, so its bounding-box centre is the hole: dispatch the click on it directly.
+    await arc.dispatchEvent('click')
+    await expect(page.locator('.insight-segment', { hasText: priority! })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.insight-detail-head strong')).toHaveText(`${priority} open tickets`)
+  })
+
+  test('an intake hour lists its tickets, and selecting it again shows all 24 hours', async ({ page }) => {
+    await openInsight(page, 'Ticket intake')
+    const hour = page.locator('.insight-hour').first()
+    const expected = Number((await hour.getAttribute('aria-label'))!.match(/, (\d+) ticket/)![1])
+    await hour.click()
+    await expect(hour).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.insight-detail-head strong')).toHaveText(/^Created /)
+    await expect(page.locator('.insight-detail-head span')).toHaveText(`${expected} ticket${expected === 1 ? '' : 's'}`)
+    await hour.click()
+    await expect(page.locator('.insight-detail-head strong')).toHaveText('Created in the last 24 hours')
+  })
+
   test('a segment can be chosen with the keyboard', async ({ page }) => {
     await openInsight(page, 'Tickets by state')
     const row = page.locator('.insight-segment', { hasText: 'Escalated' })

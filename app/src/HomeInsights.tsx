@@ -94,7 +94,8 @@ function PriorityCard({ ctx, onOpen, segments }: CardProps) {
       <div className="home-donut">
         <svg viewBox="0 0 180 180" role="img" aria-label={`Open ticket priorities: ${data.map((item) => `${item.priority} ${item.count}`).join(', ')}`}>
           <circle cx="90" cy="90" r="65" fill="none" stroke="#e9eef1" strokeWidth="22" />
-          {rings.filter((ring) => ring.count).map((ring) => <circle key={ring.priority} cx="90" cy="90" r="65" fill="none" stroke={ring.color} strokeWidth="22" strokeDasharray={`${ring.length} ${circumference - ring.length}`} strokeDashoffset={-ring.offset} transform="rotate(-90 90 90)" />)}
+          {/* In the popup the arcs can be clicked too; the legend rows beside them are the keyboard route. */}
+          {rings.filter((ring) => ring.count).map((ring) => <circle key={ring.priority} className={segments ? 'insight-arc' + (segments.selected === ring.priority ? ' selected' : '') : undefined} data-priority={ring.priority} onClick={segments ? () => segments.onSelect(ring.priority) : undefined} cx="90" cy="90" r="65" fill="none" stroke={ring.color} strokeWidth="22" strokeDasharray={`${ring.length} ${circumference - ring.length}`} strokeDashoffset={-ring.offset} transform="rotate(-90 90 90)" />)}
         </svg>
         <div><strong>{open.length}</strong><span>open</span></div>
       </div>
@@ -104,19 +105,22 @@ function PriorityCard({ ctx, onOpen, segments }: CardProps) {
   </article>
 }
 
-function IntakeCard({ ctx, onOpen }: CardProps) {
-  const hourStart = new Date(ctx.now)
+/** The start of each of the last 24 hours, oldest first. Shared by the intake chart and its popup. */
+function intakeHours(now: number) {
+  const hourStart = new Date(now)
   hourStart.setMinutes(0, 0, 0)
   hourStart.setHours(hourStart.getHours() - 23)
-  const buckets = Array.from({ length: 24 }, (_, index) => {
-    const start = hourStart.getTime() + index * 60 * 60_000
-    return { start, count: ctx.tickets.filter((ticket) => { const created = new Date(ticket.createdAt).getTime(); return created >= start && created < start + 60 * 60_000 }).length }
-  })
+  return Array.from({ length: 24 }, (_, index) => hourStart.getTime() + index * 60 * 60_000)
+}
+const inHour = (ticket: InsightTicket, start: number) => { const created = new Date(ticket.createdAt).getTime(); return created >= start && created < start + 60 * 60_000 }
+const hourLabel = (value: number) => new Intl.DateTimeFormat('en', { hour: 'numeric' }).format(new Date(value))
+
+function IntakeCard({ ctx, onOpen, segments }: CardProps) {
+  const buckets = intakeHours(ctx.now).map((start) => ({ start, count: ctx.tickets.filter((ticket) => inHour(ticket, start)).length }))
   const max = Math.max(1, ...buckets.map((bucket) => bucket.count))
   const points = buckets.map((bucket, index) => ({ x: 34 + index * 26, y: 174 - bucket.count / max * 125 }))
   const line = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ')
   const area = `${line} L ${points.at(-1)?.x || 632} 174 L 34 174 Z`
-  const hourLabel = (value: number) => new Intl.DateTimeFormat('en', { hour: 'numeric' }).format(new Date(value))
   return <article className="home-chart-card home-trend-card">
     <CardHeading kind="intake" ctx={ctx} badge="24 HOURS" />
     <div className="home-trend-chart">
@@ -125,6 +129,8 @@ function IntakeCard({ ctx, onOpen }: CardProps) {
         <path d={area} fill="#e7f2f5" />
         <path d={line} fill="none" stroke="#2f7186" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((point, index) => buckets[index].count > 0 && <circle key={index} cx={point.x} cy={point.y} r="3.5" fill="#2f7186" stroke="white" strokeWidth="2" />)}
+        {/* In the popup, each hour that has tickets is a column that lists them. */}
+        {segments && buckets.map((bucket, index) => bucket.count > 0 && <rect key={bucket.start} className="insight-hour" x={points[index].x - 13} y="40" width="26" height="134" rx="4" {...segmentAttributes(segments, String(bucket.start), `${hourLabel(bucket.start)}, ${bucket.count} ticket${bucket.count === 1 ? '' : 's'}`)} />)}
         <text x="5" y="53">{max}</text><text x="12" y="178">0</text><text x="34" y="199">{hourLabel(buckets[0].start)}</text><text x="315" y="199">{hourLabel(buckets[11].start)}</text><text x="607" y="199">Now</text>
       </svg>
     </div>
@@ -197,7 +203,11 @@ function detailConfig(kind: DetailKey, ctx: InsightContext): DetailConfig {
       queue: 'active', hint: 'Select a priority to list its open tickets.',
       segmentFor: (priority) => ({ label: `${priority} open tickets`, queue: /^P[12]$/.test(priority) ? 'high-priority' : 'active', match: (ticket) => isOpen(ticket) && ticket.severity.startsWith(priority) }),
     }
-    case 'intake': return { queue: 'all', whole: { label: 'Created in the last 24 hours', queue: 'all', match: (ticket) => ctx.now - new Date(ticket.createdAt).getTime() <= 864e5 } }
+    case 'intake': return {
+      queue: 'all', hint: 'Select an hour to list its tickets. Select it again to show all 24 hours.',
+      whole: { label: 'Created in the last 24 hours', queue: 'all', match: (ticket) => ctx.now - new Date(ticket.createdAt).getTime() <= 864e5 },
+      segmentFor: (start) => ({ label: `Created ${hourLabel(Number(start))} – ${hourLabel(Number(start) + 60 * 60_000)}`, queue: 'all', match: (ticket) => inHour(ticket, Number(start)) }),
+    }
     case 'sla': return { queue: 'overdue', whole: { label: 'Past resolution SLA', queue: 'overdue', match: (ticket) => ctx.breachedIds.has(ticket.id) } }
     case 'escalation': return { queue: 'escalated', whole: { label: 'Escalated open tickets', queue: 'escalated', match: (ticket) => isOpen(ticket) && ticket.status === 'Escalated' } }
     case 'assignment': return { queue: 'unassigned', whole: { label: 'Unassigned open tickets', queue: 'unassigned', match: (ticket) => isOpen(ticket) && !ticket.assignee.trim() } }
@@ -227,8 +237,10 @@ export function InsightDetail({ kind, ctx, onClose, onOpenQueue, onOpenTicket, o
   const [selected, setSelected] = useState<string | null>(null)
   const config = detailConfig(kind, ctx)
   const info = CARD_INFO[kind]
-  const segment = config.segmentFor ? (selected ? config.segmentFor(selected) : undefined) : config.whole
+  const segment = selected && config.segmentFor ? config.segmentFor(selected) : config.whole
   const queue = segment?.queue ?? config.queue
+  // A card with a whole-card list (intake) goes back to it when the selected segment is picked again.
+  const select = (key: string) => setSelected((current) => current === key && config.whole ? null : key)
   return <TicketPopout overlayClassName="insight-detail-overlay" dialogClassName="insight-detail-dialog" eyebrow="OPERATIONS INSIGHTS" title={info.title} titleId="insight-detail-title" description={info.subtitle(ctx)} onClose={onClose}
     actions={<div className="ticket-card-popout-actions">
       <button className="insight-detail-arrange" type="button" onClick={onArrange}>Arrange card</button>
@@ -236,7 +248,7 @@ export function InsightDetail({ kind, ctx, onClose, onOpenQueue, onOpenTicket, o
       <button className="ticket-card-popout-open" type="button" onClick={() => onOpenQueue(queue)}>{QUEUE_LABELS[queue]}</button>
     </div>}>
     <div className="ticket-card-popout-preview insight-detail-preview">
-      <InsightCard kind={kind} ctx={ctx} segments={config.segmentFor ? { selected, onSelect: setSelected } : undefined} />
+      <InsightCard kind={kind} ctx={ctx} segments={config.segmentFor ? { selected, onSelect: select } : undefined} />
       {config.hint && <p className="insight-detail-hint">{config.hint}</p>}
     </div>
     <div className="insight-detail-tickets" aria-live="polite">{segment && <TicketList segment={segment} ctx={ctx} onOpenTicket={onOpenTicket} />}</div>
