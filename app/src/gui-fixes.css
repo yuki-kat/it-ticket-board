@@ -1,0 +1,39 @@
+/* Layout fixes loaded after every other stylesheet, so they win over the older rules they correct. */
+
+/* Previous / next page arrows: a small pair in the bottom-right corner instead of two buttons at
+   mid-height on both edges, where they covered cards, filters and the table. */
+.quick-page-nav { inset: auto calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) auto; gap: 8px; padding: 0; transform: none; }
+.quick-page-nav button { width: 40px; height: 40px; }
+@media (max-width: 600px) { .quick-page-nav { gap: 6px; }.quick-page-nav button { width: 38px; height: 38px; } }
+
+/* Ticket list columns. The checkbox column is the first column, so every width below is one
+   column further along than in the older rules (which gave "Number" the description's width). */
+.task-table { min-width: 1275px; }
+.task-table th:nth-child(1) { width: 38px; }
+.task-table th:nth-child(2) { width: 122px; }
+.task-table th:nth-child(3) { width: 250px; }
+.task-table th:nth-child(4) { width: 150px; }
+.task-table th:nth-child(5) { width: 160px; }
+.task-table th:nth-child(6) { width: 130px; }
+.task-table th:nth-child(7) { width: 80px; }
+.task-table th:nth-child(8) { width: 125px; }
+.task-table th:nth-child(9) { width: 110px; }
+.task-table th:nth-child(10) { width: 110px; }
+
+/* The date chip on the Tickets page stays on one line. */
+.date-chip { white-space: nowrap; }
+
+/* Header button labels are wrapped in a span; an old rule enlarges any span inside .primary-button. */
+.topbar .topbar-label { font-size: inherit; line-height: inherit; font-weight: inherit; }
+
+/* Phones: the header buttons show just their icons so Settings, Tools and New task fit on one row. */
+@media (max-width: 600px) {
+  .topbar .topbar-label { display: none; }
+  .top-actions { gap: 6px; flex-wrap: nowrap; }
+  .top-actions > button, .header-tools-trigger { width: 36px; min-width: 36px; height: 36px; padding: 0; gap: 0; justify-content: center; }
+  .header-tools-trigger svg:last-child { display: none; }
+  .topbar .primary-button { width: 36px; min-width: 36px; padding: 0; }
+  /* The Tickets heading: the date chip moves under the title instead of running off the edge. */
+  .main-content > .page-heading { flex-wrap: wrap; gap: 12px; }
+  .main-content > .page-heading .date-chip { order: 1; }
+}

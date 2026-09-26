@@ -744,9 +744,9 @@ function App() {
       <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
-        <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> Settings</button>
+        <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> <span className="topbar-label">Settings</span></button>
         <div className="header-tools" ref={toolsMenuRef}>
-          <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu"><Menu size={16} /> Tools <ChevronDown size={13} /></button>
+          <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu" aria-label="Tools"><Menu size={16} /> <span className="topbar-label">Tools</span> <ChevronDown size={13} /></button>
           {showToolsMenu && <div className="header-tools-menu" id="header-tools-menu" aria-label="Tools">
             <span className="header-tools-heading">INVENTORY</span>
             <button type="button" onClick={() => runInventoryCommand('add-asset')}><Plus size={16} /><span>Add asset<small>Create a tracked device record</small></span></button>
@@ -770,7 +770,8 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowModel(true) }}><Layers size={16} /><span>Task model<small>How the mock workflow is structured</small></span></button>
           </div>}
         </div>
-        {page === 'inventory' ? <button type="button" className="primary-button" onClick={() => runInventoryCommand('add-asset')} aria-label="Add asset"><Plus size={16} /> Add asset</button> : <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> New task</button>}
+        {/* Inventory has its own Add asset / Add stock item button beside its heading. */}
+        {page !== 'inventory' && <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> <span className="topbar-label">New task</span></button>}
       </div>
     </header>
     <QuickPageNav page={page} onChange={goToPage} />
@@ -1419,7 +1420,7 @@ function ListView({ tickets, now, openTicket, toggleStar, selectedIds, onSelecti
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
         <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button></div></td>
-        <td><a className="list-title list-title-link" href={`#ticket=${encodeURIComponent(ticket.id)}`} target="_blank" rel="noopener noreferrer" title={`Open ${ticket.id} in a new tab`}>{ticket.title}</a><span className="list-type">{ticket.recordType} · {tableNames[ticket.recordType]}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
+        <td><a className="list-title list-title-link" href={`#ticket=${encodeURIComponent(ticket.id)}`} target="_blank" rel="noopener noreferrer" title={`Open ${ticket.id} in a new tab`}>{ticket.title}</a><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>
         <td>{ticket.assignee || 'Unassigned'}</td>
