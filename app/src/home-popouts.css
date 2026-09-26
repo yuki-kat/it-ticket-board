@@ -1,0 +1,38 @@
+/* Popups on the Home page: the Ticket overview cards, the Needs attention strip and the
+   Explore tickets launcher. Taken from the add-on styles in index.html. */
+.home-kpi-grid .home-kpi{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.home-kpi-grid .home-kpi:hover{transform:translateY(-3px);border-color:#9ec2cc;box-shadow:0 10px 26px rgb(34 77 93 / 14%)}
+.ticket-card-popout{position:fixed;z-index:540;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgb(15 31 39 / 72%);backdrop-filter:blur(3px)}
+.ticket-card-popout-dialog{position:relative;width:min(540px,92vw);padding:30px;border:1px solid #d3e1e5;border-radius:15px;background:#f8faf9;color:#294754;box-shadow:0 28px 85px rgb(0 0 0 / 38%);animation:ticket-card-pop .2s ease-out}
+@keyframes ticket-card-pop {
+  from { opacity: 0; transform: scale(.9) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.ticket-card-popout-close{position:absolute;top:16px;right:16px;width:35px;height:35px;border:1px solid #d1e0e4;border-radius:50%;background:#fff;color:#355e6d;font-size:22px;cursor:pointer}
+.ticket-card-popout-dialog>.eyebrow{margin-right:45px}
+.ticket-card-popout-dialog h2{margin:6px 45px 5px 0;font-size:24px}
+.ticket-card-popout-dialog>p{margin:0 0 20px;color:#748a94;font-size:11px}
+.ticket-card-popout-preview .home-kpi{width:100%;min-height:190px;padding:22px;text-align:left;pointer-events:none;transform:none!important;box-shadow:0 7px 25px rgb(34 77 93 / 10%)}
+.ticket-card-popout-preview .home-kpi strong{font-size:42px}
+.ticket-card-popout-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.ticket-card-popout-actions button{min-height:37px;padding:0 16px;border-radius:7px;font-size:11px;font-weight:750;cursor:pointer}
+.ticket-card-popout-cancel{border:1px solid #cedde2;background:#fff;color:#52717e}
+.ticket-card-popout-open{border:0;background:#264e5f;color:#fff}
+.home-action-strip button{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.home-action-strip button:hover{transform:translateY(-2px);border-color:#9ec2cc;box-shadow:0 7px 18px rgb(34 77 93 / 12%)}
+.ticket-card-popout-preview .attention-popout-card{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:112px;padding:22px;border:1px solid #dce7ea;border-radius:10px;background:#fff;color:#365662;box-shadow:0 7px 25px rgb(34 77 93 / 10%);font-size:14px;font-weight:750}
+.ticket-card-popout-preview .attention-popout-card b{display:grid;place-items:center;min-width:50px;height:50px;border-radius:50%;background:#eef6f8;color:#2e7085;font-size:23px}
+.explore-queue-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:18px}
+.explore-queue-grid button{display:flex;align-items:center;justify-content:space-between;min-height:64px;padding:12px 14px;border:1px solid #d8e5e8;border-radius:9px;background:#fff;color:#365662;text-align:left;cursor:pointer}
+.explore-queue-grid button:hover{border-color:#8cb6c2;background:#eff8fa}
+.explore-queue-grid button span{font-size:11px;font-weight:750}
+.explore-queue-grid button small{display:block;margin-top:3px;color:#84969e;font-size:9px;font-weight:500}
+.explore-queue-grid button b{display:grid;place-items:center;min-width:34px;height:34px;border-radius:50%;background:#edf5f7;color:#2e7085;font-size:14px}
+.explore-queue-grid .all-tickets{grid-column:1/-1;background:#294f60;color:#fff;border-color:#294f60}
+.explore-queue-grid .all-tickets small{color:#c9d8dd}
+.explore-queue-grid .all-tickets b{background:#fff;color:#294f60}
+@media (max-width: 520px) {
+  .explore-queue-grid { grid-template-columns: 1fr; }
+  .explore-queue-grid .all-tickets { grid-column: auto; }
+}
+.ticket-card-popout-dialog:focus { outline: none; }
