@@ -130,4 +130,3 @@ export async function readBackupFile(file: File): Promise<ParsedBackup> {
 }
 
 export const lastBackupTime = (storage: Storage = localStorage): string => storage.getItem(LAST_BACKUP_KEY) || ''
-export const undoBackupText = (storage: Storage = localStorage): string => storage.getItem(BEFORE_RESTORE_KEY) || ''
