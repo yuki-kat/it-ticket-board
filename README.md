@@ -15,7 +15,6 @@ Double-click `index.html`. It runs in any modern browser, with no install and no
 - **`app/`** is the source: React + TypeScript, built with Vite. This is where every change is made.
 - **`index.html`** is **built from `app/`** into one self-contained file. Do not edit it by hand; it says so at the top. Since 26 Sep 2026 it is no longer a compiled bundle with add-on scripts, which is what used to cause stacked, hard-to-find bugs.
 - **`tests/`** are browser tests that open `index.html` exactly as it ships.
-- **`desktop/`** wraps the same page as a Windows / Mac app (see `desktop/README.md`).
 - **`legacy/`** holds a copy of the old compiled page, so you can compare the two. Delete it once you are happy with the new one.
 
 ## Making changes
