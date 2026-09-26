@@ -1,0 +1,4 @@
+node_modules/
+release/
+# Copied from ../index.html at build time by scripts/copyApp.js
+app/

@@ -1,0 +1,52 @@
+{
+  "name": "it-ticket-board",
+  "productName": "IT Ticket Board",
+  "version": "1.0.0",
+  "description": "IT service desk ticket board and asset inventory, packaged as a desktop app.",
+  "author": "Yuki Katayama",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "copy-app": "node scripts/copyApp.js",
+    "start": "npm run copy-app && electron .",
+    "dist:mac": "npm run copy-app && electron-builder --mac --publish=never",
+    "dist:win": "npm run copy-app && electron-builder --win --publish=never",
+    "dist": "npm run copy-app && electron-builder --mac --win --publish=never"
+  },
+  "devDependencies": {
+    "electron": "^39.8.10",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.yukikatayama.itticketboard",
+    "productName": "IT Ticket Board",
+    "afterPack": "scripts/afterPackSign.js",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "app/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "category": "public.app-category.business",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
