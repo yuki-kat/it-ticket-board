@@ -3557,3 +3557,8 @@ textarea:focus-visible {
 
 .report-overlay, .settings-overlay { z-index: 100; align-items: center; justify-content: center; background: rgb(15 31 39 / 72%); }
 .report-overlay > .report-panel, .settings-overlay > .settings-panel { position: relative; z-index: 1; flex: 0 1 auto; opacity: 1; visibility: visible; }
+
+/* Export CSV button in the Tickets toolbar */
+.export-csv-button { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 6px; height: 35px; margin-bottom: 3px; padding: 0 10px; border: 1px solid #c7dce3; border-radius: 6px; background: #f3f9fb; color: #347187; font-size: 10px; font-weight: 750; white-space: nowrap; cursor: pointer; }
+.export-csv-button:hover { border-color: #99c1cc; background: #e9f5f8; }
+.ticket-browser-tabs .export-csv-button { align-self: flex-end; }

@@ -19,14 +19,16 @@ Add `?debug` to the end of the page address, or press **Ctrl + Shift + D**, to s
 
 ## The React source (`app/`)
 
-`app/` holds the React + TypeScript source the page was originally compiled from, recovered from the Codex workspace on 26 Sep 2026. It builds cleanly and, apart from the add-on scripts, it now does everything `index.html` does:
+`app/` holds the React + TypeScript source the page was originally compiled from, recovered from the Codex workspace on 26 Sep 2026. It builds cleanly and now does **everything `index.html` does**. The source has taken over these from the add-on scripts in `index.html`:
 
-- **Brought across from the page:** Inventory device health (Healthy, Monitor, At Risk, Critical) with the demo "Sync from Action1", the Export CSV button on the Tickets page, the "All assets and stock" export from the Tools menu (CSV, or one Excel workbook with two sheets), the Home popups (Ticket overview cards, Needs attention, and the Explore tickets launcher, in `app/src/HomePopouts.tsx`), and the Operations insights: all eight cards, the four extra ones (SLA health, Escalation workload, Assignment coverage, Resolution rate) with their Settings switches, the detail popup, and moving the cards around with "Arrange card" and its saved order (all in `app/src/HomeInsights.tsx`).
+- **Inventory:** device health (Healthy, Monitor, At Risk, Critical) with the demo "Sync from Action1", and the exports (the Export CSV button on the Tickets page, and "All assets and stock" as CSV or a two-sheet Excel workbook).
+- **Home:** the Ticket overview, Needs attention and Explore tickets popups (`app/src/HomePopouts.tsx`), and the Operations insights: all eight cards, their Settings switches, the detail popup, and "Arrange card" with its saved order (`app/src/HomeInsights.tsx`).
+- **Around the edges:** the previous/next page arrows (`QuickPageNav.tsx`), the styled Settings button in the header, the round × in the corner and Escape to close every dialog (`Overlay.tsx`), the "All Views" picker (`ViewPicker.tsx`), the screen pattern choices in Settings (`screenPattern.ts`), and the debug log (`debug.ts`, `DebugPanel.tsx`; turn it on with `?debug` or Ctrl + Shift + D).
 - **Already in the source, nothing to port:** keyword ticket routing, the missing-email reminder in the "resolved" email draft, and an Excel export that works offline (the page needs a web library for Excel).
-- **Ahead of the page:** the ticket list view has checkboxes with Shift-click range selection and can export just the selected tickets, and tickets can be exported to Excel.
-- **Still only in `index.html`, as add-on scripts:** the "All Views" picker, the screen pattern picker, the quick page arrows, the quick Settings button, and the debug log. Rebuilding these as components is the rest of this stage; after that `index.html` is built from `app/` and the add-on scripts are retired.
+- **Ahead of the page:** the ticket list view has checkboxes with Shift-click range selection and can export just the selected tickets; tickets can be exported to Excel; Escape closes only the top dialog; the SLA card lists the tickets really past their SLA; a card switched off in Settings keeps its place in the arrangement.
+- **Left out on purpose:** the stand-in "Customize Home" and "Reports" dialogs, which the page showed only if the real ones failed to open.
 
-Until then, **`index.html` stays the page to use.**
+**The next step is to build `index.html` from `app/`** and delete the add-on scripts. Until then, `index.html` stays the page to use.
 
 To build it (needs Node.js):
 

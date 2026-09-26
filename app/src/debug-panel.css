@@ -1,0 +1,14 @@
+/* The debug log panel. Taken from the add-on styles in index.html. */
+.debug-panel{position:fixed;z-index:5000;left:12px;bottom:12px;display:flex;flex-direction:column;width:min(460px,calc(100vw - 24px));max-height:42vh;border:1px solid #33505c;border-radius:10px;background:#0f1f27;color:#d4e4ea;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;box-shadow:0 18px 50px rgb(0 0 0 / 40%)}
+.debug-panel header{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #26414c}
+.debug-panel header strong{flex:1;color:#fff}
+.debug-panel header button{padding:3px 8px;border:1px solid #3d5c68;border-radius:5px;background:#18313c;color:#d4e4ea;font:inherit;cursor:pointer}
+.debug-panel ol{margin:0;padding:6px 10px;overflow:auto;list-style:none}
+.debug-panel li{display:grid;grid-template-columns:auto auto 1fr;gap:8px;padding:2px 0;border-bottom:1px solid #1b313b}
+.debug-panel time{color:#6f8c97}
+.debug-panel b{color:#8cc7d8}
+.debug-panel li.popup b{color:#e5c07b}
+.debug-panel li.page b{color:#98c379}
+.debug-panel li.error b{color:#ef7b72}
+.debug-panel li.error span{color:#f3b1ab}
+.debug-panel span{overflow-wrap:anywhere}
