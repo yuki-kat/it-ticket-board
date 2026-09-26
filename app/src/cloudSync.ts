@@ -35,6 +35,8 @@ const POLL_EVERY = 30_000
 const RETRY_AFTER = 15_000
 const PAGE = 1000
 const CHUNK = 200
+// Reads are sent with the client's own retries off (`.retry(false)`): they wait 1, 2 and 4 seconds, which would
+// hold up waiting changes and the "Offline" state when the connection drops. Sync tries again by itself.
 
 function readSaved(): Saved | null {
   try {
@@ -121,7 +123,7 @@ function failed(message: string) {
 
 /** Whether this person is still a member of the workspace, or the error that stopped the check. */
 async function isMember(workspaceId: string, userId: string): Promise<boolean | string> {
-  const { data, error } = await cloud().from('workspace_members').select('user_id').eq('workspace_id', workspaceId).eq('user_id', userId)
+  const { data, error } = await cloud().from('workspace_members').select('user_id').eq('workspace_id', workspaceId).eq('user_id', userId).retry(false)
   return error ? error.message : Boolean(data?.length)
 }
 
@@ -185,7 +187,7 @@ export async function fetchWorkspace(workspaceId: string): Promise<Record<TableN
   for (const { table } of TABLES) {
     const records: SyncRecord[] = []
     for (let from = 0; ; from += PAGE) {
-      const { data, error } = await cloud().from(table).select('id, data').eq('workspace_id', workspaceId).order('id').range(from, from + PAGE - 1)
+      const { data, error } = await cloud().from(table).select('id, data').eq('workspace_id', workspaceId).order('id').range(from, from + PAGE - 1).retry(false)
       if (error) return { error: error.message }
       for (const row of (data ?? []) as { data: SyncRecord }[]) if (row.data && typeof row.data === 'object') records.push(row.data)
       if (!data || data.length < PAGE) break

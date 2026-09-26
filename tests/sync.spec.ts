@@ -149,6 +149,7 @@ test.describe('Sync with the workspace', () => {
     await startSyncing(page, db)
     await page.keyboard.press('Escape')
     db.offline = true
+    await windowEvent(page, 'focus') // the connection drops while the board is reading the workspace
     const id = await starATicket(page)
     await expect(badge(page)).toHaveText('Offline, changes kept here')
     await page.reload()
