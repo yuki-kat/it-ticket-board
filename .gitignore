@@ -7,9 +7,6 @@
 app/node_modules/
 app/dist/
 
-# Netlify's publish folder, made from index.html at deploy time
-site/
-
 # Browser test output and packages
 tests/node_modules/
 tests/test-results/

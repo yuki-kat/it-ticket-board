@@ -33,19 +33,19 @@ You need Node.js (version 22) and, for the tests, Google Chrome.
 4. Commit **both** the source and the rebuilt `index.html`, push, and open a pull request. GitHub rebuilds the page from the source and **fails the pull request if `index.html` is out of date**, so a forgotten rebuild can't slip through.
 5. Merge into `main` once the **Browser tests** check is green. `main` always holds a working version.
 
-## Hosting (Netlify)
+## Hosting (Vercel)
 
-The app is published on Netlify's free plan straight from this private repo. `netlify.toml` tells Netlify to publish **only `index.html`**; the source, tests, `legacy/` and `supabase/` are never put online. Every merge into `main` updates the live site, and every pull request gets its own preview address.
+The app is hosted on Vercel, connected to this repo (Vercel project **app**, root directory `app/`). Vercel builds the React source itself, so only the built app goes online; the tests, `legacy/` and `supabase/` never do. Every merge into `main` updates the live site, and every pull request gets its own preview address, linked in a comment on the pull request.
 
-Sign-in (Settings → Account) only works on the hosted site, not on a double-clicked `index.html`, because the sign-in email has to link back to a web address.
+- **Login protection:** Vercel's deployment protection is on, so only people signed in to the Vercel account can open the site. Keep it on until the app is ready for customers.
+- **Security headers:** `app/vercel.json` turns off framing and MIME sniffing, sets a strict referrer policy, and blocks camera, microphone and location.
+- **Sign-in** (Settings → Account) only works on the hosted site, not on a double-clicked `index.html`, because the sign-in email has to link back to a web address.
 
-**One-time setup:**
+**One-time setup for sign-in:**
 
-1. Sign up at [netlify.com](https://www.netlify.com) with your GitHub account (free).
-2. Add a new site by importing an existing project from GitHub, and allow Netlify access to **only** the `it-ticket-board` repo. Leave the build settings as Netlify fills them in from `netlify.toml`, and deploy.
-3. Optionally rename the site (Site configuration → Change site name) to get a nicer `<name>.netlify.app` address.
-4. In Supabase: Authentication → URL Configuration. Set **Site URL** to the Netlify address, and add it under **Redirect URLs**. To sign in on pull request previews too, also add `https://deploy-preview-*--<name>.netlify.app/**`.
-5. Optional, until you're ready for other people: in Supabase, turn off **Allow new users to sign up**, so only accounts that already exist can sign in (you can invite people from the Supabase dashboard).
+1. In Vercel, open project **app** → **Domains** and note the production address.
+2. In Supabase: Authentication → URL Configuration. Set **Site URL** to that address and add it under **Redirect URLs**. To sign in on pull request previews too, also add `https://app-git-*-yuki-0306.vercel.app/**`.
+3. Optional, until you're ready for other people: in Supabase, turn off **Allow new users to sign up**, so only accounts that already exist can sign in (you can invite people from the Supabase dashboard).
 
 ## Backup and restore
 
