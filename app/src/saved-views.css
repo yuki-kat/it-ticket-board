@@ -1,0 +1,15 @@
+.saved-view-controls { display: inline-flex; align-items: end; gap: 6px; flex-wrap: wrap; }
+.saved-view-select { display: flex; align-items: center; gap: 5px; color: #718891; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.saved-view-select select { width: 160px; height: 35px; padding: 0 9px; border: 1px solid #dbe5e8; border-radius: 6px; background: #fff; color: #355564; font-size: 11px; font-weight: 500; }
+.saved-view-save,.saved-view-delete { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 35px; padding: 0 9px; border: 1px solid #dbe5e8; border-radius: 6px; background: #fff; color: #426e7d; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.saved-view-save:hover,.saved-view-delete:hover { border-color: #a9cbd4; background: #eff7f9; }
+.saved-view-delete { width: 35px; padding: 0; color: #9b7370; }
+.saved-view-overlay { z-index: 60; align-items: center; justify-content: center; padding: 16px; }
+.saved-view-dialog { width: min(420px,100%); padding: 22px; border-radius: 10px; background: #fff; box-shadow: 0 24px 60px rgb(14 38 50 / 22%); }
+.saved-view-dialog header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.saved-view-dialog h2 { margin: 5px 0 0; color: #1f3e4b; font-size: 21px; }
+.saved-view-dialog p { margin: 12px 0 18px; color: #758b95; font-size: 11px; line-height: 1.5; }
+.saved-view-dialog label { display: flex; flex-direction: column; gap: 7px; color: #506c78; font-size: 11px; font-weight: 700; }
+.saved-view-dialog input { height: 38px; padding: 0 10px; border: 1px solid #d9e4e8; border-radius: 6px; color: #2d4b58; font-size: 12px; font-weight: 400; }
+.saved-view-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 19px; }
+@media (max-width: 650px) { .saved-view-controls { width: 100%; }.saved-view-select { flex: 1; }.saved-view-select select { flex: 1; min-width: 0; width: auto; } }
