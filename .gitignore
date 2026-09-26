@@ -2,3 +2,7 @@
 *.backup-*.html
 # Created automatically by an editor extension
 .snapshots/
+
+# React source build output and packages
+app/node_modules/
+app/dist/
