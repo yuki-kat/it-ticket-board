@@ -14,8 +14,10 @@ import { applyScreenPattern, loadScreenPattern, SCREEN_PATTERNS, type ScreenPatt
 import ViewPicker, { VIEW_GROUPS } from './ViewPicker'
 import './quick-settings.css'
 import './screen-pattern.css'
-import { ExploreLauncher, PopoutActions, TicketPopout } from './HomePopouts'
-import { ArrangeInsight, InsightCard, InsightDetail, loadInsightOrder, moveInsight, QUEUE_LABELS, saveInsightOrder, TicketList, type DetailKey, type InsightContext, type InsightKey, type QueueFilter } from './HomeInsights'
+import { PopoutActions, TicketPopout } from './HomePopouts'
+import ExplorePage, { type ExploreQueue } from './ExplorePage'
+import { parseRoute, routeHash, type ExploreKey, type PageId } from './route'
+import { ArrangeInsight, InsightCard, InsightDetail, loadInsightOrder, moveInsight, saveInsightOrder, type DetailKey, type InsightContext, type InsightKey } from './HomeInsights'
 import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
 import { exportCsv } from './lib/exportCsv'
@@ -393,7 +395,10 @@ function App() {
   const [groupFilter, setGroupFilter] = useState('All groups')
   const [assigneeFilter, setAssigneeFilter] = useState('All assignees')
   const [metricFilter, setMetricFilter] = useState<MetricFilter>('all')
-  const [page, setPage] = useState<'home' | 'board' | 'inventory'>('home')
+  // The page, and the Explore page's chosen queue and ticket, start from the address (see route.ts).
+  const [page, setPage] = useState<PageId>(() => parseRoute(window.location.hash).page)
+  const [exploreQueue, setExploreQueue] = useState<ExploreKey | undefined>(() => parseRoute(window.location.hash).queue)
+  const [exploreTicketId, setExploreTicketId] = useState<string | undefined>(() => parseRoute(window.location.hash).ticket)
   const [screenPattern, setScreenPattern] = useState<ScreenPattern>(loadScreenPattern)
   useEffect(() => { applyScreenPattern(screenPattern) }, [screenPattern])
   const [showViewPicker, setShowViewPicker] = useState(false)
@@ -437,6 +442,24 @@ function App() {
     const match = window.location.hash.match(/^#ticket=(.+)$/)
     return match ? decodeURIComponent(match[1]) : ''
   }, [])
+  // Each page change becomes a history entry, so Back and Forward move between pages and a refresh stays put.
+  // (Not on the full-page ticket record opened in a new tab, whose address is #ticket=….)
+  useEffect(() => {
+    if (standaloneTicketId) return
+    const target = routeHash({ page, queue: exploreQueue, ticket: exploreTicketId })
+    const current = window.location.hash
+    if (current === target || (!current && target === '#/home')) return
+    window.location.hash = target
+  }, [page, exploreQueue, exploreTicketId, standaloneTicketId])
+  useEffect(() => {
+    if (standaloneTicketId) return
+    const follow = () => {
+      const route = parseRoute(window.location.hash)
+      setPage(route.page); setExploreQueue(route.queue); setExploreTicketId(route.ticket)
+    }
+    window.addEventListener('hashchange', follow)
+    return () => window.removeEventListener('hashchange', follow)
+  }, [standaloneTicketId])
   const viewBeforeMatrix = useRef<CardSize>('small')
   const boardByBeforeMatrix = useRef<BoardBy>('State')
 
@@ -715,7 +738,8 @@ function App() {
     if (useList) setCardSize('list')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const goToPage = (target: 'home' | 'board' | 'inventory') => {
+  const openExplore = () => { setExploreQueue(undefined); setExploreTicketId(undefined); setPage('explore'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const goToPage = (target: PageId) => {
     if (target === 'board') { showTickets(); return }
     if (target === 'inventory') setInventoryFocusId('')
     setPage(target)
@@ -741,7 +765,7 @@ function App() {
 
   return <div className={`app-shell view-${cardSize}`}>
     <header className="topbar">
-      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
+      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
         <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> <span className="topbar-label">Settings</span></button>
@@ -774,9 +798,12 @@ function App() {
         {page !== 'inventory' && <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> <span className="topbar-label">New task</span></button>}
       </div>
     </header>
-    <QuickPageNav page={page} onChange={goToPage} />
+    <QuickPageNav page={page === 'explore' ? 'home' : page} onChange={goToPage} />
     <DebugPanel />
-    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} searchTicket={openRelatedTicket} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : <main className="main-content">
+    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} searchTicket={openRelatedTicket} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} openExplore={openExplore} /> : page === 'explore' ? <ExplorePage queues={exploreQueuesFor(tickets, clock)} tickets={tickets} queue={exploreQueue} ticketId={exploreTicketId}
+      onSelectQueue={(queue) => { setExploreQueue(queue); setExploreTicketId(undefined) }} onSelectTicket={setExploreTicketId}
+      onOpenQueue={(queue) => showTickets(EXPLORE_FILTERS[queue], true)} onOpenAll={() => showTickets('all', true)} onOpenRecord={setSelectedTicketId} onHome={() => goToPage('home')}
+      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : <main className="main-content">
       <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
       <div className="prototype-note"><span className="prototype-dot" /><b>Sync: live</b><span>Email intake: mock · 0 new</span><span>{tickets.length} cards on the board, {open.length} open. SLA clocks count calendar time.</span><button onClick={() => setShowModel(true)}>How this maps <ArrowRight size={13} /></button></div>
       <section className="summary-strip" aria-label="Task summary">
@@ -863,9 +890,8 @@ function App() {
   </div>
 }
 
-function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openReports, openSettings, widgets }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; searchTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets }) {
-  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'arrange'; kind: InsightKey; columns: number } | { type: 'explore' } | { type: 'explore-queue'; queue: ExploreKey } | { type: 'explore-ticket'; queue: ExploreKey; id: string } | null
-  type ExploreKey = 'active' | 'priority' | 'overdue' | 'escalated'
+function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openReports, openSettings, widgets, openExplore }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; searchTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets; openExplore: () => void }) {
+  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'arrange'; kind: InsightKey; columns: number } | null
   const [popup, setPopup] = useState<HomePopup>(null)
   const [insightOrder, setInsightOrder] = useState<InsightKey[]>(loadInsightOrder)
   useEffect(() => { saveInsightOrder(insightOrder) }, [insightOrder])
@@ -902,22 +928,6 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
   ]
   const kpiContent = (item: typeof kpiCards[number]) => <><span className={`home-kpi-icon ${item.tone}`}>{item.icon}</span><span className="home-kpi-label">{item.label}</span><strong>{item.count}</strong><span className="home-kpi-action">{item.action} <ArrowRight size={14} /></span></>
   const openQueue = (filter: MetricFilter) => { closePopup(); showTickets(filter, true) }
-  // Explore tickets is a chain of three popups: (1) choose a queue, (2) that queue's tickets, (3) one ticket's summary.
-  // Back steps through them; "All tickets" still goes straight to the Tickets page.
-  const exploreChoices: Record<ExploreKey, { label: string; hint: string; filter: QueueFilter; tickets: TicketItem[] }> = {
-    active: { label: 'Active tickets', hint: 'All unresolved work', filter: 'active', tickets: open },
-    priority: { label: 'Priority tickets', hint: 'Open P1 and P2 work', filter: 'high-priority', tickets: highPriority },
-    overdue: { label: 'Past SLA', hint: 'Resolution target breached', filter: 'overdue', tickets: overdue },
-    escalated: { label: 'Escalated', hint: 'Tickets raised beyond Tier 1', filter: 'escalated', tickets: escalated },
-  }
-  const exploreQueues = [
-    ...(Object.keys(exploreChoices) as ExploreKey[]).map((key) => ({ key, label: exploreChoices[key].label, hint: exploreChoices[key].hint, count: exploreChoices[key].tickets.length, onChoose: () => setPopup({ type: 'explore-queue', queue: key }) })),
-    { key: 'all', label: 'All tickets', hint: 'Open the complete ticket workspace', onChoose: () => openQueue('all') },
-  ]
-  const exploreStep = popup?.type === 'explore-queue' || popup?.type === 'explore-ticket' ? popup : null
-  const exploreChoice = exploreStep ? exploreChoices[exploreStep.queue] : undefined
-  const exploreIds = new Set(exploreChoice?.tickets.map((ticket) => ticket.id))
-  const exploreTicket = exploreStep?.type === 'explore-ticket' ? tickets.find((ticket) => ticket.id === exploreStep.id) : undefined
   const openKpi = popup?.type === 'kpi' ? kpiCards.find((item) => item.filter === popup.filter) : undefined
   const openAttention = popup?.type === 'attention' ? attentionQueues.find((item) => item.filter === popup.filter) : undefined
 
@@ -930,7 +940,7 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
   }
   const visibleInsights = insightOrder.filter((key) => widgets[key])
   return <main className="main-content home-content">
-    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={() => setPopup({ type: 'explore' })}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
+    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={openExplore}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
     <div className="home-section-heading"><div><span className="eyebrow">AT A GLANCE</span><h2>Ticket overview</h2></div><p>Based on the tickets saved in this browser</p></div>
     <section className="home-kpi-grid" aria-label="Ticket totals">
       {kpiCards.map((item) => <button className="home-kpi" key={item.filter} onClick={() => setPopup({ type: 'kpi', filter: item.filter })}>{kpiContent(item)}</button>)}
@@ -952,15 +962,6 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
     {popup?.type === 'insight' && <InsightDetail kind={popup.kind} ctx={ctx} onClose={closePopup} onOpenQueue={openQueue} onOpenTicket={(id) => { closePopup(); searchTicket(id) }} onArrange={() => setPopup({ type: 'arrange', kind: popup.kind, columns: measureColumns() })} />}
     {popup?.type === 'arrange' && <ArrangeInsight kind={popup.kind} ctx={ctx} visible={visibleInsights} columns={popup.columns} onClose={closePopup}
       onMove={(direction) => { const next = moveInsight(insightOrder, visibleInsights, popup.kind, direction, popup.columns); if (next) setInsightOrder(next); closePopup() }} />}
-    {popup?.type === 'explore' && <ExploreLauncher queues={exploreQueues} onClose={closePopup} />}
-    {exploreStep?.type === 'explore-queue' && exploreChoice && <TicketPopout eyebrow="EXPLORE TICKETS" title={exploreChoice.label} titleId="explore-queue-title" description="Select a ticket to see its details, or open the whole queue." onClose={closePopup} dialogClassName="explore-step-dialog"
-      actions={<div className="ticket-card-popout-actions"><button className="explore-back" type="button" onClick={() => setPopup({ type: 'explore' })}>← Back</button><button className="ticket-card-popout-cancel" type="button" onClick={closePopup}>Close</button><button className="ticket-card-popout-open" type="button" onClick={() => openQueue(exploreChoice.filter)}>{QUEUE_LABELS[exploreChoice.filter]}</button></div>}>
-      <div className="insight-detail-tickets"><TicketList segment={{ label: exploreChoice.hint, queue: exploreChoice.filter, match: (ticket) => exploreIds.has(ticket.id) }} ctx={ctx} onOpenTicket={(id) => setPopup({ type: 'explore-ticket', queue: exploreStep.queue, id })} /></div>
-    </TicketPopout>}
-    {exploreStep?.type === 'explore-ticket' && exploreTicket && <TicketPopout eyebrow="TICKET DETAILS" title={exploreTicket.id} titleId="explore-ticket-title" description={exploreTicket.title} onClose={closePopup} dialogClassName="explore-step-dialog"
-      actions={<div className="ticket-card-popout-actions"><button className="explore-back" type="button" onClick={() => setPopup({ type: 'explore-queue', queue: exploreStep.queue })}>← Back</button><button className="ticket-card-popout-cancel" type="button" onClick={closePopup}>Close</button><button className="ticket-card-popout-open" type="button" onClick={() => { closePopup(); openTicket(exploreTicket.id) }}>Open full record</button></div>}>
-      <ExploreTicketSummary ticket={exploreTicket} now={now} />
-    </TicketPopout>}
   </main>
 }
 
@@ -1346,7 +1347,19 @@ function RecordStatusStrip({ ticket, now }: { ticket: TicketItem; now: number })
   </div>
 }
 
-/** The short summary in the third Explore tickets popup; "Open full record" shows everything else. */
+/** The four queues on the Explore page, and the Tickets-page filter each one opens. */
+const EXPLORE_FILTERS: Record<ExploreKey, MetricFilter> = { active: 'active', priority: 'high-priority', overdue: 'overdue', escalated: 'escalated' }
+function exploreQueuesFor(tickets: TicketItem[], now: number): ExploreQueue<TicketItem>[] {
+  const open = tickets.filter((ticket) => ticket.status !== 'Resolved')
+  return [
+    { key: 'active', label: 'Active tickets', hint: 'All unresolved work', tickets: open },
+    { key: 'priority', label: 'Priority tickets', hint: 'Open P1 and P2 work', tickets: open.filter((ticket) => ticket.severity.startsWith('P1') || ticket.severity.startsWith('P2')) },
+    { key: 'overdue', label: 'Past SLA', hint: 'Resolution target breached', tickets: open.filter((ticket) => slaTime(ticket, now).breached) },
+    { key: 'escalated', label: 'Escalated', hint: 'Tickets raised beyond Tier 1', tickets: open.filter((ticket) => ticket.status === 'Escalated') },
+  ]
+}
+
+/** The ticket summary in step 3 of the Explore page; "Open full record" shows everything else. */
 function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number }) {
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   return <div className="explore-ticket-summary">

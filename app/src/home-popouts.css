@@ -1,5 +1,4 @@
-/* Popups on the Home page: the Ticket overview cards, the Needs attention strip and the
-   Explore tickets launcher. Taken from the add-on styles in index.html. */
+/* Popups on the Home page: the Ticket overview cards and the Needs attention strip. Taken from the add-on styles in index.html. */
 .home-kpi-grid .home-kpi{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
 .home-kpi-grid .home-kpi:hover{transform:translateY(-3px);border-color:#9ec2cc;box-shadow:0 10px 26px rgb(34 77 93 / 14%)}
 .ticket-card-popout{position:fixed;z-index:540;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgb(15 31 39 / 72%);backdrop-filter:blur(3px)}
@@ -22,37 +21,5 @@
 .home-action-strip button:hover{transform:translateY(-2px);border-color:#9ec2cc;box-shadow:0 7px 18px rgb(34 77 93 / 12%)}
 .ticket-card-popout-preview .attention-popout-card{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:112px;padding:22px;border:1px solid #dce7ea;border-radius:10px;background:#fff;color:#365662;box-shadow:0 7px 25px rgb(34 77 93 / 10%);font-size:14px;font-weight:750}
 .ticket-card-popout-preview .attention-popout-card b{display:grid;place-items:center;min-width:50px;height:50px;border-radius:50%;background:#eef6f8;color:#2e7085;font-size:23px}
-.explore-queue-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:18px}
-.explore-queue-grid button{display:flex;align-items:center;justify-content:space-between;min-height:64px;padding:12px 14px;border:1px solid #d8e5e8;border-radius:9px;background:#fff;color:#365662;text-align:left;cursor:pointer}
-.explore-queue-grid button:hover{border-color:#8cb6c2;background:#eff8fa}
-.explore-queue-grid button span{font-size:11px;font-weight:750}
-.explore-queue-grid button small{display:block;margin-top:3px;color:#84969e;font-size:9px;font-weight:500}
-.explore-queue-grid button b{display:grid;place-items:center;min-width:34px;height:34px;border-radius:50%;background:#edf5f7;color:#2e7085;font-size:14px}
-.explore-queue-grid .all-tickets{grid-column:1/-1;background:#294f60;color:#fff;border-color:#294f60}
-.explore-queue-grid .all-tickets small{color:#c9d8dd}
-.explore-queue-grid .all-tickets b{background:#fff;color:#294f60}
-@media (max-width: 520px) {
-  .explore-queue-grid { grid-template-columns: 1fr; }
-  .explore-queue-grid .all-tickets { grid-column: auto; }
-}
 .ticket-card-popout-dialog:focus { outline: none; }
 
-/* Explore tickets, popups 2 and 3: a queue's tickets, then one ticket's summary. Back sits on the left. */
-.explore-step-dialog{width:min(640px,94vw);max-height:92vh;overflow:auto}
-.explore-step-dialog .ticket-card-popout-actions{align-items:center}
-.explore-step-dialog .explore-back{margin-right:auto;border:1px solid #cedde2;background:#fff;color:#52717e}
-.explore-step-dialog .explore-back:hover{background:#f1f7f9}
-.explore-ticket-summary .record-form-grid{margin-bottom:14px}
-.explore-ticket-summary .record-section{margin:0}
-@media (max-width: 520px) {
-  .explore-step-dialog { padding: 24px 18px 20px; }
-  .explore-step-dialog .ticket-card-popout-actions { flex-wrap: wrap; }
-  .explore-step-dialog .ticket-card-popout-open { flex: 1 1 100%; }
-  /* Keep the summary in columns on a phone (the full record stacks every field). */
-  .explore-ticket-summary .record-status-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .explore-ticket-summary .record-status-strip > div { min-height: 0; padding: 11px 10px; border-right: 1px solid #e4ebed; border-bottom: 0; }
-  .explore-ticket-summary .record-status-strip > div:last-child { border-right: 0; }
-  .explore-ticket-summary .record-status-strip b { font-size: 12px; }
-  .explore-ticket-summary .record-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .explore-ticket-summary .record-field { min-height: 0; padding: 10px 11px; }
-}

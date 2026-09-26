@@ -70,3 +70,6 @@
 /* Side panels: the round × in the screen corner closes them and stays in view while scrolling, so the
    panel's own ×, which it sat on top of, is hidden. */
 .form-overlay .panel-header .close-button, .ticket-record-panel .record-header-actions .close-button { display: none; }
+
+/* Phones: room under the last item on every page, so it can scroll clear of the page arrows in the corner. */
+@media (max-width: 600px) { .main-content { padding-bottom: 76px; } }
