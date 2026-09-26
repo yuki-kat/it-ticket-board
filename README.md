@@ -35,6 +35,20 @@ cd app && npm ci && npm run build
 
 The result lands in `app/dist/`, which isn't committed.
 
+## Automated tests
+
+Browser tests in `tests/` open the real `index.html` in Chrome and click through the main flows: the Home totals and their queues, the Ticket overview and Needs-attention popups, the Explore tickets launcher, the Operations insights popups (including keyboard use and arranging), Home settings, opening a ticket, and Inventory device health. They also check that the Home page settles instead of re-rendering forever. Each test starts with a fresh browser profile, so nothing depends on your saved tickets.
+
+Run them (needs Node.js and Google Chrome):
+
+```bash
+cd tests && npm ci && npm test
+```
+
+`npm run test:headed` shows the browser while it runs. GitHub runs the same tests on every pull request and on `main`; the result shows on the pull request as **Browser tests**. If a run fails, open it on the Actions tab and download the `playwright-report` file.
+
+One test is marked `fixme`: filtering Inventory by At Risk, Critical or Monitor shows nothing in `index.html` (a known bug, fixed in the React source in `app/`). Turn it on when `index.html` is built from `app/`.
+
 ## Making changes
 
 1. Create a branch (for example `fix-insight-popup`).
