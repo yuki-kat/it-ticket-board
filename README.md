@@ -17,6 +17,25 @@ Add `?debug` to the end of the page address, or press **Ctrl + Shift + D**, to s
 
 `index.html` is a compiled React app plus a set of small add-on scripts near the end of the file that extend it: ticket overview popups, the Operations insights popups, the arrange popup, device health, the debug log, and so on. When changing behaviour, update or replace the relevant add-on script rather than stacking a new one on top. Stacked scripts caused most of the bugs fixed on 26 Sep 2026.
 
+## The React source (`app/`)
+
+`app/` holds the React + TypeScript source the page was originally compiled from, recovered from the Codex workspace on 26 Sep 2026. It builds cleanly, but it is **one round behind** `index.html`. It is missing:
+
+- the Inventory device-health column, filter and badges, and the demo "Sync from Action1";
+- keyword-based ticket routing (VPN, laptop, printer…);
+- the email reminder when a ticket has no affected-user email;
+- the add-on scripts listed above.
+
+Until those are brought into `app/`, **`index.html` stays the page to use**. Once `app/` matches it, `index.html` will be built from `app/` and the add-on scripts retired.
+
+To build it (needs Node.js):
+
+```bash
+cd app && npm ci && npm run build
+```
+
+The result lands in `app/dist/`, which isn't committed.
+
 ## Making changes
 
 1. Create a branch (for example `fix-insight-popup`).
