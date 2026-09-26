@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Package, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { ExploreLauncher, PopoutActions, TicketPopout } from './HomePopouts'
 import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
 import { exportCsv } from './lib/exportCsv'
@@ -816,6 +817,9 @@ function App() {
 }
 
 function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSettings, widgets }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets }) {
+  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'explore' } | null
+  const [popup, setPopup] = useState<HomePopup>(null)
+  const closePopup = () => setPopup(null)
   const open = tickets.filter((ticket) => ticket.status !== 'Resolved')
   const closed = tickets.filter((ticket) => ticket.status === 'Resolved')
   const highPriority = open.filter((ticket) => ticket.severity.startsWith('P1') || ticket.severity.startsWith('P2'))
@@ -851,16 +855,37 @@ function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSe
   const dateLabel = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(now))
   const hourLabel = (value: number) => new Intl.DateTimeFormat('en', { hour: 'numeric' }).format(new Date(value))
 
+  const kpiCards = [
+    { filter: 'active' as MetricFilter, label: 'Open tickets', count: open.length, tone: 'blue', icon: <Ticket size={19} />, action: 'View open' },
+    { filter: 'resolved' as MetricFilter, label: 'Closed tickets', count: closed.length, tone: 'green', icon: <Check size={19} />, action: 'View closed' },
+    { filter: 'high-priority' as MetricFilter, label: 'P1 / P2 open', count: highPriority.length, tone: 'coral', icon: <AlertTriangle size={19} />, action: 'View priority' },
+    { filter: 'overdue' as MetricFilter, label: 'Past resolution SLA', count: overdue.length, tone: 'amber', icon: <Clock3 size={19} />, action: 'View overdue' },
+  ]
+  const attentionQueues = [
+    { filter: 'escalated' as MetricFilter, label: 'Escalated', count: escalated.length, icon: <ArrowUp size={14} /> },
+    { filter: 'escalation-due' as MetricFilter, label: 'Escalation due', count: escalationDueTickets.length, icon: <ShieldAlert size={14} /> },
+    { filter: 'waiting' as MetricFilter, label: 'Waiting on user', count: waiting.length, icon: <Clock3 size={14} /> },
+    { filter: 'unassigned' as MetricFilter, label: 'Unassigned', count: unassigned.length, icon: <Layers size={14} /> },
+  ]
+  const kpiContent = (item: typeof kpiCards[number]) => <><span className={`home-kpi-icon ${item.tone}`}>{item.icon}</span><span className="home-kpi-label">{item.label}</span><strong>{item.count}</strong><span className="home-kpi-action">{item.action} <ArrowRight size={14} /></span></>
+  const openQueue = (filter: MetricFilter) => { closePopup(); showTickets(filter, true) }
+  const exploreQueues = [
+    { key: 'active', label: 'Active tickets', hint: 'All unresolved work', count: open.length, onChoose: () => openQueue('active') },
+    { key: 'priority', label: 'Priority tickets', hint: 'Open P1 and P2 work', count: highPriority.length, onChoose: () => openQueue('high-priority') },
+    { key: 'overdue', label: 'Past SLA', hint: 'Resolution target breached', count: overdue.length, onChoose: () => openQueue('overdue') },
+    { key: 'escalated', label: 'Escalated', hint: 'Tickets raised beyond Tier 1', count: escalated.length, onChoose: () => openQueue('escalated') },
+    { key: 'all', label: 'All tickets', hint: 'Open the complete ticket workspace', onChoose: () => openQueue('all') },
+  ]
+  const openKpi = popup?.type === 'kpi' ? kpiCards.find((item) => item.filter === popup.filter) : undefined
+  const openAttention = popup?.type === 'attention' ? attentionQueues.find((item) => item.filter === popup.filter) : undefined
+
   return <main className="main-content home-content">
-    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={() => showTickets('all', true)}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
+    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={() => setPopup({ type: 'explore' })}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
     <div className="home-section-heading"><div><span className="eyebrow">AT A GLANCE</span><h2>Ticket overview</h2></div><p>Based on the tickets saved in this browser</p></div>
     <section className="home-kpi-grid" aria-label="Ticket totals">
-      <button className="home-kpi" onClick={() => showTickets('active', true)}><span className="home-kpi-icon blue"><Ticket size={19} /></span><span className="home-kpi-label">Open tickets</span><strong>{open.length}</strong><span className="home-kpi-action">View open <ArrowRight size={14} /></span></button>
-      <button className="home-kpi" onClick={() => showTickets('resolved', true)}><span className="home-kpi-icon green"><Check size={19} /></span><span className="home-kpi-label">Closed tickets</span><strong>{closed.length}</strong><span className="home-kpi-action">View closed <ArrowRight size={14} /></span></button>
-      <button className="home-kpi" onClick={() => showTickets('high-priority', true)}><span className="home-kpi-icon coral"><AlertTriangle size={19} /></span><span className="home-kpi-label">P1 / P2 open</span><strong>{highPriority.length}</strong><span className="home-kpi-action">View priority <ArrowRight size={14} /></span></button>
-      <button className="home-kpi" onClick={() => showTickets('overdue', true)}><span className="home-kpi-icon amber"><Clock3 size={19} /></span><span className="home-kpi-label">Past resolution SLA</span><strong>{overdue.length}</strong><span className="home-kpi-action">View overdue <ArrowRight size={14} /></span></button>
+      {kpiCards.map((item) => <button className="home-kpi" key={item.filter} onClick={() => setPopup({ type: 'kpi', filter: item.filter })}>{kpiContent(item)}</button>)}
     </section>
-    <section className="home-action-strip" aria-label="Other ticket queues"><span>NEEDS ATTENTION</span><button onClick={() => showTickets('escalated', true)}><ArrowUp size={14} /> Escalated <b>{escalated.length}</b></button><button onClick={() => showTickets('escalation-due', true)}><ShieldAlert size={14} /> Escalation due <b>{escalationDueTickets.length}</b></button><button onClick={() => showTickets('waiting', true)}><Clock3 size={14} /> Waiting on user <b>{waiting.length}</b></button><button onClick={() => showTickets('unassigned', true)}><Layers size={14} /> Unassigned <b>{unassigned.length}</b></button></section>
+    <section className="home-action-strip" aria-label="Other ticket queues"><span>NEEDS ATTENTION</span>{attentionQueues.map((item) => <button key={item.filter} onClick={() => setPopup({ type: 'attention', filter: item.filter })}>{item.icon} {item.label} <b>{item.count}</b></button>)}</section>
     <div className="home-section-heading home-insights-heading"><div><span className="eyebrow">CURRENT PICTURE</span><h2>Operations insights</h2></div><div className="home-insights-actions"><button className="home-reports-link" onClick={openSettings}><Settings2 size={15} /> Customize home</button><button className="home-reports-link" onClick={openReports}><BarChart3 size={15} /> Open reports <ArrowRight size={14} /></button></div></div>
     <section className="home-chart-grid" aria-label="Ticket charts">
       {widgets.status && <article className="home-chart-card"><div className="home-chart-heading"><div><h3>Tickets by state</h3><p>All {tickets.length} tickets</p></div><span className="home-chart-badge">STATUS</span></div><div className="home-status-bars">{statusData.map((item) => <div className="home-status-row" key={item.status}><span>{item.status}</span><div className="home-status-track"><div className={`home-status-fill ${item.status === 'Resolved' ? 'resolved' : item.status === 'Escalated' ? 'escalated' : ''}`} style={{ width: `${item.count / maxStatus * 100}%` }} /></div><b>{item.count}</b></div>)}</div></article>}
@@ -869,6 +894,15 @@ function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSe
       {widgets.recent && <article className="home-chart-card home-recent-card"><div className="home-chart-heading"><div><h3>Recently created</h3><p>Open a ticket to see its details</p></div><button onClick={() => showTickets('all', true)}>See all <ArrowRight size={14} /></button></div><div className="home-recent-list">{recent.length ? recent.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span className={`home-recent-priority ${sevClass(ticket.severity)}`} /> <span className="home-recent-copy"><b>{ticket.title}</b><small>{ticket.id} · {ticket.status}</small></span><ArrowRight size={14} /></button>) : <p>No tickets yet. Create a task to start tracking work.</p>}</div></article>}
       {!Object.values(widgets).some(Boolean) && <div className="home-charts-empty"><BarChart3 size={22} /><b>No charts selected</b><p>Choose the charts you want on Home.</p><button onClick={openSettings}>Open settings</button></div>}
     </section>
+    {openKpi && <TicketPopout eyebrow="TICKET OVERVIEW" title={openKpi.label} titleId="ticket-card-popout-title" description="Current total based on the tickets stored in this workspace." onClose={closePopup}
+      actions={<PopoutActions onClose={closePopup} onOpen={() => openQueue(openKpi.filter)} />}>
+      <div className="ticket-card-popout-preview"><div className="home-kpi" aria-hidden="true">{kpiContent(openKpi)}</div></div>
+    </TicketPopout>}
+    {openAttention && <TicketPopout eyebrow="NEEDS ATTENTION" title={openAttention.label} titleId="attention-popout-title" description="Current total based on the active ticket queues in this workspace." onClose={closePopup}
+      actions={<PopoutActions onClose={closePopup} onOpen={() => openQueue(openAttention.filter)} />}>
+      <div className="ticket-card-popout-preview"><div className="attention-popout-card" aria-hidden="true">{openAttention.icon} {openAttention.label} <b>{openAttention.count}</b></div></div>
+    </TicketPopout>}
+    {popup?.type === 'explore' && <ExploreLauncher queues={exploreQueues} onClose={closePopup} />}
   </main>
 }
 
