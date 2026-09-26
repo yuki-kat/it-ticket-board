@@ -1,0 +1,5 @@
+/* The Settings button in the header. Taken from the add-on styles in index.html. */
+.quick-settings-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:0 11px;border:1px solid #c9dce2;border-radius:7px;background:#f4fafb;color:#285d70;font-size:12px;font-weight:700;cursor:pointer}
+.quick-settings-button:hover{background:#e7f4f7;border-color:#9fc4cf}
+.quick-settings-button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:600px){.quick-settings-button span{display:none}.quick-settings-button{width:38px;padding:0}}

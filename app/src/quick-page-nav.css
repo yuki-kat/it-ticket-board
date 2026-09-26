@@ -1,0 +1,8 @@
+/* The round previous/next page arrows at the screen edges. Taken from the add-on styles in index.html. */
+.quick-page-nav { position: fixed; z-index: 20; inset: 50% 0 auto; display: flex; justify-content: space-between; padding: 0 14px; transform: translateY(-50%); pointer-events: none; }
+.quick-page-nav[hidden] { display: none; }
+.quick-page-nav button { pointer-events: auto; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: #315a69; background: rgb(255 255 255 / 96%); border: 1px solid #cfdee2; border-radius: 50%; box-shadow: 0 4px 16px rgb(19 47 59 / 18%); transition: background .15s, transform .15s, box-shadow .15s; }
+.quick-page-nav button:hover { background: #eaf4f6; box-shadow: 0 7px 20px rgb(19 47 59 / 24%); transform: scale(1.07); }
+.quick-page-nav button:focus-visible { outline: 3px solid #9dbce4; outline-offset: 3px; }
+.quick-page-nav svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 600px) { .quick-page-nav { padding: 0 7px; }.quick-page-nav button { width: 38px; height: 38px; } }

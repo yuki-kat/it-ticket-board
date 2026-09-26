@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { debugLog } from './debug'
 import './home-popouts.css'
 
 type PopoutProps = {
@@ -16,9 +17,9 @@ type PopoutProps = {
 
 /**
  * What every popup does: move focus into it, close on Escape, and put focus back on whatever opened it.
- * Returns the ref to attach to the dialog element.
+ * Returns the ref to attach to the dialog element. `name` is what the debug log calls it.
  */
-export function usePopoutBehaviour(onClose: () => void) {
+export function usePopoutBehaviour(onClose: () => void, name?: string) {
   const dialog = useRef<HTMLElement>(null)
   const close = useRef(onClose)
   close.current = onClose
@@ -26,6 +27,7 @@ export function usePopoutBehaviour(onClose: () => void) {
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     dialog.current?.focus()
+    if (name) debugLog('popup', `opened: ${name}`)
     // Listen in the capture phase so Escape closes this popup before anything else reacts to it.
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
@@ -35,6 +37,7 @@ export function usePopoutBehaviour(onClose: () => void) {
     window.addEventListener('keydown', onKeyDown, true)
     return () => {
       window.removeEventListener('keydown', onKeyDown, true)
+      if (name) debugLog('popup', `closed: ${name}`)
       opener?.focus()
     }
   }, [])
@@ -47,7 +50,7 @@ export function usePopoutBehaviour(onClose: () => void) {
  * or Escape, and puts focus back on whatever opened it.
  */
 export function TicketPopout({ eyebrow, title, titleId, description, onClose, children, actions, overlayClassName, dialogClassName }: PopoutProps) {
-  const dialog = usePopoutBehaviour(onClose)
+  const dialog = usePopoutBehaviour(onClose, title)
 
   return createPortal(
     <div className={overlayClassName ? `ticket-card-popout ${overlayClassName}` : 'ticket-card-popout'} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>

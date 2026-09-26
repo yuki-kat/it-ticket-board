@@ -302,7 +302,7 @@ const MOVE_BUTTONS: { direction: MoveDirection; content: ReactNode }[] = [
 
 /** The popup that asks where a card should go (left, right, up, down, first or last). */
 export function ArrangeInsight({ kind, ctx, visible, columns, onMove, onClose }: { kind: InsightKey; ctx: InsightContext; visible: InsightKey[]; columns: number; onMove: (direction: MoveDirection) => void; onClose: () => void }) {
-  const dialog = usePopoutBehaviour(onClose)
+  const dialog = usePopoutBehaviour(onClose, `Arrange: ${CARD_INFO[kind].title}`)
   const available = availableMoves(visible.indexOf(kind), visible.length, columns)
   return createPortal(
     <div className="insight-move-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>

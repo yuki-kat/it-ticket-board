@@ -33,6 +33,12 @@ test.describe('Exports (source)', () => {
     expect(dataRows(csv)).toBe(16)
   })
 
+  test('the Tickets Export CSV button is styled (a compact button, not bare text)', async ({ page }) => {
+    await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
+    const style = await page.locator('.export-csv-button').evaluate((element) => { const css = getComputedStyle(element); return { display: css.display, height: css.height, borderStyle: css.borderTopStyle, fontSize: css.fontSize } })
+    expect(style).toEqual({ display: 'flex', height: '35px', borderStyle: 'solid', fontSize: '10px' })
+  })
+
   test('the Tickets Export CSV follows the search filter', async ({ page }) => {
     await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
     await page.locator('input[aria-label="Search tickets, people, tags"]').fill('OPS-101')

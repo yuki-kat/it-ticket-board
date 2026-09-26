@@ -1,0 +1,11 @@
+/* The screen pattern choices in Settings and the backgrounds they give. Taken from the add-on styles in index.html. */
+html[data-screen-pattern="dots"] .app-shell{background-color:#f3f6f8;background-image:radial-gradient(#b9cbd1 1px,transparent 1px);background-size:18px 18px}
+html[data-screen-pattern="lines"] .app-shell{background-color:#f3f6f8;background-image:repeating-linear-gradient(0deg,transparent 0,transparent 27px,#dbe6e9 28px)}
+html[data-screen-pattern="blueprint"] .app-shell{background-color:#eaf4f6;background-image:linear-gradient(#cbdfe5 1px,transparent 1px),linear-gradient(90deg,#cbdfe5 1px,transparent 1px);background-size:28px 28px}
+.screen-pattern-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
+.screen-pattern-option{min-height:70px;padding:11px;border:1px solid #dfe8eb;border-radius:8px;background:#fbfcfc;color:#36525f;text-align:left;cursor:pointer}
+.screen-pattern-option:hover,.screen-pattern-option.active{border-color:#85b4c1;background:#eef8fa}
+.screen-pattern-option b,.screen-pattern-option small{display:block}
+.screen-pattern-option b{font-size:11px}
+.screen-pattern-option small{margin-top:4px;color:#81949d;font-size:10px;line-height:1.35}
+@media(max-width:520px){.screen-pattern-grid{grid-template-columns:1fr}}

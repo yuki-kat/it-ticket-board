@@ -22,7 +22,7 @@ export default defineConfig({
     { name: 'source', testMatch: 'source/**/*.spec.ts', use: { baseURL: 'http://127.0.0.1:4174' } },
     // The same tests as "page", run against the React source. Add a spec file here as soon as the
     // source can do what it tests; when every spec is listed, index.html can be built from app/.
-    { name: 'source-same-flows', testMatch: ['queues.spec.ts', 'popups.spec.ts', 'insights.spec.ts', 'arrange.spec.ts'], use: { baseURL: 'http://127.0.0.1:4174' } },
+    { name: 'source-same-flows', testMatch: ['queues.spec.ts', 'popups.spec.ts', 'insights.spec.ts', 'arrange.spec.ts', 'addons.spec.ts'], use: { baseURL: 'http://127.0.0.1:4174' } },
   ],
   webServer: [
     { command: 'python3 -m http.server 4173 --bind 127.0.0.1 --directory ..', url: 'http://127.0.0.1:4173/index.html', reuseExistingServer: !process.env.CI },
