@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Package, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import Overlay from './Overlay'
 import BackupSection from './BackupSection'
 import AccountSection from './AccountSection'
+import SyncBadge from './SyncBadge'
+import { useCloudSync } from './cloudSync'
+import type { ListName, SyncLists, SyncRecord } from './syncLogic'
 import DebugPanel from './DebugPanel'
 import { debugLog } from './debug'
 import QuickPageNav from './QuickPageNav'
@@ -369,6 +372,17 @@ function App() {
   const [deletedTickets, setDeletedTickets] = useState<DeletedTicket[]>(() => {
     try { return (JSON.parse(localStorage.getItem(DELETED_STORAGE_KEY) || '[]') as DeletedTicket[]).map((ticket) => ({ ...ticket, tags: Array.isArray(ticket.tags) ? ticket.tags : [], starred: Boolean(ticket.starred) })) } catch { return [] }
   })
+  // Sync with the workspace's database (Settings → Account). Changes that arrive from the database are set
+  // directly, without activity entries: they were recorded where they were made.
+  const syncLists = useMemo(() => ({ tickets, deletedTickets, assets, stock }) as unknown as SyncLists, [tickets, deletedTickets, assets, stock])
+  const replaceSynced = useCallback((list: ListName, update: (current: SyncRecord[]) => SyncRecord[]) => {
+    const apply = <T,>(current: T[]) => update(current as unknown as SyncRecord[]) as unknown as T[]
+    if (list === 'tickets') setTicketState(apply)
+    else if (list === 'deletedTickets') setDeletedTickets(apply)
+    else if (list === 'assets') setAssetState(apply)
+    else setStockState(apply)
+  }, [])
+  useCloudSync(syncLists, replaceSynced)
   const [query, setQuery] = useState('')
   const [ticketWorkspace, setTicketWorkspace] = useState<TicketWorkspace>(loadTicketWorkspace)
   const [ticketWorkspaceReady, setTicketWorkspaceReady] = useState(false)
@@ -729,7 +743,7 @@ function App() {
     <header className="topbar">
       <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
       <div className="top-actions">
-        <span className="saved"><i />Local mock data</span>
+        <SyncBadge onOpen={() => setShowSettings(true)} />
         <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> Settings</button>
         <div className="header-tools" ref={toolsMenuRef}>
           <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu"><Menu size={16} /> Tools <ChevronDown size={13} /></button>

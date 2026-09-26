@@ -14,3 +14,6 @@
 .account-team li span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .account-team li i { color: #7a8f98; font-size: 11px; font-style: normal; }
 .account-settings h4 { margin: 14px 0 4px; font-size: 13px; }
+
+/* Backup: the data kept from before the last restore or sync start */
+.backup-previous { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 8px 10px; border: 1px dashed #d2dfe3; border-radius: 8px; color: #5b727b; font-size: 11px; }

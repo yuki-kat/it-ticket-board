@@ -2,10 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import {
   cancelInvite, canSignInHere, cloud, currentSession, currentWorkspace, inviteMember, listMembers, removeMember,
-  sendSignInLink, setMemberRole, signOut, uploadBackup, type Invite, type Member, type Role, type Workspace,
+  sendSignInLink, setMemberRole, signOut, type Invite, type Member, type Role, type Workspace,
 } from './cloud'
-import { createBackup } from './backup'
+import { startSync, stopSync, syncNow, useSyncStatus, workspaceCounts, type StartMode } from './cloudSync'
+import type { TableName } from './syncLogic'
 import './backup.css'
+import './sync.css'
+
+const timeOf = (iso: string) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
 
 /** Settings section: sign in with an emailed link, see your workspace (company) and, as an admin, manage its team. */
 export default function AccountSection() {
@@ -13,7 +17,10 @@ export default function AccountSection() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
-  const [upload, setUpload] = useState('')
+  const sync = useSyncStatus()
+  const [counts, setCounts] = useState<Record<TableName, number> | null>(null)
+  const [countsError, setCountsError] = useState('')
+  const [syncError, setSyncError] = useState('')
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [workspaceError, setWorkspaceError] = useState('')
   const [members, setMembers] = useState<Member[]>([])
@@ -61,15 +68,26 @@ export default function AccountSection() {
     setMessage(error ? `Could not send the link: ${error}` : `Link sent to ${email.trim()}. Open it on this device to finish signing in.`)
   }
 
-  const copyToAccount = async () => {
-    if (!workspace) return
+  // Before sync starts: what the workspace already holds decides what starting will do.
+  const workspaceId = workspace?.id
+  const syncOff = sync.phase === 'off'
+  useEffect(() => {
+    if (!workspaceId || !syncOff) return
+    let cancelled = false
+    void workspaceCounts(workspaceId).then((result) => {
+      if (cancelled) return
+      if ('error' in result) { setCountsError(result.error); setCounts(null) } else { setCountsError(''); setCounts(result) }
+    })
+    return () => { cancelled = true }
+  }, [workspaceId, syncOff])
+
+  const start = async (mode: StartMode) => {
+    if (!workspace || !session) return
     setBusy(true)
-    setUpload('')
-    const result = await uploadBackup(createBackup(), workspace.id)
+    setSyncError('')
+    const error = await startSync(workspace, session.user.id, mode)
     setBusy(false)
-    setUpload(result.ok
-      ? `Copied to ${workspace.name}: ${result.counts.tickets} tickets, ${result.counts.deleted_tickets} deleted, ${result.counts.assets} assets, ${result.counts.stock_items} stock items, and your ${result.counts.settings} settings. Nothing was changed in this browser.`
-      : `Could not copy: ${result.error}`)
+    if (error) setSyncError(error)
   }
 
   /** Runs a team change, then shows its error or reloads the team. */
@@ -89,12 +107,44 @@ export default function AccountSection() {
     <h3>Account</h3>
     {!available && <p data-account-unavailable>Sign-in works when the board is opened from a web address, not from a file on your computer.</p>}
     {available && session && <>
-      <p>Signed in as <b data-account-email>{session.user.email}</b>. Your tickets are still saved in this browser; moving them to your workspace comes next.</p>
+      <p>Signed in as <b data-account-email>{session.user.email}</b>.</p>
       {workspaceError && <div className="import-note" role="status" data-account-workspace-error>Could not open your workspace: {workspaceError}</div>}
       {workspace && <>
         <p>Workspace: <b data-account-workspace>{workspace.name}</b> <span data-account-role>(you are {workspace.role === 'admin' ? 'an admin' : 'an agent'})</span></p>
-        <div className="backup-actions"><button type="button" className="primary-button" data-account-upload disabled={busy} onClick={() => void copyToAccount()}>Copy this browser’s data to {workspace.name}</button></div>
-        {upload && <div className="import-note" role="status" data-account-upload-message>{upload}</div>}
+
+        <h4>Sync</h4>
+        <div className="account-sync" data-account-sync>
+          {syncOff ? <>
+            {countsError && <div className="import-note" role="status" data-sync-counts-error>Could not check {workspace.name}: {countsError}</div>}
+            {!counts && !countsError && <p>Checking what {workspace.name} holds…</p>}
+            {counts && counts.tickets + counts.deleted_tickets + counts.assets + counts.stock_items === 0 && <>
+              <p data-sync-summary>{workspace.name} has no tickets, assets or stock yet. Start syncing to keep this board in the workspace, so your team works from the same board. Every change is then saved automatically.</p>
+              <div className="backup-actions">
+                <button type="button" className="primary-button" data-sync-start-upload disabled={busy} onClick={() => void start('upload')}>Copy this board into {workspace.name}</button>
+                <button type="button" className="text-button" data-sync-start-empty disabled={busy} onClick={() => void start('empty')}>Start with an empty board</button>
+              </div>
+            </>}
+            {counts && counts.tickets + counts.deleted_tickets + counts.assets + counts.stock_items > 0 && <>
+              <p data-sync-summary>{workspace.name} already has {counts.tickets} tickets, {counts.assets} assets and {counts.stock_items} stock items. Syncing shows that board in this browser instead of what is here now.</p>
+              <div className="backup-actions"><button type="button" className="primary-button" data-sync-start-download disabled={busy} onClick={() => void start('download')}>Use {workspace.name}’s board</button></div>
+            </>}
+            <p>What this browser has now is kept first, and can be put back under Backup and restore.</p>
+          </> : <>
+            <div className="sync-state" data-sync-state={sync.phase}>
+              {sync.phase === 'saved' && `This browser is synced with ${sync.workspaceName}${sync.lastSyncedAt ? ` (last synced ${timeOf(sync.lastSyncedAt)})` : ''}.`}
+              {sync.phase === 'saving' && `Saving to ${sync.workspaceName}…`}
+              {sync.phase === 'offline' && 'Offline: changes are kept in this browser.'}
+              {sync.phase === 'error' && 'Sync has a problem.'}
+            </div>
+            {sync.message && <p data-sync-message>{sync.message}</p>}
+            <p>Changes are saved to the workspace automatically, and colleagues’ changes arrive every 30 seconds or when you come back to this window.</p>
+            <div className="backup-actions">
+              <button type="button" className="text-button" data-sync-now onClick={syncNow}>Sync now</button>
+              <button type="button" className="text-button" data-sync-stop onClick={stopSync}>Stop syncing in this browser</button>
+            </div>
+          </>}
+          {syncError && <div className="import-note" role="status" data-sync-error>Could not start syncing: {syncError}</div>}
+        </div>
 
         <h4>Team</h4>
         <ul className="account-team" data-account-members>
@@ -129,7 +179,7 @@ export default function AccountSection() {
         </div>}
         {teamMessage && <div className="import-note" role="status" data-account-team-message>{teamMessage}</div>}
       </>}
-      <div className="backup-actions"><button type="button" className="text-button" data-account-signout onClick={() => void signOut().then(() => { setSession(null); setWorkspace(null); setMembers([]); setInvites([]); setTeamMessage('') })}>Sign out</button></div>
+      <div className="backup-actions"><button type="button" className="text-button" data-account-signout onClick={() => { stopSync(); void signOut().then(() => { setSession(null); setWorkspace(null); setMembers([]); setInvites([]); setTeamMessage(''); setCounts(null) }) }}>Sign out</button></div>
     </>}
     {available && !session && <>
       <p>Sign in with your email. You will get a link, with no password to remember.</p>

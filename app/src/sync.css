@@ -1,0 +1,16 @@
+/* Top bar sync badge (only while syncing with a workspace) */
+.sync-badge { display: inline-flex; align-items: center; gap: 7px; max-width: 240px; height: 30px; padding: 0 10px; border: 1px solid #dbe6e3; border-radius: 15px; background: #f7faf9; color: #4b6a63; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.sync-badge i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #56a879; }
+.sync-badge:hover { border-color: #b8cfc9; background: #eef6f3; }
+.sync-badge.sync-saving i { background: #d2a13f; animation: sync-pulse 1s ease-in-out infinite; }
+.sync-badge.sync-offline { border-color: #ecdcbb; background: #fdf8ee; color: #8a6420; }
+.sync-badge.sync-offline i { background: #d2a13f; }
+.sync-badge.sync-error { border-color: #efd0cc; background: #fbefed; color: #a3483e; }
+.sync-badge.sync-error i { background: #c9594e; }
+@keyframes sync-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .sync-badge.sync-saving i { animation: none; } }
+
+/* Settings → Account: the sync part */
+.account-sync { margin-top: 6px; padding: 12px; border: 1px solid #dfe8eb; border-radius: 8px; background: #fbfcfc; }
+.account-sync p { font-size: 12px; line-height: 1.5; color: #4f6670; }
+.account-sync .sync-state { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2f4f58; }
