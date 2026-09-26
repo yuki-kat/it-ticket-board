@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Package, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import { ExploreLauncher, PopoutActions, TicketPopout } from './HomePopouts'
+import { InsightCard, InsightDetail, INSIGHT_KEYS, type DetailKey, type InsightContext } from './HomeInsights'
 import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
 import { exportCsv } from './lib/exportCsv'
@@ -16,7 +17,7 @@ type SplitPaneMode = Exclude<CardSize, 'split'> | 'details'
 type GraphCategory = 'Priority' | 'State' | 'Department' | 'Assignment group' | 'Task type'
 type GraphRange = '24h' | '7d' | '30d'
 type MetricFilter = 'all' | 'active' | 'resolved' | 'high-priority' | 'overdue' | 'at-risk' | 'escalated' | 'escalation-due' | 'unassigned' | 'waiting' | 'due-today'
-type HomeWidgets = { status: boolean; priority: boolean; intake: boolean; recent: boolean }
+type HomeWidgets = { status: boolean; priority: boolean; intake: boolean; recent: boolean; sla: boolean; escalation: boolean; assignment: boolean; resolution: boolean }
 type TicketPaneSettings = { cardSize: CardSize; boardBy: BoardBy; query: string; typeFilter: RecordType | 'All task types'; groupFilter: string; assigneeFilter: string; metricFilter: MetricFilter; tagFilter: string; starredOnly: boolean; splitLeft: SplitPaneMode; splitRight: SplitPaneMode }
 type TicketWorkspaceTab = { id: string; settings: TicketPaneSettings }
 type TicketViewSettings = TicketPaneSettings & { workspaceTabs?: TicketWorkspaceTab[]; activeWorkspaceId?: string }
@@ -77,7 +78,13 @@ const VIEW_STORAGE_KEY = 'it-ticket-kanban-view-v1'
 const HOME_WIDGETS_STORAGE_KEY = 'it-ticket-kanban-home-widgets-v1'
 const SAVED_TICKET_VIEWS_KEY = 'it-ticket-kanban-saved-views-v1'
 const TICKET_WORKSPACE_KEY = 'it-ticket-kanban-ticket-workspace-v1'
-const defaultHomeWidgets: HomeWidgets = { status: true, priority: true, intake: true, recent: true }
+const defaultHomeWidgets: HomeWidgets = { status: true, priority: true, intake: true, recent: true, sla: true, escalation: true, assignment: true, resolution: true }
+// The compiled page kept the switches for its four extra cards under this key; use them until they are saved under the key above.
+const LEGACY_EXTRA_INSIGHTS_KEY = 'ops-kanban-extra-home-insights-v1'
+function loadHomeWidgets(): HomeWidgets {
+  const read = (key: string) => { try { return JSON.parse(localStorage.getItem(key) || '{}') } catch { return {} } }
+  return { ...defaultHomeWidgets, ...read(LEGACY_EXTRA_INSIGHTS_KEY), ...read(HOME_WIDGETS_STORAGE_KEY) }
+}
 const viewModes: CardSize[] = ['small', 'regular', 'list', 'split', 'my-work', 'sla', 'workload', 'escalation', 'department', 'calendar', 'priority-matrix', 'analytics', 'graph', 'timeline']
 const splitPaneModes: SplitPaneMode[] = ['list', 'details', 'small', 'regular', 'my-work', 'sla', 'workload', 'escalation', 'department', 'calendar', 'priority-matrix', 'analytics', 'graph', 'timeline']
 const newTicketWorkspaceId = () => `ticket-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -383,9 +390,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showToolsMenu, setShowToolsMenu] = useState(false)
   const toolsMenuRef = useRef<HTMLDivElement>(null)
-  const [homeWidgets, setHomeWidgets] = useState<HomeWidgets>(() => {
-    try { return { ...defaultHomeWidgets, ...JSON.parse(localStorage.getItem(HOME_WIDGETS_STORAGE_KEY) || '{}') } } catch { return defaultHomeWidgets }
-  })
+  const [homeWidgets, setHomeWidgets] = useState<HomeWidgets>(loadHomeWidgets)
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [clock, setClock] = useState(Date.now())
@@ -730,7 +735,7 @@ function App() {
         {page === 'inventory' ? <button type="button" className="primary-button" onClick={() => runInventoryCommand('add-asset')} aria-label="Add asset"><Plus size={16} /> Add asset</button> : <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> New task</button>}
       </div>
     </header>
-    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : <main className="main-content">
+    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} searchTicket={openRelatedTicket} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : <main className="main-content">
       <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
       <div className="prototype-note"><span className="prototype-dot" /><b>Sync: live</b><span>Email intake: mock · 0 new</span><span>{tickets.length} cards on the board, {open.length} open. SLA clocks count calendar time.</span><button onClick={() => setShowModel(true)}>How this maps <ArrowRight size={13} /></button></div>
       <section className="summary-strip" aria-label="Task summary">
@@ -816,8 +821,8 @@ function App() {
   </div>
 }
 
-function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSettings, widgets }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets }) {
-  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'explore' } | null
+function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openReports, openSettings, widgets }: { tickets: TicketItem[]; now: number; showTickets: (filter?: MetricFilter, useList?: boolean) => void; openTicket: (id: string) => void; searchTicket: (id: string) => void; openReports: () => void; openSettings: () => void; widgets: HomeWidgets }) {
+  type HomePopup = { type: 'kpi' | 'attention'; filter: MetricFilter } | { type: 'insight'; kind: DetailKey } | { type: 'explore' } | null
   const [popup, setPopup] = useState<HomePopup>(null)
   const closePopup = () => setPopup(null)
   const open = tickets.filter((ticket) => ticket.status !== 'Resolved')
@@ -828,32 +833,7 @@ function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSe
   const escalationDueTickets = open.filter((ticket) => escalationDue(ticket, now))
   const waiting = open.filter((ticket) => ticket.status === 'Waiting on User')
   const unassigned = open.filter((ticket) => !ticket.assignee.trim())
-  const statusData = statuses.map((status) => ({ status, count: tickets.filter((ticket) => ticket.status === status).length }))
-  const maxStatus = Math.max(1, ...statusData.map((item) => item.count))
-  const priorityColors = ['#db6763', '#e4a551', '#4b91a2', '#a0aeb8']
-  const priorityData = ['P1', 'P2', 'P3', 'P4'].map((priority, index) => ({ priority, count: open.filter((ticket) => ticket.severity.startsWith(priority)).length, color: priorityColors[index] }))
-  const circumference = 2 * Math.PI * 65
-  let ringOffset = 0
-  const rings = priorityData.map((item) => {
-    const length = open.length ? item.count / open.length * circumference : 0
-    const ring = { ...item, length, offset: ringOffset }
-    ringOffset += length
-    return ring
-  })
-  const hourStart = new Date(now)
-  hourStart.setMinutes(0, 0, 0)
-  hourStart.setHours(hourStart.getHours() - 23)
-  const hourBuckets = Array.from({ length: 24 }, (_, index) => {
-    const start = hourStart.getTime() + index * 60 * 60_000
-    return { start, count: tickets.filter((ticket) => { const created = new Date(ticket.createdAt).getTime(); return created >= start && created < start + 60 * 60_000 }).length }
-  })
-  const maxHourly = Math.max(1, ...hourBuckets.map((bucket) => bucket.count))
-  const chartPoints = hourBuckets.map((bucket, index) => ({ x: 34 + index * 26, y: 174 - bucket.count / maxHourly * 125 }))
-  const chartLine = chartPoints.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ')
-  const chartArea = `${chartLine} L ${chartPoints.at(-1)?.x || 632} 174 L 34 174 Z`
-  const recent = [...tickets].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5)
   const dateLabel = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(now))
-  const hourLabel = (value: number) => new Intl.DateTimeFormat('en', { hour: 'numeric' }).format(new Date(value))
 
   const kpiCards = [
     { filter: 'active' as MetricFilter, label: 'Open tickets', count: open.length, tone: 'blue', icon: <Ticket size={19} />, action: 'View open' },
@@ -879,6 +859,13 @@ function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSe
   const openKpi = popup?.type === 'kpi' ? kpiCards.find((item) => item.filter === popup.filter) : undefined
   const openAttention = popup?.type === 'attention' ? attentionQueues.find((item) => item.filter === popup.filter) : undefined
 
+  const ctx: InsightContext = {
+    tickets, now, statuses,
+    counts: { open: open.length, closed: closed.length, overdue: overdue.length, escalated: escalated.length, escalationDue: escalationDueTickets.length, unassigned: unassigned.length },
+    breachedIds: new Set(overdue.map((ticket) => ticket.id)),
+    showTickets: (filter) => showTickets(filter, true),
+    openTicket,
+  }
   return <main className="main-content home-content">
     <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={() => setPopup({ type: 'explore' })}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
     <div className="home-section-heading"><div><span className="eyebrow">AT A GLANCE</span><h2>Ticket overview</h2></div><p>Based on the tickets saved in this browser</p></div>
@@ -888,10 +875,7 @@ function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSe
     <section className="home-action-strip" aria-label="Other ticket queues"><span>NEEDS ATTENTION</span>{attentionQueues.map((item) => <button key={item.filter} onClick={() => setPopup({ type: 'attention', filter: item.filter })}>{item.icon} {item.label} <b>{item.count}</b></button>)}</section>
     <div className="home-section-heading home-insights-heading"><div><span className="eyebrow">CURRENT PICTURE</span><h2>Operations insights</h2></div><div className="home-insights-actions"><button className="home-reports-link" onClick={openSettings}><Settings2 size={15} /> Customize home</button><button className="home-reports-link" onClick={openReports}><BarChart3 size={15} /> Open reports <ArrowRight size={14} /></button></div></div>
     <section className="home-chart-grid" aria-label="Ticket charts">
-      {widgets.status && <article className="home-chart-card"><div className="home-chart-heading"><div><h3>Tickets by state</h3><p>All {tickets.length} tickets</p></div><span className="home-chart-badge">STATUS</span></div><div className="home-status-bars">{statusData.map((item) => <div className="home-status-row" key={item.status}><span>{item.status}</span><div className="home-status-track"><div className={`home-status-fill ${item.status === 'Resolved' ? 'resolved' : item.status === 'Escalated' ? 'escalated' : ''}`} style={{ width: `${item.count / maxStatus * 100}%` }} /></div><b>{item.count}</b></div>)}</div></article>}
-      {widgets.priority && <article className="home-chart-card"><div className="home-chart-heading"><div><h3>Open tickets by priority</h3><p>Current priority mix</p></div><span className="home-chart-badge">PRIORITY</span></div><div className="home-priority-content"><div className="home-donut"><svg viewBox="0 0 180 180" role="img" aria-label={`Open ticket priorities: ${priorityData.map((item) => `${item.priority} ${item.count}`).join(', ')}`}><circle cx="90" cy="90" r="65" fill="none" stroke="#e9eef1" strokeWidth="22" />{rings.filter((ring) => ring.count).map((ring) => <circle key={ring.priority} cx="90" cy="90" r="65" fill="none" stroke={ring.color} strokeWidth="22" strokeDasharray={`${ring.length} ${circumference - ring.length}`} strokeDashoffset={-ring.offset} transform="rotate(-90 90 90)" />)}</svg><div><strong>{open.length}</strong><span>open</span></div></div><div className="home-priority-legend">{priorityData.map((item) => <div key={item.priority}><i style={{ background: item.color }} /><span>{item.priority}</span><b>{item.count}</b></div>)}</div></div></article>}
-      {widgets.intake && <article className="home-chart-card home-trend-card"><div className="home-chart-heading"><div><h3>Ticket intake</h3><p>Tickets created each hour, last 24 hours</p></div><span className="home-chart-badge">24 HOURS</span></div><div className="home-trend-chart"><svg viewBox="0 0 680 205" role="img" aria-label={`Ticket intake in the last 24 hours: ${hourBuckets.reduce((sum, bucket) => sum + bucket.count, 0)} tickets`} preserveAspectRatio="none"><line x1="34" y1="174" x2="658" y2="174" stroke="#d9e3e8" /><line x1="34" y1="111" x2="658" y2="111" stroke="#edf1f3" /><line x1="34" y1="49" x2="658" y2="49" stroke="#edf1f3" /><path d={chartArea} fill="#e7f2f5" /><path d={chartLine} fill="none" stroke="#2f7186" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />{chartPoints.map((point, index) => hourBuckets[index].count > 0 && <circle key={index} cx={point.x} cy={point.y} r="3.5" fill="#2f7186" stroke="white" strokeWidth="2" />)}<text x="5" y="53">{maxHourly}</text><text x="12" y="178">0</text><text x="34" y="199">{hourLabel(hourBuckets[0].start)}</text><text x="315" y="199">{hourLabel(hourBuckets[11].start)}</text><text x="607" y="199">Now</text></svg></div></article>}
-      {widgets.recent && <article className="home-chart-card home-recent-card"><div className="home-chart-heading"><div><h3>Recently created</h3><p>Open a ticket to see its details</p></div><button onClick={() => showTickets('all', true)}>See all <ArrowRight size={14} /></button></div><div className="home-recent-list">{recent.length ? recent.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span className={`home-recent-priority ${sevClass(ticket.severity)}`} /> <span className="home-recent-copy"><b>{ticket.title}</b><small>{ticket.id} · {ticket.status}</small></span><ArrowRight size={14} /></button>) : <p>No tickets yet. Create a task to start tracking work.</p>}</div></article>}
+      {INSIGHT_KEYS.filter((key) => widgets[key]).map((key) => <InsightCard key={key} kind={key} ctx={ctx} onOpen={key === 'recent' ? undefined : () => setPopup({ type: 'insight', kind: key })} />)}
       {!Object.values(widgets).some(Boolean) && <div className="home-charts-empty"><BarChart3 size={22} /><b>No charts selected</b><p>Choose the charts you want on Home.</p><button onClick={openSettings}>Open settings</button></div>}
     </section>
     {openKpi && <TicketPopout eyebrow="TICKET OVERVIEW" title={openKpi.label} titleId="ticket-card-popout-title" description="Current total based on the tickets stored in this workspace." onClose={closePopup}
@@ -902,6 +886,7 @@ function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSe
       actions={<PopoutActions onClose={closePopup} onOpen={() => openQueue(openAttention.filter)} />}>
       <div className="ticket-card-popout-preview"><div className="attention-popout-card" aria-hidden="true">{openAttention.icon} {openAttention.label} <b>{openAttention.count}</b></div></div>
     </TicketPopout>}
+    {popup?.type === 'insight' && <InsightDetail kind={popup.kind} ctx={ctx} onClose={closePopup} onOpenQueue={openQueue} onOpenTicket={(id) => { closePopup(); searchTicket(id) }} />}
     {popup?.type === 'explore' && <ExploreLauncher queues={exploreQueues} onClose={closePopup} />}
   </main>
 }
@@ -909,16 +894,20 @@ function HomeScreen({ tickets, now, showTickets, openTicket, openReports, openSe
 function Metric({ icon, label, value, tone, selected, onClick }: { icon: React.ReactNode; label: string; value: number; tone: string; selected: boolean; onClick: () => void }) { return <button type="button" className={`metric${selected ? ' selected' : ''}`} aria-label={`Filter tickets: ${label} (${value})`} aria-pressed={selected} title={`Show ${label.toLowerCase()} tickets`} onClick={onClick}><div className={`metric-icon ${tone}`}>{icon}</div><div><div className="metric-label">{label}</div><div className="metric-value">{value}</div></div></button> }
 
 function SettingsPanel({ view, onViewChange, widgets, onWidgetsChange, onClose }: { view: CardSize; onViewChange: (value: CardSize) => void; widgets: HomeWidgets; onWidgetsChange: (value: HomeWidgets) => void; onClose: () => void }) {
-  const choices: { key: keyof HomeWidgets; label: string; detail: string }[] = [
+  const choices: { key: keyof HomeWidgets; label: string; detail: string; extra?: boolean }[] = [
     { key: 'status', label: 'Tickets by state', detail: 'Show the current workflow distribution.' },
     { key: 'priority', label: 'Open tickets by priority', detail: 'Show the P1–P4 mix for open work.' },
     { key: 'intake', label: 'Ticket intake', detail: 'Show hourly ticket creation over 24 hours.' },
     { key: 'recent', label: 'Recently created', detail: 'Show the newest tickets with quick access.' },
+    { key: 'sla', label: 'SLA health', detail: 'Show tickets within and beyond their SLA target.', extra: true },
+    { key: 'escalation', label: 'Escalation workload', detail: 'Show escalated tickets and upcoming escalation demand.', extra: true },
+    { key: 'assignment', label: 'Assignment coverage', detail: 'Show assigned and unassigned ticket coverage.', extra: true },
+    { key: 'resolution', label: 'Resolution rate', detail: 'Show resolved tickets as a share of all tickets.', extra: true },
   ]
   return <section className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <header className="settings-header"><div><div className="eyebrow">LOCAL PREFERENCES</div><h2 id="settings-title">Settings</h2></div><button className="close-button" onClick={onClose} aria-label="Close settings"><X size={19} /></button></header>
     <p className="settings-intro">These display choices are saved in this browser. Home remains the landing page.</p>
-    <section className="settings-section"><h3>Home charts</h3><p>Choose which charts and lists appear on your Home screen.</p><div className="settings-widget-list">{choices.map((choice) => <label key={choice.key}><input type="checkbox" checked={widgets[choice.key]} onChange={(event) => onWidgetsChange({ ...widgets, [choice.key]: event.target.checked })} /><span><b>{choice.label}</b><small>{choice.detail}</small></span></label>)}</div><button className="settings-reset" onClick={() => onWidgetsChange({ ...defaultHomeWidgets })}>Show all Home charts</button></section>
+    <section className="settings-section"><h3>Home charts</h3><p>Choose which charts and lists appear on your Home screen.</p><div className="settings-widget-list">{choices.map((choice) => <label key={choice.key} {...(choice.extra ? { 'data-extra-insight-toggle': choice.key } : {})}><input type="checkbox" checked={widgets[choice.key]} onChange={(event) => onWidgetsChange({ ...widgets, [choice.key]: event.target.checked })} /><span><b>{choice.label}</b><small>{choice.detail}</small></span></label>)}</div><button className="settings-reset" onClick={() => onWidgetsChange({ ...defaultHomeWidgets })}>Show all Home charts</button></section>
     <section className="settings-section"><h3>Ticket view</h3><p>The selected view is remembered when you open Tickets. Home still opens first.</p><label className="settings-view-label">Current ticket view<select value={view} onChange={(event) => onViewChange(event.target.value as CardSize)}><optgroup label="Records"><option value="list">List View</option><option value="split">Split View</option></optgroup><optgroup label="Kanban"><option value="small">Kanban Compact</option><option value="regular">Kanban Detailed</option></optgroup><optgroup label="Operations"><option value="my-work">My Work</option><option value="sla">SLA View</option><option value="workload">Workload View</option><option value="escalation">Escalation View</option><option value="department">Department View</option></optgroup><optgroup label="Planning and insights"><option value="calendar">Calendar View</option><option value="priority-matrix">Priority Matrix</option><option value="analytics">Analytics View</option><option value="graph">Graph View</option><option value="timeline">Timeline View</option></optgroup></select></label></section>
     <section className="settings-section settings-readonly"><h3>Workflow defaults</h3><div><Clock3 size={17} /><span><b>Resolution SLA</b><small>24-hour calendar time, including weekends and holidays.</small></span></div><div><Mail size={17} /><span><b>Email drafts</b><small>Escalation and resolution actions open test drafts. Nothing sends automatically.</small></span></div><div><Layers size={17} /><span><b>Ticket data</b><small>This prototype stores tickets and preferences in this browser.</small></span></div></section>
     <div className="settings-footer"><button className="primary-button" onClick={onClose}>Done</button></div>
