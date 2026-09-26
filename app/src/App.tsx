@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Package, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
-import InventoryPage, { loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
+import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
 import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
 import { exportCsv } from './lib/exportCsv'
 import { exportXlsx } from './lib/exportXlsx'
@@ -716,6 +716,9 @@ function App() {
             <span className="header-tools-heading">EXPORT · {page === 'inventory' ? 'INVENTORY' : 'TICKETS'}</span>
             <button type="button" onClick={() => runExport('csv')}><Download size={16} /><span>Export CSV<small>{page === 'inventory' ? 'Filtered assets or stock' : 'Filtered ticket records'}</small></span></button>
             <button type="button" onClick={() => runExport('xlsx')}><Download size={16} /><span>Export Excel<small>{page === 'inventory' ? 'Filtered assets or stock · .xlsx' : 'Filtered ticket records · .xlsx'}</small></span></button>
+            <span className="header-tools-heading">EXPORT · ALL ASSETS AND STOCK</span>
+            <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('csv', assets, stock, tickets) }}><Download size={16} /><span>All inventory CSV<small>Every asset and stock item · two files</small></span></button>
+            <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('xlsx', assets, stock, tickets) }}><Download size={16} /><span>All inventory Excel<small>Every asset and stock item · one workbook, two sheets</small></span></button>
             <span className="header-tools-heading">INSIGHTS & SETTINGS</span>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Ticket trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowSettings(true) }}><Settings2 size={16} /><span>Settings<small>Views and home widgets</small></span></button>
@@ -746,6 +749,7 @@ function App() {
           <button className="ticket-browser-add" onClick={addTicketTab} aria-label="New ticket tab" title="New ticket tab"><Plus size={16} /><span>New tab</span></button>
         </div>
         <SavedViews label="Ticket views" views={savedTicketViews} current={currentTicketView} onApply={applyTicketView} onReset={resetTicketView} onSave={(view) => setSavedTicketViews((items) => [...items, view])} onDelete={(id) => setSavedTicketViews((items) => items.filter((view) => view.id !== id))} saveButtonLabel="Save tabs as view" saveDescription="Save all open ticket tabs, including each tab’s layout, search, filters, and split view choices. Reopen the full set from Saved views." />
+        <button type="button" className="export-csv-button" onClick={() => exportCurrentTickets('csv')} title={selectedTicketIds.length ? `Export ${selectedTicketIds.length} selected ${selectedTicketIds.length === 1 ? 'ticket' : 'tickets'} as CSV` : `Export ${visible.length} tickets matching the current filters as CSV`}><Download size={14} /> Export CSV</button>
               </div>
       {cardSize === 'split' && <div className="ticket-split-options" aria-label="Split view layout">
         <strong>Split layout</strong>

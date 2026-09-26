@@ -19,13 +19,14 @@ Add `?debug` to the end of the page address, or press **Ctrl + Shift + D**, to s
 
 ## The React source (`app/`)
 
-`app/` holds the React + TypeScript source the page was originally compiled from, recovered from the Codex workspace on 26 Sep 2026. It builds cleanly, but it is still **behind** `index.html`. Already brought across: Inventory device health (Healthy, Monitor, At Risk, Critical) and the demo "Sync from Action1". Still missing:
+`app/` holds the React + TypeScript source the page was originally compiled from, recovered from the Codex workspace on 26 Sep 2026. It builds cleanly and, apart from the add-on scripts, it now does everything `index.html` does:
 
-- keyword-based ticket routing (VPN, laptop, printer…);
-- the email reminder when a ticket has no affected-user email;
-- the add-on scripts listed above.
+- **Brought across from the page:** Inventory device health (Healthy, Monitor, At Risk, Critical) with the demo "Sync from Action1", the Export CSV button on the Tickets page, and the "All assets and stock" export from the Tools menu (CSV, or one Excel workbook with two sheets).
+- **Already in the source, nothing to port:** keyword ticket routing, the missing-email reminder in the "resolved" email draft, and an Excel export that works offline (the page needs a web library for Excel).
+- **Ahead of the page:** the ticket list view has checkboxes with Shift-click range selection and can export just the selected tickets, and tickets can be exported to Excel.
+- **Still only in `index.html`, as add-on scripts:** the Ticket overview / Needs-attention / Explore tickets popups, the Operations insights cards and their popups, the "All Views" picker, the screen pattern picker, the quick page arrows, the debug log, and the extra Home insight cards with their Settings toggles. Rebuilding these as components is the next stage; after that `index.html` is built from `app/` and the add-on scripts are retired.
 
-Until those are brought into `app/`, **`index.html` stays the page to use**. Once `app/` matches it, `index.html` will be built from `app/` and the add-on scripts retired.
+Until then, **`index.html` stays the page to use.**
 
 To build it (needs Node.js):
 
@@ -37,7 +38,7 @@ The result lands in `app/dist/`, which isn't committed.
 
 ## Automated tests
 
-Browser tests in `tests/` open the real `index.html` in Chrome and click through the main flows: the Home totals and their queues, the Ticket overview and Needs-attention popups, the Explore tickets launcher, the Operations insights popups (including keyboard use and arranging), Home settings, opening a ticket, and Inventory device health. They also check that the Home page settles instead of re-rendering forever. Each test starts with a fresh browser profile, so nothing depends on your saved tickets.
+Browser tests in `tests/` run in two sets. The **page** tests open the real `index.html` in Chrome and click through the main flows: the Home totals and their queues, the Ticket overview and Needs-attention popups, the Explore tickets launcher, the Operations insights popups (including keyboard use and arranging), Home settings, opening a ticket, and Inventory device health. They also check that the Home page settles instead of re-rendering forever. Each test starts with a fresh browser profile, so nothing depends on your saved tickets.
 
 Run them (needs Node.js and Google Chrome):
 
@@ -47,7 +48,9 @@ cd tests && npm ci && npm test
 
 `npm run test:headed` shows the browser while it runs. GitHub runs the same tests on every pull request and on `main`; the result shows on the pull request as **Browser tests**. If a run fails, open it on the Actions tab and download the `playwright-report` file.
 
-One test is marked `fixme`: filtering Inventory by At Risk, Critical or Monitor shows nothing in `index.html` (a known bug, fixed in the React source in `app/`). Turn it on when `index.html` is built from `app/`.
+The **source** tests (`tests/source/`) run against the React source built into `app/dist`, and cover Inventory device health and every export (the downloaded files are checked, including the two-sheet Excel workbook). Build the source first: `cd app && npm ci && npm run build`. GitHub does this automatically.
+
+One page test is marked `fixme`: filtering Inventory by At Risk, Critical or Monitor shows nothing in `index.html` (a known bug, fixed in the React source and tested there). Turn it on when `index.html` is built from `app/`.
 
 ## Making changes
 
