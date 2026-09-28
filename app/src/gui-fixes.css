@@ -88,3 +88,19 @@
 
 /* Insight card subtitle text: slightly darker for readability. */
 .home-chart-heading p { color: #5a7280; }
+
+/* Ticket card: description on the right side. */
+.ticket-card-front-layout { display: flex; gap: 16px; }
+.ticket-card-left { flex: 1; min-width: 0; }
+.ticket-card-right { width: 280px; flex-shrink: 0; overflow: hidden; }
+.ticket-description-section { display: flex; flex-direction: column; height: 100%; }
+.ticket-description-section h5 { margin: 0 0 8px 0; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #5a7280; }
+.ticket-description-section p { margin: 0; font-size: 13px; line-height: 1.5; color: #0d1924; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ticket-description-section h5 { color: #a0aec0; }
+  :root:not([data-theme="light"]) .ticket-description-section p { color: #f3f4f6; }
+}
+
+:root[data-theme="dark"] .ticket-description-section h5 { color: #a0aec0; }
+:root[data-theme="dark"] .ticket-description-section p { color: #f3f4f6; }
