@@ -30,10 +30,8 @@ type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolve
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
 type RecordType = 'Incident' | 'Problem' | 'Change Request' | 'Work Order'
 type BoardBy = 'State' | 'Task type' | 'Assignment group'
-type CardSize = 'small' | 'regular' | 'list' | 'split' | 'my-work' | 'sla' | 'workload' | 'escalation' | 'department' | 'calendar' | 'priority-matrix' | 'analytics' | 'graph' | 'timeline'
-type SplitPaneMode = Exclude<CardSize, 'split'> | 'details'
-type GraphCategory = 'Priority' | 'State' | 'Department' | 'Assignment group' | 'Task type'
-type GraphRange = '24h' | '7d' | '30d'
+type CardSize = 'small' | 'regular' | 'list' | 'split' | 'my-work'
+type SplitPaneMode = 'list' | 'small' | 'regular' | 'my-work' | 'details'
 type MetricFilter = 'all' | 'active' | 'resolved' | 'high-priority' | 'overdue' | 'at-risk' | 'escalated' | 'escalation-due' | 'unassigned' | 'waiting' | 'due-today'
 type HomeWidgets = { status: boolean; priority: boolean; intake: boolean; recent: boolean; sla: boolean; escalation: boolean; assignment: boolean; resolution: boolean }
 type TicketPaneSettings = { cardSize: CardSize; boardBy: BoardBy; query: string; typeFilter: RecordType | 'All task types'; groupFilter: string; assigneeFilter: string; metricFilter: MetricFilter; tagFilter: string; starredOnly: boolean; splitLeft: SplitPaneMode; splitRight: SplitPaneMode }
@@ -103,8 +101,8 @@ function loadHomeWidgets(): HomeWidgets {
   const read = (key: string) => { try { return JSON.parse(localStorage.getItem(key) || '{}') } catch { return {} } }
   return { ...defaultHomeWidgets, ...read(LEGACY_EXTRA_INSIGHTS_KEY), ...read(HOME_WIDGETS_STORAGE_KEY) }
 }
-const viewModes: CardSize[] = ['small', 'regular', 'list', 'split', 'my-work', 'sla', 'workload', 'escalation', 'department', 'calendar', 'priority-matrix', 'analytics', 'graph', 'timeline']
-const splitPaneModes: SplitPaneMode[] = ['list', 'details', 'small', 'regular', 'my-work', 'sla', 'workload', 'escalation', 'department', 'calendar', 'priority-matrix', 'analytics', 'graph', 'timeline']
+const viewModes: CardSize[] = ['small', 'regular', 'list', 'split', 'my-work']
+const splitPaneModes: SplitPaneMode[] = ['list', 'details', 'small', 'regular', 'my-work']
 const newTicketWorkspaceId = () => `ticket-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 const defaultTicketPane = (): TicketPaneSettings => ({ cardSize: 'list', boardBy: 'State', query: '', typeFilter: 'All task types', groupFilter: 'All groups', assigneeFilter: 'All assignees', metricFilter: 'all', tagFilter: 'All tags', starredOnly: false, splitLeft: 'list', splitRight: 'details' })
 function loadTicketWorkspace(): TicketWorkspace {
@@ -667,7 +665,7 @@ function App() {
     setTicketWorkspace({ tabs: [{ id, settings }], activeId: id })
     applyTicketPane(settings)
   }
-  const ticketTabLabel = (settings: TicketPaneSettings) => ({ small: 'Kanban Compact', regular: 'Kanban Detailed', list: 'List', split: 'Split', 'my-work': 'My Work', sla: 'SLA', workload: 'Workload', escalation: 'Escalation', department: 'Department', calendar: 'Calendar', 'priority-matrix': 'Priority Matrix', analytics: 'Analytics', graph: 'Graph', timeline: 'Timeline' } as Record<CardSize, string>)[settings.cardSize]
+  const ticketTabLabel = (settings: TicketPaneSettings) => ({ small: 'Kanban Compact', regular: 'Kanban Detailed', list: 'List', split: 'Split', 'my-work': 'My Work' } as Record<CardSize, string>)[settings.cardSize]
   const ticketTags = useMemo(() => [...new Set(tickets.flatMap((ticket) => ticket.tags || []))].sort(), [tickets])
   const groupOptions = useMemo(() => [...new Set(tickets.map((ticket) => ticket.assignmentGroup || 'No group'))].sort(), [tickets])
   const assigneeOptions = useMemo(() => [...new Set(tickets.map((ticket) => ticket.assignee.trim()).filter(Boolean))].sort(), [tickets])
@@ -1182,16 +1180,7 @@ function TicketListItem({ ticket, now, onClick, active = false }: { ticket: Tick
 
 function AdditionalView({ mode, tickets, allTickets, now, boardBy, openTicket, assessTicket, moveToLane, splitLeft = 'list', splitRight = 'details', onSplitLeftChange, onSplitRightChange }: { mode: CardSize; tickets: TicketItem[]; allTickets: TicketItem[]; now: number; boardBy: BoardBy; openTicket: (id: string) => void; assessTicket: (id: string, field: 'impact' | 'urgency', value: string) => void; moveToLane: (id: string, lane: string) => void; splitLeft?: SplitPaneMode; splitRight?: SplitPaneMode; onSplitLeftChange?: (value: SplitPaneMode) => void; onSplitRightChange?: (value: SplitPaneMode) => void }) {
   if (mode === 'split') return <SplitView tickets={tickets} allTickets={allTickets} now={now} boardBy={boardBy} openTicket={openTicket} assessTicket={assessTicket} moveToLane={moveToLane} leftMode={splitLeft} rightMode={splitRight} setLeftMode={onSplitLeftChange || (() => {})} setRightMode={onSplitRightChange || (() => {})} />
-  if (mode === 'my-work') return <MyWorkView tickets={tickets} allTickets={allTickets} now={now} openTicket={openTicket} />
-  if (mode === 'sla') return <SlaView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'workload') return <WorkloadView tickets={tickets} openTicket={openTicket} />
-  if (mode === 'escalation') return <EscalationView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'department') return <DepartmentView tickets={tickets} openTicket={openTicket} />
-  if (mode === 'calendar') return <CalendarView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'priority-matrix') return <PriorityMatrixView tickets={tickets} now={now} openTicket={openTicket} assessTicket={assessTicket} />
-  if (mode === 'analytics') return <AnalyticsView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'graph') return <GraphView tickets={tickets} now={now} />
-  return <TimelineView tickets={tickets} openTicket={openTicket} />
+  return <MyWorkView tickets={tickets} allTickets={allTickets} now={now} openTicket={openTicket} />
 }
 
 function SplitPaneOptions() {
@@ -1252,181 +1241,6 @@ function MyWorkView({ tickets, allTickets, now, openTicket }: { tickets: TicketI
   return <section className="operation-view" id="board"><ViewHeader title="My Work" subtitle="Choose a technician to see their assigned queue." action={<label className="view-inline-filter"><span>Technician</span><select value={person} onChange={(event) => setPerson(event.target.value)}><option value="">Choose a technician</option>{people.map((name) => <option key={name}>{name}</option>)}</select></label>} /><div className="view-kpis"><div><span>Assigned</span><b>{mine.length}</b></div><div><span>Open</span><b>{openCount}</b></div><div><span>P1 / P2</span><b>{urgent}</b></div></div><div className="stacked-ticket-list">{person ? mine.length ? mine.map((ticket) => <TicketListItem key={ticket.id} ticket={ticket} now={now} onClick={() => openTicket(ticket.id)} />) : <div className="view-empty">No tickets are assigned to this technician.</div> : <div className="view-empty">Select your name above to see your work.</div>}</div></section>
 }
 
-function SlaView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  const buckets = [
-    { label: 'Breached', tone: 'red', tickets: tickets.filter((ticket) => ticket.status !== 'Resolved' && slaTime(ticket, now).breached) },
-    { label: 'At risk', tone: 'amber', tickets: tickets.filter((ticket) => slaAtRisk(ticket, now)) },
-    { label: 'Due soon', tone: 'blue', tickets: tickets.filter((ticket) => { const sla = slaTime(ticket, now); return ticket.status !== 'Resolved' && !sla.breached && !slaAtRisk(ticket, now) && sla.deadline - now <= 24 * 60 * 60_000 }) },
-    { label: 'On track', tone: 'green', tickets: tickets.filter((ticket) => { const sla = slaTime(ticket, now); return ticket.status !== 'Resolved' && !sla.breached && !slaAtRisk(ticket, now) && sla.deadline - now > 24 * 60 * 60_000 }) },
-    { label: 'Resolved', tone: 'slate', tickets: tickets.filter((ticket) => ticket.status === 'Resolved') },
-  ]
-  return <section className="operation-view" id="board"><ViewHeader title="SLA View" subtitle="Resolution health grouped by the current calendar-time SLA clock." /><div className="bucket-grid">{buckets.map((bucket) => <article className={`view-bucket tone-${bucket.tone}`} key={bucket.label}><header><span>{bucket.label}</span><b>{bucket.tickets.length}</b></header><div>{bucket.tickets.length ? bucket.tickets.map((ticket) => <TicketListItem key={ticket.id} ticket={ticket} now={now} onClick={() => openTicket(ticket.id)} />) : <div className="bucket-empty">No tickets</div>}</div></article>)}</div></section>
-}
-
-function WorkloadView({ tickets, openTicket }: { tickets: TicketItem[]; openTicket: (id: string) => void }) {
-  const groups = [...new Set(tickets.map((ticket) => ticket.assignee || 'Unassigned'))].sort().map((name) => ({ name, tickets: tickets.filter((ticket) => (ticket.assignee || 'Unassigned') === name) }))
-  const max = Math.max(1, ...groups.map((group) => group.tickets.filter((ticket) => ticket.status !== 'Resolved').length))
-  return <section className="operation-view" id="board"><ViewHeader title="Workload View" subtitle="Compare active work and priority pressure across the team." /><div className="workload-grid">{groups.map((group) => { const open = group.tickets.filter((ticket) => ticket.status !== 'Resolved'); const urgent = open.filter((ticket) => ticket.severity.startsWith('P1') || ticket.severity.startsWith('P2')).length; return <article className="workload-card" key={group.name}><header><span className="avatar">{group.name === 'Unassigned' ? '—' : group.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2)}</span><div><b>{group.name}</b><span>{open.length} open · {urgent} high priority</span></div></header><div className="workload-meter"><i style={{ width: `${open.length / max * 100}%` }} /></div><div className="workload-tickets">{group.tickets.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span>{ticket.id}</span><b>{ticket.title}</b><small>{ticket.status}</small></button>)}</div></article> })}</div></section>
-}
-
-function EscalationView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  return <section className="operation-view" id="board"><ViewHeader title="Escalation View" subtitle="Tickets arranged by their current support tier." /><div className="tier-view-grid">{([1, 2, 3] as const).map((tier) => { const items = tickets.filter((ticket) => ticket.currentTier === tier); const contact = tierRows[tier - 1]; return <article className={`tier-view-card tier-${tier}`} key={tier}><header><div><span>{contact.tier}</span><b>{contact.role}</b></div><strong>{items.length}</strong></header><p>{contact.when}</p><div>{items.length ? items.map((ticket) => <TicketListItem key={ticket.id} ticket={ticket} now={now} onClick={() => openTicket(ticket.id)} />) : <div className="bucket-empty">No tickets at this tier</div>}</div></article> })}</div></section>
-}
-
-function DepartmentView({ tickets, openTicket }: { tickets: TicketItem[]; openTicket: (id: string) => void }) {
-  const groups = [...new Set([...departments, ...tickets.map((ticket) => ticket.department || 'Field Services')])].sort().map((name) => ({ name, tickets: tickets.filter((ticket) => (ticket.department || 'Field Services') === name) }))
-  return <section className="operation-view" id="board"><ViewHeader title="Department View" subtitle="Demand and ownership across business departments." /><div className="department-grid">{groups.map((group) => <article className="department-card" key={group.name}><header><Building2 size={16} /><div><b>{group.name}</b><span>{group.tickets.filter((ticket) => ticket.status !== 'Resolved').length} open of {group.tickets.length}</span></div></header><div className="department-tickets">{group.tickets.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.slice(0, 2)}</span><span><b>{ticket.id}</b><small>{ticket.title}</small></span></button>)}</div></article>)}</div></section>
-}
-
-function CalendarView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  const [monthOffset, setMonthOffset] = useState(0)
-  const [basis, setBasis] = useState<'sla' | 'due' | 'created'>('sla')
-  const month = new Date(now)
-  month.setDate(1)
-  month.setMonth(month.getMonth() + monthOffset)
-  month.setHours(0, 0, 0, 0)
-  const year = month.getFullYear()
-  const monthIndex = month.getMonth()
-  const firstDay = month.getDay()
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
-  const cells = Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) * 7 }, (_, index) => index - firstDay + 1)
-  const datedTickets = tickets.map((ticket) => ({
-    ticket,
-    date: basis === 'sla' ? new Date(slaTime(ticket, now).deadline) : basis === 'due' ? ticket.dueAt ? new Date(ticket.dueAt) : null : new Date(ticket.createdAt),
-  }))
-  const undated = datedTickets.filter((item) => !item.date || Number.isNaN(item.date.getTime()))
-  const ticketsForDay = (day: number) => datedTickets.filter((item) => item.date && item.date.getFullYear() === year && item.date.getMonth() === monthIndex && item.date.getDate() === day)
-  return <section className="operation-view calendar-view" id="board">
-    <ViewHeader title="Calendar View" subtitle="Browse ticket dates using the selected date field." action={<div className="calendar-controls"><label className="view-inline-filter"><span>Date</span><select value={basis} onChange={(event) => setBasis(event.target.value as typeof basis)}><option value="sla">Resolution SLA</option><option value="due">Task due date</option><option value="created">Created</option></select></label><button onClick={() => setMonthOffset((value) => value - 1)} aria-label="Previous month"><ArrowLeft size={14} /></button><b>{new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(month)}</b><button onClick={() => setMonthOffset(0)}>Today</button><button onClick={() => setMonthOffset((value) => value + 1)} aria-label="Next month"><ArrowRight size={14} /></button></div>} />
-    <div className="calendar-scroll"><div className="calendar-grid">
-      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div className="calendar-weekday" key={day}>{day}</div>)}
-      {cells.map((day, index) => { const items = day > 0 && day <= daysInMonth ? ticketsForDay(day) : []; const isToday = day === new Date(now).getDate() && monthIndex === new Date(now).getMonth() && year === new Date(now).getFullYear(); return <div className={`calendar-day${day < 1 || day > daysInMonth ? ' outside' : ''}${isToday ? ' today' : ''}`} key={index}>{day > 0 && day <= daysInMonth && <><span className="calendar-date">{day}</span><div className="calendar-day-items">{items.map(({ ticket }) => <button className={sevClass(ticket.severity)} key={ticket.id} onClick={() => openTicket(ticket.id)} title={ticket.title}>{ticket.id} · {ticket.title}</button>)}</div></>}</div> })}
-    </div></div>
-    {basis === 'due' && undated.length > 0 && <div className="undated-tickets"><b>No task due date ({undated.length})</b>{undated.map(({ ticket }) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}>{ticket.id} · {ticket.title}</button>)}</div>}
-  </section>
-}
-
-function PriorityMatrixView({ tickets, now, openTicket, assessTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void; assessTicket: (id: string, field: 'impact' | 'urgency', value: string) => void }) {
-  const unassessed = tickets.filter((ticket) => !ticket.impact || !ticket.urgency)
-  const suggested = (ticket: TicketItem): [Assessment, Assessment] => ticket.severity.startsWith('P1') ? ['High', 'High'] : ticket.severity.startsWith('P2') ? ['High', 'Medium'] : ticket.severity.startsWith('P3') ? ['Medium', 'Medium'] : ['Low', 'Low']
-  return <section className="operation-view" id="board"><ViewHeader title="Priority Matrix" subtitle="Placement follows the ticket priority until impact and urgency are assessed below." />
-    <div className="priority-scroll"><div className="priority-matrix"><div className="matrix-axis matrix-corner">Impact ↓ / Urgency →</div>{assessmentLevels.map((level) => <div className="matrix-axis" key={`top-${level}`}>{level}</div>)}
-      {assessmentLevels.flatMap((impact) => [<div className="matrix-axis" key={`side-${impact}`}>{impact}</div>, ...assessmentLevels.map((urgency) => { const items = tickets.filter((ticket) => { const [suggestedImpact, suggestedUrgency] = suggested(ticket); return (ticket.impact || suggestedImpact) === impact && (ticket.urgency || suggestedUrgency) === urgency }); return <div className="priority-cell" key={`${impact}-${urgency}`}><span>{items.length} tickets</span>{items.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><b>{ticket.id}</b><small>{ticket.title}</small><em>{ticket.impact && ticket.urgency ? 'Assessed' : 'Suggested from priority'} · {ticket.status === 'Resolved' ? 'Resolved' : slaTime(ticket, now).label}</em></button>)}</div> })])}</div></div>
-    <div className="assessment-queue"><h3>Assess or adjust tickets <span>{unassessed.length} need assessment</span></h3>{tickets.length ? tickets.map((ticket) => <div className="assessment-row" key={ticket.id}><button className="assessment-record" onClick={() => openTicket(ticket.id)}><b>{ticket.id}</b><span>{ticket.title}</span></button><label>Impact<select value={ticket.impact || ''} onChange={(event) => assessTicket(ticket.id, 'impact', event.target.value)}><option value="">Suggested: {suggested(ticket)[0]}</option>{assessmentLevels.map((level) => <option key={level}>{level}</option>)}</select></label><label>Urgency<select value={ticket.urgency || ''} onChange={(event) => assessTicket(ticket.id, 'urgency', event.target.value)}><option value="">Suggested: {suggested(ticket)[1]}</option>{assessmentLevels.map((level) => <option key={level}>{level}</option>)}</select></label></div>) : <p>No tickets match the current filters.</p>}</div>
-  </section>
-}
-
-function AnalyticsView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  const open = tickets.filter((ticket) => ticket.status !== 'Resolved')
-  const healthy = open.filter((ticket) => !slaTime(ticket, now).breached).length
-  const slaHealth = open.length ? Math.round(healthy / open.length * 100) : null
-  const measured = tickets.filter((ticket) => ticket.status === 'Resolved' && ticket.resolvedAt && new Date(ticket.resolvedAt).getTime() >= new Date(ticket.createdAt).getTime())
-  const averageHours = measured.length ? measured.reduce((sum, ticket) => sum + (new Date(ticket.resolvedAt!).getTime() - new Date(ticket.createdAt).getTime()) / 3_600_000, 0) / measured.length : null
-  const statusData = statuses.map((status) => ({ label: status, count: tickets.filter((ticket) => ticket.status === status).length }))
-  const priorityData = ['P1', 'P2', 'P3', 'P4'].map((priority) => ({ label: priority, count: tickets.filter((ticket) => ticket.severity.startsWith(priority)).length }))
-  const maxStatus = Math.max(1, ...statusData.map((item) => item.count))
-  const maxPriority = Math.max(1, ...priorityData.map((item) => item.count))
-  const oldest = [...open].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).slice(0, 5)
-  return <section className="operation-view" id="board"><ViewHeader title="Analytics View" subtitle="Current queue health from tickets shown by the active filters." />
-    <div className="analytics-kpis"><article><span>Total tickets</span><b>{tickets.length}</b><small>{open.length} currently open</small></article><article><span>Open within SLA</span><b>{slaHealth === null ? '—' : `${slaHealth}%`}</b><small>{healthy} of {open.length} open tickets</small></article><article><span>Unassigned</span><b>{open.filter((ticket) => !ticket.assignee).length}</b><small>Open tickets needing an owner</small></article><article><span>Average resolution</span><b>{averageHours === null ? '—' : `${averageHours.toFixed(1)}h`}</b><small>{measured.length ? `Based on ${measured.length} recorded resolutions` : 'No recorded resolution times yet'}</small></article></div>
-    <div className="analytics-grid"><article className="chart-card"><h3>Tickets by state</h3>{statusData.map((item) => <div className="bar-row" key={item.label}><span>{item.label}</span><i><b style={{ width: `${item.count / maxStatus * 100}%` }} /></i><strong>{item.count}</strong></div>)}</article><article className="chart-card"><h3>Tickets by priority</h3>{priorityData.map((item) => <div className="bar-row" key={item.label}><span>{item.label}</span><i><b className={item.label.toLowerCase()} style={{ width: `${item.count / maxPriority * 100}%` }} /></i><strong>{item.count}</strong></div>)}</article><article className="chart-card oldest-card"><h3>Oldest open tickets</h3>{oldest.length ? oldest.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span>{ticket.id}</span><b>{ticket.title}</b><small>{elapsedLabel(ticket.createdAt, now)} open</small></button>) : <p className="view-empty">No open tickets.</p>}</article></div>
-  </section>
-}
-
-const graphColors = ['#28718a', '#d17a3c', '#8c62a0', '#43a182', '#c6536a', '#6e7fc4', '#ad8d32', '#4a8ca3', '#b16c89', '#6d8e59', '#9b7355', '#627987']
-
-function graphCategoryFor(ticket: TicketItem, category: GraphCategory): string {
-  if (category === 'Priority') return ticket.severity.slice(0, 2)
-  if (category === 'State') return ticket.status
-  if (category === 'Department') return ticket.department || 'No department'
-  if (category === 'Assignment group') return ticket.assignmentGroup || 'Unassigned'
-  return ticket.recordType
-}
-
-function GraphView({ tickets, now }: { tickets: TicketItem[]; now: number }) {
-  const [category, setCategory] = useState<GraphCategory>('Priority')
-  const [range, setRange] = useState<GraphRange>('24h')
-  const [focused, setFocused] = useState<string | null>(null)
-  const labels = category === 'Priority' ? ['P1', 'P2', 'P3', 'P4'] : category === 'State' ? statuses : [...new Set(tickets.map((ticket) => graphCategoryFor(ticket, category)))].sort()
-  const count = range === '24h' ? 24 : range === '7d' ? 7 : 30
-  const start = new Date(now)
-  if (range === '24h') { start.setMinutes(0, 0, 0); start.setHours(start.getHours() - 23) }
-  else { start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - count + 1) }
-  const bucketStarts = Array.from({ length: count + 1 }, (_, index) => {
-    const date = new Date(start)
-    if (range === '24h') date.setHours(date.getHours() + index)
-    else date.setDate(date.getDate() + index)
-    return date
-  })
-  const series = labels.map((label, index) => {
-    const matching = tickets.filter((ticket) => graphCategoryFor(ticket, category) === label)
-    const points = bucketStarts.slice(0, -1).map((bucket, bucketIndex) => matching.filter((ticket) => {
-      const created = new Date(ticket.createdAt).getTime()
-      return created >= bucket.getTime() && created < bucketStarts[bucketIndex + 1].getTime()
-    }).length)
-    return { label, color: graphColors[index % graphColors.length], total: matching.length, points }
-  })
-  const maxValue = Math.max(0, ...series.flatMap((item) => item.points))
-  const maxY = Math.max(4, Math.ceil(maxValue / 4) * 4)
-  const plotLeft = 42
-  const plotRight = 814
-  const plotTop = 18
-  const plotBottom = 245
-  const plotWidth = plotRight - plotLeft
-  const plotHeight = plotBottom - plotTop
-  const xAt = (index: number) => plotLeft + index * plotWidth / Math.max(1, count - 1)
-  const yAt = (value: number) => plotBottom - value * plotHeight / maxY
-  const labelFor = (date: Date) => range === '24h' ? new Intl.DateTimeFormat('en', { hour: 'numeric' }).format(date) : new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date)
-  const shownXAxis = (index: number) => range === '24h' ? index % 4 === 0 || index === count - 1 : range === '7d' || index % 5 === 0 || index === count - 1
-  const total = tickets.length
-  let arcStart = -Math.PI / 2
-  const slices = series.filter((item) => item.total > 0).map((item) => {
-    const angle = item.total / total * Math.PI * 2
-    const startAngle = arcStart
-    const endAngle = startAngle + angle
-    arcStart = endAngle
-    const point = (radians: number) => ({ x: 120 + Math.cos(radians) * 94, y: 120 + Math.sin(radians) * 94 })
-    const first = point(startAngle)
-    const last = point(endAngle)
-    const path = 'M 120 120 L ' + first.x + ' ' + first.y + ' A 94 94 0 ' + (angle > Math.PI ? 1 : 0) + ' 1 ' + last.x + ' ' + last.y + ' Z'
-    return { ...item, path }
-  })
-  return <section className="operation-view graph-view" id="board">
-    <ViewHeader title="Graph View" subtitle="Ticket creation trend and current category distribution for the visible records." action={<div className="graph-controls">
-      <label>Category<select value={category} onChange={(event) => { setCategory(event.target.value as GraphCategory); setFocused(null) }}><option>Priority</option><option>State</option><option>Department</option><option>Assignment group</option><option>Task type</option></select></label>
-      <label>Time range<select value={range} onChange={(event) => setRange(event.target.value as GraphRange)}><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
-    </div>} />
-    <div className="graph-panels">
-      <article className="graph-panel graph-line-panel"><div className="graph-panel-heading"><div><h3>Tickets created over time</h3><p>{range === '24h' ? 'Hourly' : 'Daily'} count by current {category.toLowerCase()}</p></div><span>{tickets.length} tickets shown</span></div>
-        <div className="graph-svg-scroll"><svg viewBox="0 0 844 292" role="img" aria-label={'Line chart of tickets created by ' + category.toLowerCase() + ' during the selected time range'}>
-          {[0, 1, 2, 3, 4].map((tick) => { const value = maxY / 4 * tick; const y = yAt(value); return <g key={tick}><line x1={plotLeft} x2={plotRight} y1={y} y2={y} stroke="#e5ecef" strokeWidth="1" /><text x={plotLeft - 9} y={y + 4} textAnchor="end" fill="#83959c" fontSize="10">{value}</text></g> })}
-          {bucketStarts.slice(0, -1).map((date, index) => shownXAxis(index) ? <text key={index} x={xAt(index)} y={268} textAnchor="middle" fill="#84969d" fontSize="10">{labelFor(date)}</text> : null)}
-          {series.map((item) => <g key={item.label} opacity={focused && focused !== item.label ? 0.14 : 1}>
-            <polyline points={item.points.map((value, index) => xAt(index) + ',' + yAt(value)).join(' ')} fill="none" stroke={item.color} strokeWidth={focused === item.label ? 3.5 : 2.5} strokeLinejoin="round" strokeLinecap="round" />
-            {item.points.map((value, index) => <circle key={index} cx={xAt(index)} cy={yAt(value)} r={value ? 3.1 : 1.8} fill={item.color} stroke="#fff" strokeWidth="1"><title>{item.label}: {value} created during {new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: range === '24h' ? 'short' : undefined }).format(bucketStarts[index])}</title></circle>)}
-          </g>)}
-        </svg></div>
-        <p className="graph-footnote">The line uses creation dates. Category labels reflect each ticket's current value.</p>
-      </article>
-      <article className="graph-panel graph-pie-panel"><div className="graph-panel-heading"><div><h3>Current {category.toLowerCase()} mix</h3><p>Share of all visible tickets</p></div></div>
-        <div className="graph-pie-content"><svg viewBox="0 0 240 240" role="img" aria-label={'Pie chart of visible tickets by ' + category.toLowerCase()}>
-          {total ? slices.map((slice) => slices.length === 1 ? <circle key={slice.label} cx="120" cy="120" r="94" fill={slice.color}><title>{slice.label}: {slice.total} tickets, 100%</title></circle> : <path key={slice.label} d={slice.path} fill={slice.color} stroke="#fff" strokeWidth="2" opacity={focused && focused !== slice.label ? 0.35 : 1}><title>{slice.label}: {slice.total} tickets, {Math.round(slice.total / total * 100)}%</title></path>) : <circle cx="120" cy="120" r="94" fill="#e7edef" />}
-        </svg>{!total && <span className="graph-no-data">No tickets match the current filters.</span>}</div>
-        <div className="graph-legend" aria-label="Chart categories">{series.map((item) => <button key={item.label} type="button" className={focused === item.label ? 'focused' : ''} aria-pressed={focused === item.label} onClick={() => setFocused(focused === item.label ? null : item.label)}><i style={{ backgroundColor: item.color }} /><span>{item.label}</span><b>{item.total}</b><small>{total ? Math.round(item.total / total * 100) : 0}%</small></button>)}</div>
-      </article>
-    </div>
-  </section>
-}
-
-function TimelineView({ tickets, openTicket }: { tickets: TicketItem[]; openTicket: (id: string) => void }) {
-  const [showTargets, setShowTargets] = useState(false)
-  const events = tickets.flatMap((ticket) => [
-    { date: new Date(ticket.createdAt), label: 'Ticket created', detail: ticket.recordType, ticket, planned: false },
-    ...(ticket.activity || []).map((event) => ({ date: new Date(event.at), label: event.label, detail: event.detail || '', ticket, planned: false })),
-    ...(showTargets ? [{ date: new Date(slaTime(ticket, Date.now()).deadline), label: 'Resolution SLA target', detail: 'Planned', ticket, planned: true }, ...(ticket.dueAt ? [{ date: new Date(ticket.dueAt), label: 'Task due date', detail: 'Planned', ticket, planned: true }] : [])] : []),
-  ]).filter((event) => !Number.isNaN(event.date.getTime())).sort((a, b) => b.date.getTime() - a.date.getTime())
-  return <section className="operation-view" id="board"><ViewHeader title="Timeline View" subtitle="Recorded ticket changes and creation times, newest first." action={<label className="timeline-toggle"><input type="checkbox" checked={showTargets} onChange={(event) => setShowTargets(event.target.checked)} /> Show planned deadlines</label>} /><div className="timeline-list">{events.length ? events.map((event, index) => <button key={`${event.ticket.id}-${event.label}-${index}`} className={event.planned ? 'planned' : ''} onClick={() => openTicket(event.ticket.id)}><span className={`timeline-marker ${sevClass(event.ticket.severity)}`} /><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(event.date)}</time><div><b>{event.label}</b><span>{event.ticket.id} · {event.ticket.title}</span><small>{event.detail}</small></div></button>) : <div className="view-empty">No recorded activity.</div>}</div></section>
-}
 
 /** State, priority and resolution SLA across the top of a ticket record. */
 function RecordStatusStrip({ ticket, now }: { ticket: TicketItem; now: number }) {
