@@ -134,11 +134,16 @@
 @media (max-width:700px) { .inventory-split { grid-template-columns:1fr; }.inventory-split-pane { max-height:420px; }.inventory-split-pane + .inventory-split-pane { border-left:0; border-top:1px solid #e3ebed; }.inventory-split-options { align-items:stretch; }.inventory-split-options strong { width:100%; }.inventory-split-options label { flex:1 1 145px; align-items:flex-start; flex-direction:column; }.inventory-split-options select { width:100%; }.inventory-split-options > button { align-self:flex-end; } }
 
 /* Device health and the demo Action1 sync */
-.inventory-health-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 74px; min-height: 22px; padding: 3px 8px; border-radius: 5px; background: #edf2f4; color: #667d87; font-size: 10px; font-weight: 750; white-space: nowrap; }
+.inventory-health-badge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 100px; min-height: 28px; padding: 4px 8px; border-radius: 5px; background: #edf2f4; color: #667d87; font-size: 10px; font-weight: 750; white-space: nowrap; }
 .inventory-health-badge.healthy { background: #eaf5ee; color: #458464; }
 .inventory-health-badge.monitor { background: #fff7d8; color: #8a681f; }
 .inventory-health-badge.at-risk { background: #fff0df; color: #b46b32; }
 .inventory-health-badge.critical { background: #fdebea; color: #b84e4a; }
+.health-waveform { width: 45px; height: 14px; stroke-width: 1.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.inventory-health-badge.healthy .health-waveform { stroke: #458464; }
+.inventory-health-badge.monitor .health-waveform { stroke: #8a681f; }
+.inventory-health-badge.at-risk .health-waveform { stroke: #b46b32; }
+.inventory-health-badge.critical .health-waveform { stroke: #b84e4a; }
 .device-health-legend { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; color: #7b8e97; font-size: 10px; }
 .device-health-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .device-health-legend i { width: 7px; height: 7px; border-radius: 50%; background: #76a486; }
