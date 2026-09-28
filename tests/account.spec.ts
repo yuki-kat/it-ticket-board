@@ -1,7 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { openApp } from './helpers'
+import { fakeDatabase, putRecords, signIn } from './fake-supabase'
 
 // Sign-in is optional and never runs unless asked: opening the board makes no request to Supabase.
+// The signed-in tests use a stand-in database (fake-supabase.ts), so they need no real account.
+// Syncing the board with the workspace is tested in sync.spec.ts.
 
 const openAccount = async (page: import('@playwright/test').Page) => {
   await page.locator('.quick-settings-button').click()
@@ -47,55 +50,8 @@ test.describe('Account sign-in', () => {
     await expect(page.locator('[data-account-message]')).toContainText('Could not send the link')
   })
 
-  // A stored session, as Supabase keeps it after a sign-in, so these tests need no real account.
-  const signedIn = (page: import('@playwright/test').Page) => page.addInitScript(() => {
-    const expires = Math.floor(Date.now() / 1000) + 3600
-    localStorage.setItem('sb-lijmygwrzfodjcanddve-auth-token', JSON.stringify({ access_token: 'test', refresh_token: 'test', token_type: 'bearer', expires_in: 3600, expires_at: expires, user: { id: '11111111-1111-1111-1111-111111111111', email: 'me@example.com', aud: 'authenticated' } }))
-  })
-
-  type Row = Record<string, unknown>
-  /**
-   * A stand-in for the Supabase database, so these tests need no real account. It answers the calls the
-   * Account section makes (joining invites, finding or creating the workspace, the team list, team changes,
-   * copying data) and records what was sent.
-   */
-  const fakeDatabase = async (page: import('@playwright/test').Page, options: { role?: 'admin' | 'agent'; hasWorkspace?: boolean; fail?: boolean } = {}) => {
-    const me = '11111111-1111-1111-1111-111111111111'
-    const state = {
-      hasWorkspace: options.hasWorkspace ?? true,
-      calls: [] as string[],
-      sent: {} as Record<string, Row[]>,
-      members: [{ user_id: me, email: 'me@example.com', role: options.role ?? 'admin' }, { user_id: '22222222-2222-2222-2222-222222222222', email: 'sam@example.com', role: 'agent' }] as Row[],
-      invites: [] as Row[],
-    }
-    await page.route('**/rest/v1/**', async (route) => {
-      const request = route.request()
-      const url = new URL(request.url())
-      const path = url.pathname.replace(/^.*\/rest\/v1\//, '')
-      const method = request.method()
-      state.calls.push(`${method} ${path}`)
-      const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
-      if (options.fail && method === 'POST' && !path.startsWith('rpc/')) return json({ message: 'denied' }, 403)
-      if (path === 'rpc/accept_invites') return json(0)
-      if (path === 'rpc/create_workspace') { state.hasWorkspace = true; return json('ws-1') }
-      if (path === 'workspace_members' && method === 'GET') {
-        if ((url.searchParams.get('select') || '').includes('workspaces')) {
-          return json(state.hasWorkspace ? [{ workspace_id: 'ws-1', role: options.role ?? 'admin', workspaces: { name: 'Acme IT' } }] : [])
-        }
-        return json(state.members)
-      }
-      if (path === 'workspace_invites' && method === 'GET') return json(state.invites)
-      const body = JSON.parse(request.postData() || 'null')
-      const rows = Array.isArray(body) ? body : body ? [body] : []
-      state.sent[`${method} ${path}`] = [...(state.sent[`${method} ${path}`] || []), ...rows]
-      if (path === 'workspace_invites' && method === 'POST') state.invites.push(...rows)
-      return json([], method === 'POST' ? 201 : 200)
-    })
-    return state
-  }
-
   test('signed in: finds the workspace and shows it with your role and the team', async ({ page }) => {
-    await signedIn(page)
+    await signIn(page)
     await fakeDatabase(page)
     await openApp(page)
     await openAccount(page)
@@ -107,44 +63,41 @@ test.describe('Account sign-in', () => {
   })
 
   test('signed in for the first time: joins invites, then creates a workspace as admin', async ({ page }) => {
-    await signedIn(page)
+    await signIn(page)
     const db = await fakeDatabase(page, { hasWorkspace: false })
     await openApp(page)
     await openAccount(page)
-    await expect(page.locator('[data-account-workspace]')).toHaveText('Acme IT')
+    await expect(page.locator('[data-account-workspace]')).toHaveText('My workspace')
+    await expect(page.locator('[data-account-role]')).toContainText('an admin')
     const order = db.calls.filter((call) => call.startsWith('POST rpc/'))
     expect(order).toEqual(['POST rpc/accept_invites', 'POST rpc/create_workspace'])
   })
 
-  test('signed in: copies tickets, assets and stock into the workspace, and settings to you', async ({ page }) => {
-    await signedIn(page)
-    const db = await fakeDatabase(page)
+  test('signed in, empty workspace: offers to copy this board into it, or to start with an empty board', async ({ page }) => {
+    await signIn(page)
+    await fakeDatabase(page)
     await openApp(page)
     await openAccount(page)
-    const local = await page.evaluate(() => JSON.parse(localStorage.getItem('it-ticket-kanban-v1')!).length)
-    await page.locator('[data-account-upload]').click()
-    await expect(page.locator('[data-account-upload-message]')).toContainText(`Copied to Acme IT: ${local} tickets`)
-    const tickets = db.sent['POST tickets']
-    expect(tickets).toHaveLength(local)
-    expect(tickets.every((row) => row.workspace_id === 'ws-1' && row.owner === '11111111-1111-1111-1111-111111111111' && row.id)).toBe(true)
-    expect(db.sent).toHaveProperty(['POST assets'])
-    expect(db.sent).toHaveProperty(['POST stock_items'])
-    expect((db.sent['POST settings'] || []).every((row) => !('workspace_id' in row))).toBe(true)
+    await expect(page.locator('[data-sync-summary]')).toContainText('Acme IT has no tickets, assets or stock yet')
+    await expect(page.locator('[data-sync-start-upload]')).toHaveText('Copy this board into Acme IT')
+    await expect(page.locator('[data-sync-start-empty]')).toBeVisible()
+    await expect(page.locator('[data-sync-start-download]')).toHaveCount(0)
   })
 
-  test('signed in: a database error is shown and the browser data is untouched', async ({ page }) => {
-    await signedIn(page)
-    await fakeDatabase(page, { fail: true })
+  test('signed in, workspace with a board: offers to use that board, and says what it holds', async ({ page }) => {
+    await signIn(page)
+    const db = await fakeDatabase(page)
+    putRecords(db, 'tickets', [{ id: 'OPS-1' }, { id: 'OPS-2' }])
+    putRecords(db, 'assets', [{ id: 'A-1' }])
     await openApp(page)
     await openAccount(page)
-    const before = await page.evaluate(() => localStorage.getItem('it-ticket-kanban-v1'))
-    await page.locator('[data-account-upload]').click()
-    await expect(page.locator('[data-account-upload-message]')).toContainText('Could not copy')
-    expect(await page.evaluate(() => localStorage.getItem('it-ticket-kanban-v1'))).toBe(before)
+    await expect(page.locator('[data-sync-summary]')).toContainText('Acme IT already has 2 tickets, 1 asset and 0 stock items')
+    await expect(page.locator('[data-sync-start-download]')).toHaveText('Use Acme IT’s board')
+    await expect(page.locator('[data-sync-start-upload]')).toHaveCount(0)
   })
 
   test('admin: invites a colleague by email with a role, and the invite is listed', async ({ page }) => {
-    await signedIn(page)
+    await signIn(page)
     const db = await fakeDatabase(page)
     await openApp(page)
     await openAccount(page)
@@ -160,7 +113,7 @@ test.describe('Account sign-in', () => {
   })
 
   test('admin: changes a member’s role and removes a member, but not themselves', async ({ page }) => {
-    await signedIn(page)
+    await signIn(page)
     const db = await fakeDatabase(page)
     await openApp(page)
     await openAccount(page)
@@ -172,10 +125,11 @@ test.describe('Account sign-in', () => {
     await sam.locator('[data-account-member-remove]').click()
     await expect(page.locator('[data-account-team-message]')).toContainText('sam@example.com was removed')
     expect(db.calls).toContain('DELETE workspace_members')
+    await expect(page.locator('[data-account-member]')).toHaveCount(1)
   })
 
   test('agent: sees the team, but no invite form, role menus or remove buttons', async ({ page }) => {
-    await signedIn(page)
+    await signIn(page)
     await fakeDatabase(page, { role: 'agent' })
     await openApp(page)
     await openAccount(page)

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Download, RotateCcw, Upload } from 'lucide-react'
 import Overlay from './Overlay'
 import { applyBackup, countRecords, createBackup, downloadBackup, lastBackupTime, previousData, putBackPrevious, readBackupFile, type BackupCounts, type BackupFile } from './backup'
-import { isSyncing } from './cloudSync'
+import { isSyncing, stopSync } from './cloudSync'
 import './backup.css'
 
 const summary = (counts: BackupCounts) => `${counts.tickets} tickets · ${counts.deletedTickets} deleted · ${counts.assets} assets · ${counts.stock} stock items`
@@ -24,9 +24,18 @@ export default function BackupSection() {
     if (result.ok) { setProblems([]); setPending({ name: file.name, backup: result.backup }) } else { setPending(null); setProblems(result.problems) }
     if (input.current) input.current.value = ''
   }
+  // Both replace what is in this browser, so syncing stops first: nothing still on its way to the workspace
+  // can then switch it back on, and the workspace keeps what it has.
   const restore = () => {
     if (!pending) return
+    stopSync()
     applyBackup(pending.backup)
+    window.location.reload()
+  }
+  const putBack = () => {
+    if (!previousData()) return
+    stopSync()
+    putBackPrevious()
     window.location.reload()
   }
 
@@ -42,7 +51,7 @@ export default function BackupSection() {
     </div>
     {previous && <div className="backup-previous" data-backup-previous>
       <span>Kept from before the last restore or sync start ({when(previous.createdAt)}): {summary(previous.counts)}.{syncing ? ' Putting it back stops syncing in this browser.' : ''}</span>
-      <button type="button" className="text-button" data-backup-put-back onClick={() => { if (putBackPrevious()) window.location.reload() }}><RotateCcw size={14} /> Put it back</button>
+      <button type="button" className="text-button" data-backup-put-back onClick={putBack}><RotateCcw size={14} /> Put it back</button>
     </div>}
     {problems.length > 0 && <div className="form-error backup-problems" role="alert" data-backup-problems><b>This file can’t be restored. Nothing was changed.</b><ul>{problems.map((problem) => <li key={problem}>{problem}</li>)}</ul></div>}
     {pending && <Overlay className="form-overlay backup-overlay" onClose={() => setPending(null)}>

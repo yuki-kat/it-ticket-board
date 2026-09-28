@@ -94,9 +94,30 @@ Roles: an **admin** can invite people, change roles and remove members; an **age
 
 In the app, **Settings → Account** shows your workspace, your role and the team. Admins invite colleagues by email; they join automatically the first time they sign in with that email. Someone signing in with no workspace and no invite gets their own workspace. Screen pattern, Home layout and saved views stay personal.
 
+## Sync
+
+**Settings → Account → Sync** keeps the board in the workspace's database, so everyone in the workspace works from the same tickets, deleted tickets, assets and stock. It needs sign-in (so the hosted site) and `002_workspaces.sql`. Settings stay personal and are not synced.
+
+How it starts depends on what the workspace already has:
+
+- **An empty workspace:** **Copy this board into …** sends everything in this browser, or **Start with an empty board**.
+- **A workspace with a board:** **Use …'s board** shows that board here instead of what is here now.
+
+Either way, what the browser had is kept first: **Backup and restore → Put it back** returns to it, and stops syncing.
+
+While syncing:
+
+- A change is sent about a second after it is made. The top bar shows **Saving…**, then **Saved to** the workspace.
+- The workspace is read every 30 seconds while the page is visible, and whenever the window gets focus or the connection comes back, so colleagues' changes arrive. **Sync now** in Settings does both straight away.
+- With no connection, changes wait in the browser, also over a reload or restart, and are sent when the connection is back. The top bar says **Offline, changes kept here**.
+- Two people changing the same ticket: the change sent last wins, for the whole ticket (not field by field). A ticket changed here that someone else deleted is kept and sent again.
+- Syncing stops, and the board in the browser stays as it is, when you stop it in Settings, sign out, restore a backup or put the previous data back, or are removed from the workspace.
+
+How it works: the browser remembers a fingerprint of each record as the database last had it (under `it-ticket-kanban-sync-v1`, which is not part of backups). Comparing against it shows what changed here since, and what changed in the database. The rules are in `app/src/syncLogic.ts` (tested in `tests/sync-logic.spec.ts`); sending and reading are in `app/src/cloudSync.ts` (tested in `tests/sync.spec.ts`).
+
 ## Backup and restore
 
-**Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from such a file. Restoring shows what is in the file next to what is in the browser, checks the file first (a bad file changes nothing), replaces the tickets, assets, stock and settings, and keeps the replaced data under one key so the last restore can be undone.
+**Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from such a file. Restoring shows what is in the file next to what is in the browser, checks the file first (a bad file changes nothing), replaces the tickets, assets, stock and settings, and keeps the replaced data under one key so the last restore can be undone with **Put it back**. In a browser that syncs with a workspace, restoring or putting data back stops syncing first, so the workspace is not changed.
 
 File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets, deletedTickets, assets, stock }, settings }`. `records` are the plain lists, ready to import into a database later; `settings` are the remaining saved preferences as text. The code is in `app/src/backup.ts`.
 
@@ -113,7 +134,7 @@ Saved data uses the same storage keys as the old page, so nothing is lost when m
 
 ## Automated tests
 
-The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: the Home totals and their queues, every popup (opening, the four ways of closing, keyboard use, focus), the Explore tickets page and the page addresses (Back, Forward, refresh), the Operations insights and arranging (including saved order), Home settings, opening a ticket, Inventory device health, every export (the downloaded files are checked, including the two-sheet Excel workbook), the extras around the edges, and the debug log. Each test starts with a fresh browser profile, so nothing depends on your saved tickets.
+The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: the Home totals and their queues, every popup (opening, the four ways of closing, keyboard use, focus), the Explore tickets page and the page addresses (Back, Forward, refresh), the Operations insights and arranging (including saved order), Home settings, opening a ticket, Inventory device health, every export (the downloaded files are checked, including the two-sheet Excel workbook), the extras around the edges, the debug log, backups, sign-in, workspaces and sync. Each test starts with a fresh browser profile, so nothing depends on your saved tickets. The sign-in, workspace and sync tests talk to a stand-in for Supabase (`tests/fake-supabase.ts`), so they need no account and no network.
 
 ```bash
 cd tests && npm ci && npm test
