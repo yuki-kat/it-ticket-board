@@ -69,7 +69,22 @@
 
 /* Side panels: the round × in the screen corner closes them and stays in view while scrolling, so the
    panel's own ×, which it sat on top of, is hidden. */
-.form-overlay .panel-header .close-button, .ticket-record-panel .record-header-actions .close-button { display: none; }
+.import-overlay .panel-header .close-button, .ticket-record-panel .record-header-actions .close-button { display: none; }
+
+/* New task page: full-page layout instead of a slide-over panel. */
+.new-task-page { display: flex; flex-direction: column; align-items: center; padding: 32px 16px 80px; }
+.new-task-page .form-panel { width: 100%; max-width: 760px; box-shadow: 0 1px 4px rgba(0,0,0,.08); border-radius: 10px; padding: 28px; }
+.new-task-page .panel-header .close-button { display: none; }
+@media (max-width: 600px) { .new-task-page { padding: 16px 0 80px; } .new-task-page .form-panel { border-radius: 0; padding: 20px 16px; } }
 
 /* Phones: room under the last item on every page, so it can scroll clear of the page arrows in the corner. */
 @media (max-width: 600px) { .main-content { padding-bottom: 76px; } }
+
+/* Tickets filter bar and Inventory controls: single scrollable row instead of wrapping to multiple rows. */
+.board-filters { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.board-filters::-webkit-scrollbar { display: none; }
+.inventory-controls { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.inventory-controls::-webkit-scrollbar { display: none; }
+
+/* Insight card subtitle text: slightly darker for readability. */
+.home-chart-heading p { color: #5a7280; }
