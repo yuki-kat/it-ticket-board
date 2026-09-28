@@ -1,8 +1,19 @@
 {
-  "name": "it-ticketing-ui",
-  "private": true,
-  "version": "0.0.0",
+  "name": "it-ticket-board",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Lightweight IT service desk board with Kanban tickets, dashboards, asset inventory, and escalation matrix",
+  "keywords": ["IT", "ticketing", "service-desk", "kanban", "ITSM", "incident-management", "operations"],
+  "homepage": "https://github.com/yuki-kat/it-ticket-board",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuki-kat/it-ticket-board.git"
+  },
+  "license": "MIT",
+  "author": "Yuki Kat",
+  "bugs": {
+    "url": "https://github.com/yuki-kat/it-ticket-board/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
