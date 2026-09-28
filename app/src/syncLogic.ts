@@ -77,6 +77,8 @@ export function changesToSend(list: SyncRecord[], key: string, base: Record<stri
   const upserts: SyncRecord[] = []
   for (const record of list) {
     const id = idOf(record, key)
+    // One row per id: if a list ever holds the same id twice, only the first is sent.
+    if (here.has(id)) continue
     here.add(id)
     if (base[id] !== fingerprint(record)) upserts.push(record)
   }
