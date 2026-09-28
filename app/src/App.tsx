@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Package, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import Overlay from './Overlay'
 import BackupSection from './BackupSection'
 import AccountSection from './AccountSection'
@@ -853,30 +853,33 @@ function App() {
       <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
-        <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> <span className="topbar-label">Settings</span></button>
         <div className="header-tools" ref={toolsMenuRef}>
           <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu" aria-label="Tools"><Menu size={16} /> <span className="topbar-label">Tools</span> <ChevronDown size={13} /></button>
           {showToolsMenu && <div className="header-tools-menu" id="header-tools-menu" aria-label="Tools">
-            <span className="header-tools-heading">INVENTORY</span>
-            <button type="button" onClick={() => runInventoryCommand('add-asset')}><Plus size={16} /><span>Add asset<small>Create a tracked device record</small></span></button>
-            <button type="button" onClick={() => runInventoryCommand('add-stock')}><Package size={16} /><span>Add stock item<small>Track supplies by quantity</small></span></button>
-            <button type="button" onClick={() => runInventoryCommand('in-stock')}><Check size={16} /><span>In Stock<small>Items with quantity available</small></span></button>
-            <button type="button" onClick={() => runInventoryCommand('low-stock')}><AlertTriangle size={16} /><span>Low stock<small>Items at or below minimum</small></span></button>
-            <span className="header-tools-heading">TICKETING</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); openNewForm() }}><Ticket size={16} /><span>New task<small>Create a service desk ticket</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }}><Mail size={16} /><span>Import email<small>Draft a ticket from an email</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); openMatrixPanel() }}><ShieldAlert size={16} /><span>Escalation matrix<small>Priorities, timing, and contacts</small></span></button>
-            <span className="header-tools-heading">EXPORT · {page === 'inventory' ? 'INVENTORY' : 'TICKETS'}</span>
-            <button type="button" onClick={() => runExport('csv')}><Download size={16} /><span>Export CSV<small>{page === 'inventory' ? 'Filtered assets or stock' : 'Filtered ticket records'}</small></span></button>
-            <button type="button" onClick={() => runExport('xlsx')}><Download size={16} /><span>Export Excel<small>{page === 'inventory' ? 'Filtered assets or stock · .xlsx' : 'Filtered ticket records · .xlsx'}</small></span></button>
-            <span className="header-tools-heading">EXPORT · ALL ASSETS AND STOCK</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('csv', assets, stock, tickets) }}><Download size={16} /><span>All inventory CSV<small>Every asset and stock item · two files</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('xlsx', assets, stock, tickets) }}><Download size={16} /><span>All inventory Excel<small>Every asset and stock item · one workbook, two sheets</small></span></button>
-            <span className="header-tools-heading">INSIGHTS & SETTINGS</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Ticket trends and workload</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowSettings(true) }}><Settings2 size={16} /><span>Settings<small>Views and home widgets</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable tasks</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowModel(true) }}><Layers size={16} /><span>Task model<small>How the mock workflow is structured</small></span></button>
+            {page !== 'inventory' && <>
+              <span className="header-tools-heading">QUICK ACTIONS</span>
+              <button type="button" onClick={() => { setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }}><Mail size={16} /><span>Import email<small>Draft a ticket from an email</small></span></button>
+              <button type="button" onClick={() => { setShowToolsMenu(false); openMatrixPanel() }}><ShieldAlert size={16} /><span>Escalation matrix<small>Priorities, timing, and contacts</small></span></button>
+            </>}
+            {page === 'inventory' && <>
+              <span className="header-tools-heading">FILTERS</span>
+              <button type="button" onClick={() => runInventoryCommand('in-stock')}><Check size={16} /><span>In Stock<small>Items with quantity available</small></span></button>
+              <button type="button" onClick={() => runInventoryCommand('low-stock')}><AlertTriangle size={16} /><span>Low stock<small>Items at or below minimum</small></span></button>
+            </>}
+            <span className="header-tools-heading">EXPORT</span>
+            {page === 'inventory' && <>
+              <button type="button" onClick={() => runExport('csv')}><Download size={16} /><span>Filtered assets/stock · CSV<small>Current view</small></span></button>
+              <button type="button" onClick={() => runExport('xlsx')}><Download size={16} /><span>Filtered assets/stock · Excel<small>Current view</small></span></button>
+              <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('csv', assets, stock, tickets) }}><Download size={16} /><span>All inventory · CSV<small>All assets and stock</small></span></button>
+              <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('xlsx', assets, stock, tickets) }}><Download size={16} /><span>All inventory · Excel<small>All assets and stock</small></span></button>
+            </>}
+            {page !== 'inventory' && <>
+              <button type="button" onClick={() => runExport('csv')}><Download size={16} /><span>Tickets · CSV<small>Current filters</small></span></button>
+              <button type="button" onClick={() => runExport('xlsx')}><Download size={16} /><span>Tickets · Excel<small>Current filters</small></span></button>
+            </>}
+            <span className="header-tools-heading">DATA</span>
+            <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
+            <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
           </div>}
         </div>
         {/* Inventory has its own Add asset / Add stock item button beside its heading. The new-task page is the form itself. */}
