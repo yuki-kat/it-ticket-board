@@ -3,6 +3,7 @@ import type { CsvValue } from './exportCsv'
 const encoder = new TextEncoder()
 
 function xml(value: string): string {
+  // eslint-disable-next-line no-control-regex
   return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 }
 
@@ -123,7 +124,7 @@ function sheetXml(headers: string[], rows: CsvValue[][]): string {
 export function exportXlsxWorkbook(filename: string, sheets: XlsxSheet[]): void {
   const used = new Set<string>()
   const names = sheets.map((sheet, index) => {
-    const base = sheet.name.replace(/[\\/*?:\[\]]/g, '').slice(0, 31) || `Sheet${index + 1}`
+    const base = sheet.name.replace(/[\\/*?:[\]]/g, '').slice(0, 31) || `Sheet${index + 1}`
     let name = base
     for (let copy = 2; used.has(name.toLowerCase()); copy++) name = `${base.slice(0, 28)} ${copy}`
     used.add(name.toLowerCase())
