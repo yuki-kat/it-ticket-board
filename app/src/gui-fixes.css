@@ -113,3 +113,13 @@
 .summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .summary-strip .metric-show-more { grid-column: 1 / -1; min-height: 32px; padding: 8px 12px; border: 0; background: #f8fafb; color: #4a6373; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; border-top: 1px solid #dfe7ec; }
 .summary-strip .metric-show-more:hover { background: #f0f4f6; }
+
+/* Board filters dropdown: consolidate Type, Group, Assignee, Tag into a menu. */
+.board-filters-dropdown { position: relative; }
+.board-filters-button { display: inline-flex; align-items: center; gap: 5px; height: 35px; padding: 0 9px; border: 1px solid #d7e3e8; border-radius: 6px; background: #fff; color: #4a6373; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.board-filters-button:hover { border-color: #a0c0ca; background: #f9f9fa; }
+.board-filters-menu { position: absolute; top: calc(100% + 5px); left: 0; z-index: 20; min-width: 200px; border: 1px solid #d7e3e8; border-radius: 6px; background: #fff; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+.board-filters-menu-section { padding: 8px; display: grid; gap: 8px; }
+.board-filters-menu label { display: flex; flex-direction: column; gap: 4px; color: #5a727d; font-size: 10px; font-weight: 700; }
+.board-filters-menu label span { color: #667d87; font-size: 9px; }
+.board-filters-menu select { height: 32px; padding: 0 6px; border: 1px solid #d7e3e8; border-radius: 5px; background: #fff; color: #42606c; font-size: 11px; }
