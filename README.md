@@ -1,14 +1,50 @@
 # IT Ticket Board
 
-A lightweight IT service desk board in a single web page: ticket queues, a Kanban board and other ticket views, a Home dashboard with Operations insights, asset and stock inventory with device health, an escalation matrix, email-to-ticket import, and reports.
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Tests](https://github.com/yuki-kat/it-ticket-board/actions/workflows/tests.yml/badge.svg)](https://github.com/yuki-kat/it-ticket-board/actions)
 
-## Open it
+A **lightweight, single-file IT service desk board** for managing tickets, assets, and operations. No install, no server—just open it in your browser.
 
-Double-click `index.html`. It runs in any modern browser, with no install and no server.
+## ✨ Features
 
-- **Your data stays in your browser.** Tickets, assets and settings are saved in that browser's local storage. A different browser or computer starts from the sample data.
-- **Everything works offline**, including the Excel export.
-- **Debug log:** add `?debug` to the end of the page address, or press **Ctrl + Shift + D**, to show a log of clicks, popups opening and closing, page changes, and errors. Click **Turn off** to hide it.
+- **📋 Multiple ticket views** — Kanban board, list view, split view, calendar, analytics, and more
+- **🏠 Operations dashboard** — Home screen with KPI cards, insights, and queue management
+- **📦 Asset & stock inventory** — Track devices with health monitoring and supply levels
+- **🚨 Escalation matrix** — Built-in SLA reference and escalation workflow guidance
+- **📧 Email-to-ticket import** — Draft tickets directly from email text
+- **📊 Reports & exports** — CSV, Excel, and custom data analysis
+- **🔍 Global search** — Find tickets across all statuses with advanced filtering
+- **👥 Workspaces** — Team collaboration with role-based access (optional with Supabase)
+- **💾 Backup & restore** — Download all data as JSON, restore anytime
+- **🌐 Works offline** — Everything functions without internet (local storage mode)
+
+## 🚀 Quick Start
+
+### Local Use (Offline)
+
+1. Download or clone this repo
+2. Double-click **`index.html`**
+3. That's it. Your data stays in your browser.
+
+**Note:** Open `index.html` from the file system, not a web server, for full offline functionality.
+
+### Team Collaboration (With Database)
+
+For multiple team members sharing tickets and assets:
+
+1. Follow the [Database Setup](#database-and-workspaces-supabase) section below
+2. Deploy to Vercel (or any host)
+3. Team members sign in and join your workspace
+
+---
+
+## 📌 Key Highlights
+
+- **Your data stays with you** — Local storage by default. No cloud required.
+- **Zero dependencies** — No install, no build step. Just open the file.
+- **Modern browser** — Works on Chrome, Firefox, Safari, Edge (2023+)
+- **Keyboard shortcuts** — `Esc` closes dialogs, `Ctrl+Shift+D` opens debug log
+- **Mobile responsive** — Adapts to phone, tablet, and desktop screens
 
 ## How it is put together
 

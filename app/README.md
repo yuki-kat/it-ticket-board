@@ -1,32 +1,66 @@
-# React + TypeScript + Vite
+# IT Ticket Board — Source
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The React + TypeScript source for IT Ticket Board. Builds into a single self-contained HTML file for offline use or team collaboration.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
+npm run dev        # Start dev server with hot reload
+npm run lint       # Check code quality with oxlint
+npm run build      # Compile to dist/
+npm run build:page # Build into ../index.html (main page)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Architecture
+
+Built with **React 19**, **TypeScript**, and **Vite**. Uses:
+- **Radix UI** primitives for accessible components
+- **TailwindCSS** for styling
+- **React Hook Form** + Zod for form validation
+- **Supabase.js** for optional database integration
+- **Embla Carousel** for carousels
+- **Sonner** for toast notifications
+- **date-fns** for date utilities
+
+## Pages
+
+Each page is a React component, hash-routed from `App.tsx`:
+
+| Path | Component | Purpose |
+|------|-----------|---------|
+| `#/home` | `HomePopouts.tsx`, `HomeInsights.tsx` | Ticket overview, KPI cards, operations dashboard |
+| `#/tickets` | `App.tsx` | Kanban, list, split, and other ticket views |
+| `#/search` | `SearchPage.tsx` | Full-text search and filtering |
+| `#/inventory` | `InventoryPage.tsx` | Assets, stock, device health |
+| `#/explore/:queue/:id` | `ExplorePage.tsx` | Detailed ticket view |
+| `#/new` | `NewTicketDialog.tsx` | Create ticket |
+| `#/signin` | `SignInPage.tsx` | Supabase authentication |
+
+## State Management
+
+- **Local data**: Stored in `localStorage` with keys prefixed by page (e.g., `tickets`, `assets`, `settings`)
+- **Supabase integration**: Optional; when connected, syncs to a PostgreSQL database
+- **Persistence**: `backup.ts` handles download/restore of all data as JSON
+
+## Styling
+
+Each component has its own `.css` file when it needs scoped styles. Inline styles are used sparingly for one-off adjustments. All colors use CSS variables from `:root` with dark/light theme support via `@media (prefers-color-scheme: dark)`.
+
+## Linting
+
+Oxlint (Rust-based) checks code quality. Rules are in `.oxlintrc.json`. Run before commit:
+
+```bash
+npm run lint
+```
+
+## Building for Distribution
+
+The `build:page` script compiles the React app and inlines all CSS/JS into a single `index.html`:
+
+```bash
+npm run build:page
+```
+
+This creates `../index.html` (one level up from `app/`), which is the file that ships.
