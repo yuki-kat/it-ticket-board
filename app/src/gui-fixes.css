@@ -67,6 +67,10 @@
 .form-panel .field input, .form-panel .field select, .form-panel .field textarea { display: block; width: 100%; min-width: 0; margin-top: 6px; }
 .form-panel .field .field-hint { display: block; margin-top: 5px; }
 
+/* Show more options button in the form. */
+.form-show-more-btn { border: 0; background: transparent; color: #5a7280; font-size: 11px; font-weight: 600; padding: 10px 0; margin-top: 8px; margin-bottom: 8px; cursor: pointer; text-decoration: underline; transition: color 0.15s; }
+.form-show-more-btn:hover { color: #3d5461; }
+
 /* Side panels: the round × in the screen corner closes them and stays in view while scrolling, so the
    panel's own ×, which it sat on top of, is hidden. Exception: ticket-record-panel keeps its close button. */
 .import-overlay .panel-header .close-button { display: none; }
