@@ -6,19 +6,22 @@
  *
  * (#ticket=OPS-101, the full-page ticket record opened in a new tab, is handled separately in App.tsx.)
  */
-export type PageId = 'home' | 'board' | 'inventory' | 'explore'
+export type PageId = 'home' | 'board' | 'inventory' | 'search' | 'explore' | 'new' | 'signin'
 export type ExploreKey = 'active' | 'priority' | 'overdue' | 'escalated'
 export type Route = { page: PageId; queue?: ExploreKey; ticket?: string }
 
 export const EXPLORE_KEYS: ExploreKey[] = ['active', 'priority', 'overdue', 'escalated']
-const SLUGS: Record<Exclude<PageId, 'explore'>, string> = { home: 'home', board: 'tickets', inventory: 'inventory' }
+const SLUGS: Record<Exclude<PageId, 'explore' | 'new' | 'signin'>, string> = { home: 'home', board: 'tickets', inventory: 'inventory', search: 'search' }
 
 const decode = (part: string) => { try { return decodeURIComponent(part) } catch { return part } }
 
 export function parseRoute(hash: string): Route {
   const [first, second, third] = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decode)
+  if (first === 'signin') return { page: 'signin' }
   if (first === 'tickets') return { page: 'board' }
   if (first === 'inventory') return { page: 'inventory' }
+  if (first === 'search') return { page: 'search' }
+  if (first === 'new') return { page: 'new' }
   if (first === 'explore') {
     const queue = EXPLORE_KEYS.find((key) => key === second)
     return { page: 'explore', queue, ticket: queue ? third : undefined }
@@ -27,6 +30,7 @@ export function parseRoute(hash: string): Route {
 }
 
 export function routeHash({ page, queue, ticket }: Route): string {
+  if (page === 'new' || page === 'signin') return '#/' + page
   if (page !== 'explore') return '#/' + SLUGS[page]
   if (!queue) return '#/explore'
   return `#/explore/${queue}` + (ticket ? '/' + encodeURIComponent(ticket) : '')

@@ -239,7 +239,28 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   const warrantySoon = isWarrantySoon
   // A healthy device whose warranty ends within 60 days is shown as Monitor.
   const healthLevel = assetHealthLevel
-  const healthBadge = (asset: AssetItem) => { const level = healthLevel(asset); return <span className={'inventory-health-badge ' + healthClass(level)} title={healthDescriptions[level]}>{level}</span> }
+  const healthBadge = (asset: AssetItem) => {
+    const level = healthLevel(asset)
+    // Generate waveform path based on health level
+    const generateWaveform = (health: HealthLevel) => {
+      const points: [number, number][] = []
+      const amp = health === 'Healthy' ? 6 : health === 'Monitor' ? 5 : health === 'At Risk' ? 4 : 2
+      const freq = health === 'Healthy' ? 1.2 : health === 'Monitor' ? 1 : health === 'At Risk' ? 0.8 : 0.3
+      for (let x = 0; x <= 60; x += 2) {
+        const y = 8 + Math.sin((x / 60) * Math.PI * 2 * freq) * amp + (health === 'Critical' || health === 'At Risk' ? Math.random() * 2 - 1 : 0)
+        points.push([x, y])
+      }
+      return points.map((p) => p.join(',')).join(' ')
+    }
+    return (
+      <span className={'inventory-health-badge ' + healthClass(level)} title={healthDescriptions[level]}>
+        <svg viewBox="0 0 70 16" className="health-waveform" aria-hidden="true">
+          <polyline points={generateWaveform(level)} />
+        </svg>
+        <span>{level}</span>
+      </span>
+    )
+  }
   const counts = { available: assets.filter((asset) => asset.status === 'Available').length, assigned: assets.filter((asset) => asset.status === 'Assigned').length, repair: assets.filter((asset) => asset.status === 'In Repair').length, warranty: assets.filter(warrantySoon).length, low: stock.filter((item) => item.quantity <= item.minimum).length }
   const assetCategories = useMemo(() => [...new Set(assets.map((asset) => asset.category))].sort(), [assets])
   const assignedPeople = useMemo(() => [...new Set(assets.map((asset) => asset.assignedTo).filter(Boolean))].sort(), [assets])

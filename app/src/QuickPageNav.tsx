@@ -1,7 +1,7 @@
 import './quick-page-nav.css'
 
-export type PageId = 'home' | 'board' | 'inventory'
-const PAGES: { id: PageId; label: string }[] = [{ id: 'home', label: 'Home' }, { id: 'board', label: 'Tickets' }, { id: 'inventory', label: 'Inventory' }]
+export type PageId = 'home' | 'board' | 'search' | 'inventory'
+const PAGES: { id: PageId; label: string }[] = [{ id: 'home', label: 'Home' }, { id: 'board', label: 'Tickets' }, { id: 'search', label: 'Search' }, { id: 'inventory', label: 'Inventory' }]
 
 /** Round previous / next arrows at the screen edges that go round Home, Tickets and Inventory. */
 export default function QuickPageNav({ page, onChange }: { page: PageId; onChange: (page: PageId) => void }) {

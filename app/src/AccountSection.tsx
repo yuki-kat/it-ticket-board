@@ -10,6 +10,7 @@ import './backup.css'
 import './sync.css'
 
 const timeOf = (iso: string) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
+const count = (n: number, thing: string) => `${n} ${thing}${n === 1 ? '' : 's'}`
 
 /** Settings section: sign in with an emailed link, see your workspace (company) and, as an admin, manage its team. */
 export default function AccountSection() {
@@ -48,6 +49,9 @@ export default function AccountSection() {
   }, [])
 
   const userId = session?.user.id
+  // Why syncing stopped by itself, if it did (for example: removed from the workspace). The workspace is then
+  // looked up again, since it may no longer be this person's.
+  const stopReason = sync.phase === 'off' ? sync.message : ''
   useEffect(() => {
     if (!userId) return
     let cancelled = false
@@ -59,7 +63,7 @@ export default function AccountSection() {
       void loadTeam(result.id)
     })
     return () => { cancelled = true }
-  }, [userId, loadTeam])
+  }, [userId, loadTeam, stopReason])
 
   const send = async () => {
     setBusy(true)
@@ -115,6 +119,7 @@ export default function AccountSection() {
         <h4>Sync</h4>
         <div className="account-sync" data-account-sync>
           {syncOff ? <>
+            {stopReason && <div className="import-note" role="status" data-sync-stopped>{stopReason}</div>}
             {countsError && <div className="import-note" role="status" data-sync-counts-error>Could not check {workspace.name}: {countsError}</div>}
             {!counts && !countsError && <p>Checking what {workspace.name} holds…</p>}
             {counts && counts.tickets + counts.deleted_tickets + counts.assets + counts.stock_items === 0 && <>
@@ -125,7 +130,7 @@ export default function AccountSection() {
               </div>
             </>}
             {counts && counts.tickets + counts.deleted_tickets + counts.assets + counts.stock_items > 0 && <>
-              <p data-sync-summary>{workspace.name} already has {counts.tickets} tickets, {counts.assets} assets and {counts.stock_items} stock items. Syncing shows that board in this browser instead of what is here now.</p>
+              <p data-sync-summary>{workspace.name} already has {count(counts.tickets, 'ticket')}, {count(counts.assets, 'asset')} and {count(counts.stock_items, 'stock item')}. Syncing shows that board in this browser instead of what is here now.</p>
               <div className="backup-actions"><button type="button" className="primary-button" data-sync-start-download disabled={busy} onClick={() => void start('download')}>Use {workspace.name}’s board</button></div>
             </>}
             <p>What this browser has now is kept first, and can be put back under Backup and restore.</p>
@@ -140,10 +145,10 @@ export default function AccountSection() {
             <p>Changes are saved to the workspace automatically, and colleagues’ changes arrive every 30 seconds or when you come back to this window.</p>
             <div className="backup-actions">
               <button type="button" className="text-button" data-sync-now onClick={syncNow}>Sync now</button>
-              <button type="button" className="text-button" data-sync-stop onClick={stopSync}>Stop syncing in this browser</button>
+              <button type="button" className="text-button" data-sync-stop onClick={() => stopSync()}>Stop syncing in this browser</button>
             </div>
           </>}
-          {syncError && <div className="import-note" role="status" data-sync-error>Could not start syncing: {syncError}</div>}
+          {syncError && sync.phase !== 'saved' && <div className="import-note" role="status" data-sync-error>Could not start syncing: {syncError}</div>}
         </div>
 
         <h4>Team</h4>
@@ -179,7 +184,7 @@ export default function AccountSection() {
         </div>}
         {teamMessage && <div className="import-note" role="status" data-account-team-message>{teamMessage}</div>}
       </>}
-      <div className="backup-actions"><button type="button" className="text-button" data-account-signout onClick={() => { stopSync(); void signOut().then(() => { setSession(null); setWorkspace(null); setMembers([]); setInvites([]); setTeamMessage(''); setCounts(null) }) }}>Sign out</button></div>
+      <div className="backup-actions"><button type="button" className="text-button" data-account-signout onClick={() => { stopSync(); void signOut().then(() => { setSession(null); setWorkspace(null); setMembers([]); setInvites([]); setTeamMessage(''); setCounts(null); setCountsError(''); setSyncError('') }) }}>Sign out</button></div>
     </>}
     {available && !session && <>
       <p>Sign in with your email. You will get a link, with no password to remember.</p>

@@ -1,0 +1,447 @@
+/* Sign-in page layout and styling. */
+
+:root {
+  --signin-bg-light: #e8eef5;
+  --signin-surface-light: #ffffff;
+  --signin-text-light: #0d1924;
+  --signin-accent-light: #165fa3;
+  --signin-subtitle-light: #5a7280;
+  --signin-badge-p1-light: #dc2626;
+  --signin-badge-p2-light: #ea580c;
+  --signin-badge-p3-light: #ca8a04;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --signin-bg-light: #0d1924;
+    --signin-surface-light: #1a2940;
+    --signin-text-light: #f3f4f6;
+    --signin-accent-light: #60a5fa;
+    --signin-subtitle-light: #a0aec0;
+    --signin-badge-p1-light: #fca5a5;
+    --signin-badge-p2-light: #fed7aa;
+    --signin-badge-p3-light: #fcd34d;
+  }
+}
+
+:root[data-theme="dark"] {
+  --signin-bg-light: #0d1924;
+  --signin-surface-light: #1a2940;
+  --signin-text-light: #f3f4f6;
+  --signin-accent-light: #60a5fa;
+  --signin-subtitle-light: #a0aec0;
+  --signin-badge-p1-light: #fca5a5;
+  --signin-badge-p2-light: #fed7aa;
+  --signin-badge-p3-light: #fcd34d;
+}
+
+.signin-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--signin-bg-light);
+  padding: 32px 16px;
+}
+
+.signin-card {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 0;
+  background-color: var(--signin-surface-light);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  max-width: 1000px;
+  width: 100%;
+}
+
+.signin-form-side {
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .signin-form-side {
+    border-right-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+:root[data-theme="dark"] .signin-form-side {
+  border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+.signin-header {
+  margin-bottom: 40px;
+}
+
+.signin-header h1 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin: 0 0 16px 0;
+  color: var(--signin-text-light);
+}
+
+.signin-header h1 b {
+  font-weight: 700;
+}
+
+.signin-header h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 24px;
+  font-style: italic;
+  line-height: 1.3;
+  margin: 0;
+  color: var(--signin-text-light);
+}
+
+.signin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-field span {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--signin-text-light);
+}
+
+.form-field input {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  padding: 11px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background-color: var(--signin-surface-light);
+  color: var(--signin-text-light);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.form-field input:focus {
+  border-color: var(--signin-accent-light);
+}
+
+.form-field input::placeholder {
+  color: rgba(13, 25, 36, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .form-field input::placeholder {
+    color: rgba(243, 244, 246, 0.5);
+  }
+}
+
+:root[data-theme="dark"] .form-field input::placeholder {
+  color: rgba(243, 244, 246, 0.5);
+}
+
+.signin-button {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 11px 20px;
+  background-color: var(--signin-accent-light);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  margin-top: 8px;
+}
+
+.signin-button:hover {
+  opacity: 0.9;
+}
+
+.signin-button:active {
+  opacity: 0.85;
+}
+
+.signin-stats-side {
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  justify-content: center;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.stat-card {
+  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .stat-card {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+:root[data-theme="dark"] .stat-card {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.stat-value {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--signin-text-light);
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--signin-subtitle-light);
+}
+
+.recent-activity {
+  flex: 1;
+}
+
+.recent-activity h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--signin-subtitle-light);
+  margin: 0 0 12px 0;
+}
+
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ticket-item {
+  display: grid;
+  grid-template-columns: 70px 1fr 50px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ticket-item {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+:root[data-theme="dark"] .ticket-item {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.ticket-id {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--signin-accent-light);
+}
+
+.ticket-title {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--signin-text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticket-badge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: white;
+  text-align: center;
+}
+
+.ticket-badge.priority-p1 {
+  background-color: var(--signin-badge-p1-light);
+}
+
+.ticket-badge.priority-p2 {
+  background-color: var(--signin-badge-p2-light);
+  color: #0d1924;
+}
+
+.ticket-badge.priority-p3 {
+  background-color: var(--signin-badge-p3-light);
+  color: #0d1924;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ticket-badge.priority-p2,
+  :root:not([data-theme="light"]) .ticket-badge.priority-p3 {
+    color: #0d1924;
+  }
+}
+
+:root[data-theme="dark"] .ticket-badge.priority-p2,
+:root[data-theme="dark"] .ticket-badge.priority-p3 {
+  color: #0d1924;
+}
+
+.sla-compliance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sla-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--signin-subtitle-light);
+}
+
+.sla-bar {
+  height: 6px;
+  background-color: rgba(0, 0, 0, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sla-bar {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+:root[data-theme="dark"] .sla-bar {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sla-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--signin-accent-light), var(--signin-accent-light));
+  border-radius: 3px;
+}
+
+.sla-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--signin-text-light);
+}
+
+/* Phone layout */
+@media (max-width: 768px) {
+  .signin-card {
+    grid-template-columns: 1fr;
+    border-radius: 0;
+  }
+
+  .signin-form-side {
+    padding: 32px;
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .signin-form-side {
+      border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  :root[data-theme="dark"] .signin-form-side {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .signin-header {
+    margin-bottom: 32px;
+  }
+
+  .signin-header h1 {
+    font-size: 18px;
+  }
+
+  .signin-header h2 {
+    font-size: 20px;
+  }
+
+  .signin-stats-side {
+    padding: 32px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .signin-page {
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .signin-card {
+    box-shadow: none;
+  }
+
+  .signin-form-side,
+  .signin-stats-side {
+    padding: 20px;
+  }
+
+  .signin-header {
+    margin-bottom: 24px;
+  }
+
+  .signin-header h1 {
+    font-size: 16px;
+  }
+
+  .signin-header h2 {
+    font-size: 18px;
+  }
+
+  .signin-form {
+    gap: 20px;
+  }
+
+  .stats-grid {
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .signin-stats-side {
+    gap: 24px;
+  }
+}
