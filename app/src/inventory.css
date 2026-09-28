@@ -179,4 +179,12 @@
 .inventory-table:not(.stock-table) th:nth-child(8), .inventory-table:not(.stock-table) td:nth-child(8) { width: 178px; }
 .inventory-table:not(.stock-table) th:nth-child(9), .inventory-table:not(.stock-table) td:nth-child(9) { width: 125px; }
 .inventory-table:not(.stock-table) th:nth-child(10), .inventory-table:not(.stock-table) td:nth-child(10) { width: 105px; text-align: center; }
+.inventory-filters-dropdown { position: relative; }
+.inventory-filters-button { display: inline-flex; align-items: center; gap: 5px; height: 35px; padding: 0 9px; border: 1px solid #dbe5e8; border-radius: 6px; background: #fff; color: #42606c; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.inventory-filters-button:hover { border-color: #adcbd3; background: #f9f9fa; }
+.inventory-filters-menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 20; min-width: 220px; border: 1px solid #dbe5e8; border-radius: 6px; background: #fff; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+.inventory-filters-menu-section { padding: 8px; display: grid; gap: 8px; }
+.inventory-filters-menu label { display: flex; flex-direction: column; gap: 4px; color: #59727d; font-size: 10px; font-weight: 700; }
+.inventory-filters-menu label span { color: #667d87; font-size: 9px; }
+.inventory-filters-menu select { height: 32px; padding: 0 6px; border: 1px solid #dbe5e8; border-radius: 5px; background: #fff; color: #42606c; font-size: 11px; }
 @media (max-width: 900px) { .inventory-toolbar { align-items: stretch; }.inventory-controls { justify-content: flex-start; }.device-health-legend { width: 100%; margin: 7px 0 0; flex-wrap: wrap; } }
