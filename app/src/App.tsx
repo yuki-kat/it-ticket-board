@@ -512,6 +512,7 @@ function App() {
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [showFormOptional, setShowFormOptional] = useState(false)
+  const [showMoreMetrics, setShowMoreMetrics] = useState(false)
   const [clock, setClock] = useState(Date.now())
   const [dragOverLane, setDragOverLane] = useState('')
   const [selectedTicketId, setSelectedTicketId] = useState('')
@@ -898,12 +899,15 @@ function App() {
         <Metric icon={<Ticket size={17} />} label="Open" value={open.length} tone="blue" selected={metricFilter === 'active'} onClick={() => setMetricFilter((current) => current === 'active' ? 'all' : 'active')} />
         <Metric icon={<AlertTriangle size={17} />} label="P1 / P2 open" value={highPriority} tone="red" selected={metricFilter === 'high-priority'} onClick={() => setMetricFilter((current) => current === 'high-priority' ? 'all' : 'high-priority')} />
         <Metric icon={<Clock3 size={17} />} label="Past SLA" value={overdue} tone="red" selected={metricFilter === 'overdue'} onClick={() => setMetricFilter((current) => current === 'overdue' ? 'all' : 'overdue')} />
-        <Metric icon={<Activity size={17} />} label="SLA at risk" value={atRisk} tone="amber" selected={metricFilter === 'at-risk'} onClick={() => setMetricFilter((current) => current === 'at-risk' ? 'all' : 'at-risk')} />
         <Metric icon={<ArrowUp size={17} />} label="Escalated" value={escalated} tone="amber" selected={metricFilter === 'escalated'} onClick={() => setMetricFilter((current) => current === 'escalated' ? 'all' : 'escalated')} />
-        <Metric icon={<ShieldAlert size={17} />} label="Escalation due" value={escalationDueCount} tone="amber" selected={metricFilter === 'escalation-due'} onClick={() => setMetricFilter((current) => current === 'escalation-due' ? 'all' : 'escalation-due')} />
-        <Metric icon={<Layers size={17} />} label="Unassigned" value={unassigned} tone="slate" selected={metricFilter === 'unassigned'} onClick={() => setMetricFilter((current) => current === 'unassigned' ? 'all' : 'unassigned')} />
-        <Metric icon={<Workflow size={17} />} label="Waiting on user" value={waiting} tone="blue" selected={metricFilter === 'waiting'} onClick={() => setMetricFilter((current) => current === 'waiting' ? 'all' : 'waiting')} />
-        <Metric icon={<Clock3 size={17} />} label="Due today / late" value={dueToday} tone="slate" selected={metricFilter === 'due-today'} onClick={() => setMetricFilter((current) => current === 'due-today' ? 'all' : 'due-today')} />
+        {showMoreMetrics && <>
+          <Metric icon={<Activity size={17} />} label="SLA at risk" value={atRisk} tone="amber" selected={metricFilter === 'at-risk'} onClick={() => setMetricFilter((current) => current === 'at-risk' ? 'all' : 'at-risk')} />
+          <Metric icon={<ShieldAlert size={17} />} label="Escalation due" value={escalationDueCount} tone="amber" selected={metricFilter === 'escalation-due'} onClick={() => setMetricFilter((current) => current === 'escalation-due' ? 'all' : 'escalation-due')} />
+          <Metric icon={<Layers size={17} />} label="Unassigned" value={unassigned} tone="slate" selected={metricFilter === 'unassigned'} onClick={() => setMetricFilter((current) => current === 'unassigned' ? 'all' : 'unassigned')} />
+          <Metric icon={<Workflow size={17} />} label="Waiting on user" value={waiting} tone="blue" selected={metricFilter === 'waiting'} onClick={() => setMetricFilter((current) => current === 'waiting' ? 'all' : 'waiting')} />
+          <Metric icon={<Clock3 size={17} />} label="Due today / late" value={dueToday} tone="slate" selected={metricFilter === 'due-today'} onClick={() => setMetricFilter((current) => current === 'due-today' ? 'all' : 'due-today')} />
+        </>}
+        <button className="metric-show-more" onClick={() => setShowMoreMetrics((v) => !v)} type="button">{showMoreMetrics ? 'Show less' : 'Show more'}</button>
       </section>
       <div className="board-toolbar"><div className="ticket-browser-tabs">
         <div className="ticket-browser-tab-scroll" role="tablist" aria-label="Open ticket tabs">
