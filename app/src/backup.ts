@@ -37,6 +37,7 @@ function readList(storage: Storage, key: string): unknown[] {
   } catch { return [] }
 }
 
+/** Count records in each category for display. */
 export const countRecords = (records: BackupRecords): BackupCounts => ({ tickets: records.tickets.length, deletedTickets: records.deletedTickets.length, assets: records.assets.length, stock: records.stock.length })
 
 /** What is saved in this browser right now. */
@@ -145,9 +146,17 @@ export function downloadBackup(storage: Storage = localStorage): BackupFile {
   return backup
 }
 
+/**
+ * Read and validate a backup file uploaded by the user.
+ * Checks file size and JSON format before parsing.
+ *
+ * @param file - The backup file to validate
+ * @returns Result with parsed backup or validation errors
+ */
 export async function readBackupFile(file: File): Promise<ParsedBackup> {
   if (file.size > MAX_FILE_BYTES) return { ok: false, problems: ['This file is too large to be a backup.'] }
   return parseBackup(await file.text())
 }
 
+/** Retrieve the ISO timestamp of the last backup download, or empty string if never backed up. */
 export const lastBackupTime = (storage: Storage = localStorage): string => storage.getItem(LAST_BACKUP_KEY) || ''
