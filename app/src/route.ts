@@ -15,6 +15,11 @@ const SLUGS: Record<Exclude<PageId, 'explore' | 'new' | 'signin'>, string> = { h
 
 const decode = (part: string) => { try { return decodeURIComponent(part) } catch { return part } }
 
+/**
+ * Parse location hash into a route object. Handles all page addresses with safe decoding.
+ * @param hash - The location.hash string (e.g., "#/tickets", "#/explore/priority/OPS-101")
+ * @returns Route object specifying the page and optional queue/ticket context
+ */
 export function parseRoute(hash: string): Route {
   const [first, second, third] = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decode)
   if (first === 'signin') return { page: 'signin' }
@@ -29,6 +34,11 @@ export function parseRoute(hash: string): Route {
   return { page: 'home' }
 }
 
+/**
+ * Convert a route object back to a location hash string.
+ * @param route - Route object with page and optional explore queue/ticket
+ * @returns Location hash string with proper encoding (e.g., "#/explore/priority/OPS-101")
+ */
 export function routeHash({ page, queue, ticket }: Route): string {
   if (page === 'new' || page === 'signin') return '#/' + page
   if (page !== 'explore') return '#/' + SLUGS[page]
