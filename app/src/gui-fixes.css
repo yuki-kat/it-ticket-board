@@ -68,8 +68,8 @@
 .form-panel .field .field-hint { display: block; margin-top: 5px; }
 
 /* Side panels: the round × in the screen corner closes them and stays in view while scrolling, so the
-   panel's own ×, which it sat on top of, is hidden. */
-.import-overlay .panel-header .close-button, .ticket-record-panel .record-header-actions .close-button { display: none; }
+   panel's own ×, which it sat on top of, is hidden. Exception: ticket-record-panel keeps its close button. */
+.import-overlay .panel-header .close-button { display: none; }
 
 /* New task page: full-page layout instead of a slide-over panel. */
 .new-task-page { display: flex; flex-direction: column; align-items: center; padding: 32px 16px 80px; }
