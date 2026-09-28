@@ -413,6 +413,36 @@ function loadTickets(): TicketItem[] {
   }
 }
 
+/**
+ * Main application component for IT Ticket Board.
+ *
+ * Manages the entire application state including tickets, assets, inventory, and user interactions.
+ * Provides a multi-page interface with Kanban boards, search, inventory tracking, and detailed ticket views.
+ *
+ * Pages:
+ * - Home: Dashboard with KPI cards, ticket insights, and operations overview
+ * - Tickets (board): Kanban, list, split-pane, and specialty views (SLA, escalation, calendar, etc.)
+ * - Search: Full-text search and filtering across all tickets
+ * - Inventory: Asset and stock tracking with health monitoring
+ * - Explore: Detailed ticket view with full ITSM fields and activity tracking
+ * - New: Ticket creation with auto-triage and email import
+ * - Sign In: Supabase authentication for cloud sync
+ *
+ * State Management:
+ * - Local persistence: All data stored in localStorage with recovery from backups
+ * - Cloud sync: Optional Supabase integration for collaborative updates
+ * - Real-time clock: Updates every 1000ms for SLA, escalation, and activity calculations
+ *
+ * Features:
+ * - Ticket filtering by status, severity, assignee, type, and tags
+ * - Multiple view modes: Kanban, list, split-pane, calendar, graphs, and priority matrices
+ * - Workspace tabs with independent filter and view settings
+ * - SLA tracking with escalation matrix and tier routing
+ * - Asset linkage and inventory management
+ * - CSV and Excel export for both tickets and inventory
+ * - Undo/restore for deleted tickets and records
+ * - Accessibility: Full keyboard navigation and screen reader support
+ */
 function App() {
   const [tickets, setTicketState] = useState<TicketItem[]>(loadTickets)
   const [assets, setAssetState] = useState<AssetItem[]>(loadAssets)

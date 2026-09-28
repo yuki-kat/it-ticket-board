@@ -1,5 +1,13 @@
 import './signin-page.css'
 
+/**
+ * Sign-in page for Supabase authentication.
+ *
+ * Allows users to authenticate with their email and password to enable cloud sync.
+ * Displays recent activity statistics and ticket summary while signing in.
+ *
+ * @param onSignIn - Callback fired when authentication succeeds
+ */
 export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()

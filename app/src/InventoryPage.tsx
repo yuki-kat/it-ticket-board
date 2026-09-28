@@ -191,6 +191,33 @@ type InventoryProps = {
 const emptyAsset = { id: '', name: '', category: 'Laptop', manufacturer: '', model: '', serial: '', department: 'Field Services', location: '', purchaseDate: '', warrantyEnd: '', condition: 'Good' as AssetItem['condition'], health: 'Healthy' as DeviceHealth, notes: '', tagsText: '' }
 const emptyStock = { sku: '', name: '', category: 'Cable', quantity: '0', minimum: '0', location: '', tagsText: '' }
 
+/**
+ * Asset and stock tracking inventory page.
+ *
+ * Manages two tabs: Assets (devices, hardware) and Stock (supplies, consumables). Includes:
+ * - Multiple view modes: list, cards, split-pane, grouped, and attention (devices needing service)
+ * - Asset search, filtering by status, category, assignee, health, and warranty expiration
+ * - Stock filtering by quantity (in stock, low stock)
+ * - Workspace tabs with independent view settings
+ * - Asset lifecycle tracking: assigned/in-repair/retired/lost status and event history
+ * - Device health monitoring: healthy, at-risk (needs attention), critical (offline/lost)
+ * - Warranty tracking: alerts for items expiring within 60 days
+ * - Ticket linkage: associate tickets with assets, create tickets for asset issues
+ * - CSV and Excel export with filtering support
+ *
+ * @param focusId - Asset or stock item ID to scroll into view and highlight
+ * @param focusRevision - Increment to re-trigger focus behavior when same ID is refocused
+ * @param command - Action to perform (add asset/stock, filter, export)
+ * @param onCommandHandled - Callback when command execution completes
+ * @param assets - Array of all asset items with full lifecycle data
+ * @param stock - Array of all stock items with inventory counts
+ * @param updateAssets - Callback to update assets array
+ * @param updateStock - Callback to update stock array
+ * @param tickets - Ticket references for linking to assets
+ * @param openTicket - Callback to open a ticket
+ * @param linkTicket - Callback to link a ticket to an asset
+ * @param createTicket - Callback to create a new ticket for an asset issue
+ */
 export default function InventoryPage({ focusId = '', focusRevision = 0, command, onCommandHandled, assets, stock, updateAssets, updateStock, tickets, openTicket, linkTicket, createTicket }: InventoryProps) {
   const [tab, setTab] = useState<'assets' | 'stock'>('assets')
   const [workspace, setWorkspace] = useState<InventoryWorkspace>(loadInventoryWorkspace)

@@ -13,6 +13,22 @@ export function loadSavedViews<T>(key: string): SavedView<T>[] {
   }
 }
 
+/**
+ * Saved views management component for saving and restoring filter/view combinations.
+ *
+ * Allows users to save the current view settings (filters, sort, layout) with a custom name
+ * for quick recall. Includes validation, deletion of saved views, and detection of active views.
+ *
+ * @param label - Section label (e.g., "Tickets", "Inventory") for dialogs and accessibility
+ * @param views - Array of saved views with their settings
+ * @param current - Current view settings to compare against and save
+ * @param onApply - Callback to apply a loaded view's settings
+ * @param onReset - Callback to reset to default settings
+ * @param onSave - Callback when a new view is saved
+ * @param onDelete - Callback when a view is deleted
+ * @param saveButtonLabel - Custom label for the save button
+ * @param saveDescription - Custom description text in the save dialog
+ */
 export default function SavedViews<T extends object>({ label, views, current, onApply, onReset, onSave, onDelete, saveButtonLabel = 'Save view', saveDescription = 'Save the current view, search, and filters for quick access later.' }: {
   label: string
   views: SavedView<T>[]
