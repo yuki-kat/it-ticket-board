@@ -111,5 +111,5 @@
 
 /* Summary strip: Show more/less metrics toggle. */
 .summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.summary-strip .metric-show-more { grid-column: 1 / -1; min-height: 32px; padding: 8px 12px; border: 0; background: #f8fafb; color: #4a6373; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+.summary-strip .metric-show-more { grid-column: 1 / -1; min-height: 32px; padding: 8px 12px; border: 0; background: #f8fafb; color: #4a6373; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; border-top: 1px solid #dfe7ec; }
 .summary-strip .metric-show-more:hover { background: #f0f4f6; }
