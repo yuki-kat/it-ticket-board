@@ -48,6 +48,19 @@
 .inventory-browser-tabs { display:flex; align-items:flex-end; gap:12px; min-width:0; margin-bottom:17px; border-bottom:1px solid #dce6e9; }
 .inventory-browser-tab-scroll { display:flex; align-items:flex-end; flex:1; min-width:0; overflow-x:auto; scrollbar-width:thin; }
 .inventory-browser-tab { display:flex; align-items:center; flex:none; max-width:215px; min-height:37px; margin-right:3px; border:1px solid #dce6e9; border-bottom:0; border-radius:8px 8px 0 0; background:#f3f7f8; }
+
+/* Progress bars for stock levels and warranty status */
+.stock-level-bar { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.stock-level-bar .bar { flex: 1; min-width: 80px; height: 6px; border-radius: 3px; background: #e8eef0; overflow: hidden; }
+.stock-level-bar .bar-fill { height: 100%; background: linear-gradient(90deg, #4a8a9c 0%, #3e7a8a 100%); border-radius: 3px; transition: width .3s ease; }
+.stock-level-bar .bar-fill.low { background: linear-gradient(90deg, #c18c4a 0%, #a87a38 100%); }
+.stock-level-bar .bar-fill.critical { background: linear-gradient(90deg, #b96e43 0%, #9f5c35 100%); }
+
+.warranty-bar { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.warranty-bar .bar { width: 60px; height: 5px; border-radius: 2px; background: #e6ecef; }
+.warranty-bar .bar-fill { height: 100%; background: linear-gradient(90deg, #52a67d 0%, #448a65 100%); border-radius: 2px; transition: width .3s ease; }
+.warranty-bar .bar-fill.warning { background: linear-gradient(90deg, #d4a857 0%, #b89645 100%); }
+.warranty-bar .bar-fill.expired { background: #c77d72; }
 .inventory-browser-tab.active { position:relative; z-index:1; background:#fff; border-color:#b6d1d9; box-shadow:inset 0 3px #3d8498; }
 .inventory-browser-tab > button[role='tab'] { display:flex; align-items:center; gap:7px; min-width:0; min-height:36px; padding:0 10px; overflow:hidden; border:0; background:transparent; color:#68808a; font-size:11px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
 .inventory-browser-tab.active > button[role='tab'] { color:#2c7087; }
