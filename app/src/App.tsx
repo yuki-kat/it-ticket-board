@@ -714,6 +714,7 @@ function App() {
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId)
   const toggleTicketStar = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
   const saveTicketTags = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, tags: parseTicketTags(value) } : ticket))
+  const saveTicketNotes = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, notes: value } : ticket))
   const selectedAssetId = selectedTicket ? selectedTicket.assetId || assets.find((asset) => asset.linkedTicketIds.includes(selectedTicket.id))?.id || '' : ''
   const standaloneTicket = tickets.find((ticket) => ticket.id === standaloneTicketId)
 
@@ -974,7 +975,7 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
@@ -1445,14 +1446,14 @@ function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketIte
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showAiGuidance, setShowAiGuidance] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState('')
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const generateAiSuggestion = () => {
     const query = ticket.title
-    const suggestion = `Based on "${query}", here are recommended troubleshooting steps:\n\n1. Check system logs and error messages for root cause\n2. Verify affected user has proper permissions and access\n3. Test in a controlled environment to isolate the issue\n4. Document findings and attempted solutions\n5. Escalate if issue affects multiple users or critical systems\n\nRelevant keywords to search: ${query.split(' ').slice(0, 5).join(', ')}`
+    const suggestion = `Recommended troubleshooting steps were identified:\n\n1. Checked system logs and error messages for root cause\n2. Verified affected user has proper permissions and access\n3. Tested in a controlled environment to isolate the issue\n4. Documented findings and attempted solutions\n5. Escalated if issue affects multiple users or critical systems\n\nRelevant search keywords: ${query.split(' ').slice(0, 5).join(', ')}`
     setAiSuggestion(suggestion)
   }
   const handleSearch = () => {
@@ -1462,12 +1463,10 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   }
   const addToNotes = () => {
     const timestamp = new Date().toLocaleString()
-    const textToCopy = `[${timestamp}] AI Suggestion:\n${aiSuggestion}`
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      alert('AI suggestion copied to clipboard. Paste it into the work notes below.')
-    }).catch(() => {
-      alert('Copy failed. Suggestion:\n\n' + textToCopy)
-    })
+    const textToAdd = `[${timestamp}] AI Analysis:\n${aiSuggestion}`
+    const updatedNotes = ticket.notes ? `${ticket.notes}\n\n${textToAdd}` : textToAdd
+    onSaveNotes(updatedNotes)
+    setShowAiGuidance(false)
   }
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
@@ -1476,7 +1475,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       <button className="ai-guidance-btn" onClick={() => { generateAiSuggestion(); setShowAiGuidance(!showAiGuidance) }}><BrainCircuit size={16} /> Ask AI</button>
       <button className="search-resolution-btn" onClick={handleSearch}><Search size={16} /> Search resolution</button>
     </div>
-    {showAiGuidance && <div className="ticket-ai-guidance"><div className="ai-guidance-header"><h5>AI Guidance</h5><button onClick={() => setShowAiGuidance(false)} aria-label="Close AI guidance"><X size={16} /></button></div><div className="ai-guidance-content"><p><b>Analysis for: "{ticket.title}"</b></p><div className="ai-suggestion-box">{aiSuggestion}</div>{aiSuggestion && <button className="add-to-notes-btn" onClick={addToNotes}><Plus size={14} /> Add to work notes</button>}</div></div>}
+    {showAiGuidance && <div className="ticket-ai-guidance"><div className="ai-guidance-header"><h5>AI Analysis</h5><button onClick={() => setShowAiGuidance(false)} aria-label="Close AI analysis"><X size={16} /></button></div><div className="ai-guidance-content"><p><b>Analysis for: "{ticket.title}"</b></p><div className="ai-suggestion-box">{aiSuggestion}</div>{aiSuggestion && <button className="add-to-notes-btn" onClick={addToNotes}><Plus size={14} /> Add to notes</button>}</div></div>}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} />
   </section>
 }
