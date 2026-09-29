@@ -12,9 +12,16 @@ export function setAuthToken(token: string | null) {
 }
 
 export function setAuthUser(user: unknown) {
+  console.log('[setAuthUser] called with:', user, 'Type:', typeof user, 'Is falsy:', !user);
   if (user) {
-    localStorage.setItem('auth_user', JSON.stringify(user));
+    try {
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      console.log('[setAuthUser] Successfully stored:', localStorage.getItem('auth_user'));
+    } catch (e) {
+      console.error('[setAuthUser] Failed to store:', e);
+    }
   } else {
+    console.log('[setAuthUser] User is falsy, removing from localStorage');
     localStorage.removeItem('auth_user');
   }
 }
