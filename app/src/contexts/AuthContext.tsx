@@ -26,9 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check for existing token on mount
   useEffect(() => {
     const existingToken = api.getAuthToken();
+    const existingUser = api.getAuthUser();
     if (existingToken) {
       setToken(existingToken);
-      // Could validate token here by fetching user profile
+    }
+    if (existingUser) {
+      setUser(existingUser);
     }
     setLoading(false);
   }, []);

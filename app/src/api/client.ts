@@ -11,6 +11,19 @@ export function setAuthToken(token: string | null) {
   }
 }
 
+export function setAuthUser(user: unknown) {
+  if (user) {
+    localStorage.setItem('auth_user', JSON.stringify(user));
+  } else {
+    localStorage.removeItem('auth_user');
+  }
+}
+
+export function getAuthUser() {
+  const user = localStorage.getItem('auth_user');
+  return user ? JSON.parse(user) : null;
+}
+
 export function getAuthToken(): string | null {
   return authToken;
 }
@@ -45,6 +58,7 @@ export async function signup(email: string, password: string, name: string) {
     body: JSON.stringify({ email, password, name })
   });
   setAuthToken(result.token);
+  setAuthUser(result.user);
   return result;
 }
 
@@ -54,11 +68,13 @@ export async function login(email: string, password: string) {
     body: JSON.stringify({ email, password })
   });
   setAuthToken(result.token);
+  setAuthUser(result.user);
   return result;
 }
 
 export function logout() {
   setAuthToken(null);
+  setAuthUser(null);
 }
 
 // Tickets
