@@ -57,8 +57,10 @@ export async function signup(email: string, password: string, name: string) {
     method: 'POST',
     body: JSON.stringify({ email, password, name })
   });
+  console.log('Signup result:', result);
   setAuthToken(result.token);
   setAuthUser(result.user);
+  console.log('After setAuthUser, localStorage auth_user:', localStorage.getItem('auth_user'));
   return result;
 }
 
