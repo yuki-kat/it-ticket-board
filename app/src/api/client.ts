@@ -3,10 +3,13 @@ const API_BASE = 'http://localhost:3001/api';
 let authToken: string | null = localStorage.getItem('auth_token');
 
 export function setAuthToken(token: string | null) {
+  console.log('[setAuthToken] called with token:', token ? token.substring(0, 20) + '...' : 'null');
   authToken = token;
   if (token) {
     localStorage.setItem('auth_token', token);
+    console.log('[setAuthToken] Stored to localStorage');
   } else {
+    console.log('[setAuthToken] Removing from localStorage');
     localStorage.removeItem('auth_token');
   }
 }
