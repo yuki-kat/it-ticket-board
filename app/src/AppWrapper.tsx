@@ -12,8 +12,7 @@ export default function AppWrapper() {
   // Only show app if authenticated
   if (!user || !token) {
     return <SignInPage onSignIn={() => {
-      // Refresh auth state after signup/login
-      setTimeout(() => window.location.reload(), 1000)
+      // Auth state is already updated in AuthContext, just wait for re-render
     }} />
   }
 
