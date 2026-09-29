@@ -4,6 +4,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import authRoutes from './api/auth.js';
 import ticketRoutes from './api/tickets.js';
+import queueRoutes from './api/queues.js';
+import slaRoutes from './api/sla.js';
+import emailRoutes from './api/email.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,6 +19,9 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', ticketRoutes);
+app.use('/api', queueRoutes);
+app.use('/api', slaRoutes);
+app.use('/api', emailRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
