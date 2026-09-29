@@ -1,17 +1,37 @@
+import { useState } from 'react'
+import { useAuth } from './contexts/AuthContext'
 import './signin-page.css'
 
-/**
- * Sign-in page for Supabase authentication.
- *
- * Allows users to authenticate with their email and password to enable cloud sync.
- * Displays recent activity statistics and ticket summary while signing in.
- *
- * @param onSignIn - Callback fired when authentication succeeds
- */
 export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
-  const handleSubmit = (event: React.FormEvent) => {
+  const { login, signup } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [name, setName] = useState('')
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    onSignIn()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isSignUp) {
+        const result = await signup(email, password, name)
+        console.log('Signup completed, result:', result)
+      } else {
+        const result = await login(email, password)
+        console.log('Login completed, result:', result)
+      }
+      onSignIn()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Authentication failed'
+      console.error('Auth error:', msg, err)
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return <main className="main-content signin-page">
@@ -22,15 +42,27 @@ export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
           <h2>Every open ticket, in front of the right person.</h2>
         </div>
         <form className="signin-form" onSubmit={handleSubmit}>
+          {isSignUp && (
+            <label className="form-field">
+              <span>Name</span>
+              <input type="text" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
+            </label>
+          )}
           <label className="form-field">
             <span>Email address</span>
-            <input type="email" placeholder="you@company.com" required />
+            <input type="email" placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} required />
           </label>
           <label className="form-field">
             <span>Password</span>
-            <input type="password" placeholder="••••••••" required />
+            <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
           </label>
-          <button type="submit" className="signin-button">Sign in</button>
+          {error && <div style={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</div>}
+          <button type="submit" className="signin-button" disabled={loading}>
+            {loading ? 'Loading...' : isSignUp ? 'Sign up' : 'Sign in'}
+          </button>
+          <button type="button" style={{ marginTop: '0.5rem', background: 'transparent', color: '#0066cc', border: 'none', cursor: 'pointer' }} onClick={() => setIsSignUp(!isSignUp)}>
+            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+          </button>
         </form>
       </div>
       <div className="signin-stats-side">

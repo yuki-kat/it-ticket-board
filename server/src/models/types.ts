@@ -55,6 +55,62 @@ export interface WorkNote {
   updated_at: string;
 }
 
+export interface SLATemplate {
+  id: string;
+  team_id: string;
+  name: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  response_time_minutes: number;
+  resolution_time_hours: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailConfig {
+  id: string;
+  team_id: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  from_email: string;
+  from_name?: string;
+  notifications_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailNotification {
+  id: string;
+  team_id: string;
+  ticket_id?: string;
+  recipient_email: string;
+  subject: string;
+  status: 'pending' | 'sent' | 'failed';
+  error_message?: string;
+  created_at: string;
+  sent_at?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  team_id: string;
+  ticket_id?: string;
+  user_id: string;
+  content: string;
+  message_type: 'user' | 'ai' | 'system';
+  created_at: string;
+}
+
+export interface AISuggestion {
+  id: string;
+  team_id: string;
+  ticket_id?: string;
+  suggestion_type: string;
+  content: string;
+  confidence: number;
+  created_at: string;
+}
+
 export interface JWTPayload {
   user_id: string;
   email: string;

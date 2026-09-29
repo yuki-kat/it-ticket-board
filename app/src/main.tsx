@@ -4,12 +4,15 @@ import './index.css'
 import './board-refresh.css'
 import './inventory.css'
 import './saved-views.css'
-import App from './App.tsx'
+import AppWrapper from './AppWrapper.tsx'
+import { AuthProvider } from './contexts/AuthContext.tsx'
 // After App, so its fixes come after every component's own stylesheet.
 import './gui-fixes.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <AppWrapper />
+    </AuthProvider>
   </StrictMode>,
 )
