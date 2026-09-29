@@ -56,16 +56,22 @@ export async function POST(request: Request) {
       config: { systemInstruction, responseMimeType: 'application/json', responseSchema, maxOutputTokens: 1024 },
     })
     // Gemini often answers "high demand" (503) for a moment; one quiet retry saves the user a click.
-    const response = await ask().catch(async (error) => {
-      if (!(error instanceof ApiError && (error.status === 503 || error.status === 429))) throw error
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      return ask()
+    const response = await ask().catch(async (error: unknown) => {
+      if (error instanceof ApiError && (error.status === 503 || error.status === 429)) {
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        return ask()
+      }
+      throw error
     })
     const suggestion = JSON.parse(response.text || '{}')
     if (!Array.isArray(suggestion.steps) || !suggestion.steps.length) throw new Error('Empty answer')
     return json({ likelyCauses: suggestion.likelyCauses || [], steps: suggestion.steps, escalateIf: suggestion.escalateIf || '' })
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 503 || error.status === 429)) return json({ error: 'Gemini is busy right now. Try again in a minute.' }, 503)
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      if (error.status === 503 || error.status === 429) {
+        return json({ error: 'Gemini is busy right now. Try again in a minute.' }, 503)
+      }
+    }
     console.error('suggest-fix failed', error)
     return json({ error: 'Could not get a suggestion from Gemini.' }, 502)
   }

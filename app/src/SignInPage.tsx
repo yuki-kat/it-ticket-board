@@ -3,7 +3,7 @@ import { useAuth } from './contexts/AuthContext'
 import './signin-page.css'
 
 export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
-  const { login } = useAuth()
+  const { login, signup } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -18,13 +18,7 @@ export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
 
     try {
       if (isSignUp) {
-        await fetch('http://localhost:3001/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, name })
-        }).then(r => r.json()).then(d => {
-          if (d.error) throw new Error(d.error)
-        })
+        await signup(email, password, name)
       } else {
         await login(email, password)
       }
