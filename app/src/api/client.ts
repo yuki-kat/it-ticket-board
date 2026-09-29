@@ -1,3 +1,4 @@
+
 const API_BASE = 'http://localhost:3001/api';
 
 let authToken: string | null = localStorage.getItem('auth_token');
