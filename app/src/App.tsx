@@ -1378,7 +1378,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
-          {ticket.activity?.length ? <div className="record-activity">{[...ticket.activity].reverse().map((event, index) => <div key={`${event.at}-${index}`}><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.at))}</time><b>{event.label}</b><span>{event.detail}</span></div>)}</div> : <p>Created {created}. Later changes made in this prototype will appear here.</p>}
+          {ticket.activity?.length ? <div className="record-activity">{[...ticket.activity].reverse().map((event, index) => <div key={`${event.at}-${index}`}><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.at))}</time><b>{event.label}</b></div>)}</div> : <p>Created {created}. Later changes made in this prototype will appear here.</p>}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Requester follow-up</h3><span>{ticket.universalTasks.filter((task) => task.done).length}/{ticket.universalTasks.length} complete</span></div>
