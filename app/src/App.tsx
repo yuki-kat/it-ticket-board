@@ -1351,11 +1351,13 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
 
 function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
   const [expandedNotes, setExpandedNotes] = useState(false)
+  const [notesText, setNotesText] = useState(ticket.notes || '')
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
-  const notesLength = ticket.notes?.length || 0
+  const notesLength = notesText?.length || 0
   const shouldShowToggle = notesLength > 200
+  useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
   return <>
     <RecordStatusStrip ticket={ticket} now={now} />
     <div className="record-layout-two-col">
@@ -1374,7 +1376,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Work notes</h3></div>
-          {onSaveNotes ? <textarea defaultValue={ticket.notes || ''} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <div className="work-notes-display">{shouldShowToggle ? <><p>{expandedNotes ? ticket.notes : `${ticket.notes?.substring(0, 200)}...`}</p><button className="see-more-btn" onClick={() => setExpandedNotes(!expandedNotes)}>{expandedNotes ? 'See less' : 'See more'}</button></> : <p>{ticket.notes || 'No work notes recorded.'}</p>}</div>}
+          {onSaveNotes ? <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <div className="work-notes-display">{shouldShowToggle ? <><p>{expandedNotes ? notesText : `${notesText?.substring(0, 200)}...`}</p><button className="see-more-btn" onClick={() => setExpandedNotes(!expandedNotes)}>{expandedNotes ? 'See less' : 'See more'}</button></> : <p>{notesText || 'No work notes recorded.'}</p>}</div>}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
