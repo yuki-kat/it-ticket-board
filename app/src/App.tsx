@@ -1320,7 +1320,7 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
   </div>
 }
 
-function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketItem; now: number; linkedAssetId?: string }) {
+function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
@@ -1342,7 +1342,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketIte
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Work notes</h3></div>
-          <p>{ticket.notes || 'No work notes recorded.'}</p>
+          {onSaveNotes ? <textarea value={ticket.notes || ''} onChange={(event) => onSaveNotes(event.target.value)} placeholder="Internal notes or next action" rows={6} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <p>{ticket.notes || 'No work notes recorded.'}</p>}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
@@ -1476,7 +1476,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       <button className="search-resolution-btn" onClick={handleSearch}><Search size={16} /> Search resolution</button>
     </div>
     {showAiGuidance && <div className="ticket-ai-guidance"><div className="ai-guidance-header"><h5>AI Analysis</h5><button onClick={() => setShowAiGuidance(false)} aria-label="Close AI analysis"><X size={16} /></button></div><div className="ai-guidance-content"><p><b>Analysis for: "{ticket.title}"</b></p><div className="ai-suggestion-box">{aiSuggestion}</div>{aiSuggestion && <button className="add-to-notes-btn" onClick={addToNotes}><Plus size={14} /> Add to notes</button>}</div></div>}
-    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} />
+    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
   </section>
 }
 
