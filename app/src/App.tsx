@@ -25,7 +25,7 @@ import { exportCsv } from './lib/exportCsv'
 import { exportXlsx } from './lib/exportXlsx'
 import SearchPage from './SearchPage'
 import './search.css'
-import { useTicketSummary, useDescriptionAssist, useWorkNotesSuggestions } from './useGemini'
+import { useTicketSummary, useDescriptionAssist, useWorkNotesSuggestions, useQueueAssist, usePriorityAssist } from './useGemini'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -1378,13 +1378,19 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false)
   const [cachedSuggestionsId, setCachedSuggestionsId] = useState<string | null>(null)
   const { loading: suggestionsLoading, error: suggestionsError, result: suggestionsResult, suggest: suggestWorkNotes } = useWorkNotesSuggestions()
+  const [showQueueSuggestions, setShowQueueSuggestions] = useState(false)
+  const [cachedQueueSuggestionsId, setCachedQueueSuggestionsId] = useState<string | null>(null)
+  const { loading: queueLoading, error: queueError, result: queueResult, suggest: suggestQueue } = useQueueAssist()
+  const [showPrioritySuggestions, setShowPrioritySuggestions] = useState(false)
+  const [cachedPrioritySuggestionsId, setCachedPrioritySuggestionsId] = useState<string | null>(null)
+  const { loading: priorityLoading, error: priorityError, result: priorityResult, suggest: suggestPriority } = usePriorityAssist()
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
   const notesLength = notesText?.length || 0
   const shouldShowToggle = notesLength > 200
   useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
-  useEffect(() => { setCachedSummaryId(null); setCachedSuggestionsId(null) }, [ticket.id])
+  useEffect(() => { setCachedSummaryId(null); setCachedSuggestionsId(null); setCachedQueueSuggestionsId(null); setCachedPrioritySuggestionsId(null) }, [ticket.id])
   const handleGetSummary = async () => {
     if (cachedSummaryId === ticket.id) return
     try {
@@ -1403,6 +1409,26 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
       setShowSuggestionsPanel(true)
     } catch (err) {
       console.error('Suggestions failed:', err)
+    }
+  }
+  const handleGetQueueSuggestions = async () => {
+    if (cachedQueueSuggestionsId === ticket.id) return
+    try {
+      await suggestQueue(ticket.title, ticket.description || '')
+      setCachedQueueSuggestionsId(ticket.id)
+      setShowQueueSuggestions(true)
+    } catch (err) {
+      console.error('Queue suggestions failed:', err)
+    }
+  }
+  const handleGetPrioritySuggestions = async () => {
+    if (cachedPrioritySuggestionsId === ticket.id) return
+    try {
+      await suggestPriority(ticket.title, ticket.description || '', ticket.assignmentGroup || '')
+      setCachedPrioritySuggestionsId(ticket.id)
+      setShowPrioritySuggestions(true)
+    } catch (err) {
+      console.error('Priority suggestions failed:', err)
     }
   }
   return <>
@@ -1512,12 +1538,44 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
               <b className={`status-badge ${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</b>
             </div>
             <div className="sidebar-field">
-              <span>Priority</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <span>Priority</span>
+                <button className="small-icon-button" onClick={handleGetPrioritySuggestions} disabled={priorityLoading} title="Get priority suggestion"><Sparkles size={14} /></button>
+              </div>
               <b className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</b>
+              {showPrioritySuggestions && cachedPrioritySuggestionsId === ticket.id && (
+                <div className="suggestions-panel">
+                  {priorityLoading && <p className="text-muted">Getting suggestions...</p>}
+                  {priorityError && <p className="ai-error">{priorityError.message}</p>}
+                  {priorityResult && !priorityLoading && (
+                    <div className="suggestions-content">
+                      {priorityResult.split('\n').filter(Boolean).map((line: string, idx: number) => (
+                        <p key={idx} className="suggestion-item">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="sidebar-field">
-              <span>Assignment group</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <span>Assignment group</span>
+                <button className="small-icon-button" onClick={handleGetQueueSuggestions} disabled={queueLoading} title="Get queue suggestion"><Sparkles size={14} /></button>
+              </div>
               <b>{ticket.assignmentGroup || 'Unassigned'}</b>
+              {showQueueSuggestions && cachedQueueSuggestionsId === ticket.id && (
+                <div className="suggestions-panel">
+                  {queueLoading && <p className="text-muted">Getting suggestions...</p>}
+                  {queueError && <p className="ai-error">{queueError.message}</p>}
+                  {queueResult && !queueLoading && (
+                    <div className="suggestions-content">
+                      {queueResult.split('\n').filter(Boolean).map((line: string, idx: number) => (
+                        <p key={idx} className="suggestion-item">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="sidebar-field">
               <span>Assigned to</span>
