@@ -91,6 +91,26 @@ export interface EmailNotification {
   sent_at?: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  team_id: string;
+  ticket_id?: string;
+  user_id: string;
+  content: string;
+  message_type: 'user' | 'ai' | 'system';
+  created_at: string;
+}
+
+export interface AISuggestion {
+  id: string;
+  team_id: string;
+  ticket_id?: string;
+  suggestion_type: string;
+  content: string;
+  confidence: number;
+  created_at: string;
+}
+
 export interface JWTPayload {
   user_id: string;
   email: string;

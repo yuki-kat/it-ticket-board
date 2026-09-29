@@ -104,6 +104,28 @@ CREATE TABLE IF NOT EXISTS email_notifications (
   sent_at TIMESTAMP
 );
 
+-- Chat messages
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id),
+  content TEXT NOT NULL,
+  message_type VARCHAR(50) DEFAULT 'user', -- user, ai, system
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI suggestions cache
+CREATE TABLE IF NOT EXISTS ai_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
+  suggestion_type VARCHAR(50) NOT NULL, -- summary, priority, assign, tags, duplicate, close_reason, template, knowledge, risk, next_step
+  content TEXT NOT NULL,
+  confidence DECIMAL(3,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);
