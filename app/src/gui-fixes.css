@@ -123,3 +123,40 @@
 .board-filters-menu label { display: flex; flex-direction: column; gap: 4px; color: #5a727d; font-size: 10px; font-weight: 700; }
 .board-filters-menu label span { color: #667d87; font-size: 9px; }
 .board-filters-menu select { height: 32px; padding: 0 6px; border: 1px solid #d7e3e8; border-radius: 5px; background: #fff; color: #42606c; font-size: 11px; }
+
+/* AI Guidance button and panel for tickets. */
+.ai-guidance-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
+
+.ticket-ai-guidance { padding: 12px; border-top: 1px solid #e8eef0; background: #f8fafc; }
+.ai-guidance-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.ai-guidance-header h5 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #5a7280; }
+.ai-guidance-header button { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: none; background: transparent; color: #5a7280; cursor: pointer; }
+.ai-guidance-header button:hover { color: #0d1924; }
+
+.ai-guidance-content { font-size: 13px; color: #4a6373; }
+.ai-guidance-content p { margin: 0 0 8px 0; }
+.ai-guidance-content p:first-child { font-weight: 600; color: #0d1924; }
+.ai-guidance-context { color: #667d87; font-size: 12px; }
+
+.ai-guidance-suggestions { margin-top: 8px; }
+.ai-guidance-suggestions p { margin-bottom: 6px; }
+.ai-guidance-suggestions ul { margin: 0; padding-left: 18px; list-style: disc; }
+.ai-guidance-suggestions li { margin-bottom: 4px; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ticket-ai-guidance { background: #1a2332; border-top-color: #334155; }
+  :root:not([data-theme="light"]) .ai-guidance-header h5 { color: #a0aec0; }
+  :root:not([data-theme="light"]) .ai-guidance-header button { color: #a0aec0; }
+  :root:not([data-theme="light"]) .ai-guidance-header button:hover { color: #f3f4f6; }
+  :root:not([data-theme="light"]) .ai-guidance-content { color: #cbd5e1; }
+  :root:not([data-theme="light"]) .ai-guidance-content p:first-child { color: #f3f4f6; }
+  :root:not([data-theme="light"]) .ai-guidance-context { color: #94a3b8; }
+}
+
+:root[data-theme="dark"] .ticket-ai-guidance { background: #1a2332; border-top-color: #334155; }
+:root[data-theme="dark"] .ai-guidance-header h5 { color: #a0aec0; }
+:root[data-theme="dark"] .ai-guidance-header button { color: #a0aec0; }
+:root[data-theme="dark"] .ai-guidance-header button:hover { color: #f3f4f6; }
+:root[data-theme="dark"] .ai-guidance-content { color: #cbd5e1; }
+:root[data-theme="dark"] .ai-guidance-content p:first-child { color: #f3f4f6; }
+:root[data-theme="dark"] .ai-guidance-context { color: #94a3b8; }
