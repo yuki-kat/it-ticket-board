@@ -1342,7 +1342,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Work notes</h3></div>
-          {onSaveNotes ? <textarea value={ticket.notes || ''} onChange={(event) => onSaveNotes(event.target.value)} placeholder="Internal notes or next action" rows={6} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <p>{ticket.notes || 'No work notes recorded.'}</p>}
+          {onSaveNotes ? <textarea defaultValue={ticket.notes || ''} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={6} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <p>{ticket.notes || 'No work notes recorded.'}</p>}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
