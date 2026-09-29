@@ -1325,31 +1325,123 @@ function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketIte
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
   return <>
     <RecordStatusStrip ticket={ticket} now={now} />
-    <div className="record-form-grid">
-      <div className="record-field"><span>Number</span><b>{ticket.id}</b></div>
-      <div className="record-field"><span>Task type / table</span><b>{ticket.recordType} · {tableNames[ticket.recordType]}</b></div>
-      <div className="record-field"><span>Department</span><b>{ticket.department || 'Field Services'}</b></div>
-      <div className="record-field"><span>Assignment group</span><b>{ticket.assignmentGroup || 'Unassigned'}</b></div>
-      <div className="record-field"><span>Assigned to</span><b>{ticket.assignee || 'Unassigned'}</b></div>
-      <div className="record-field"><span>Linked asset</span><b>{linkedAssetId || ticket.assetId || 'Not linked'}</b></div>
-      <div className="record-field"><span>Requested by</span><b>{ticket.requester || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Created by</span><b>{ticket.createdBy || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Affected user</span><b>{ticket.affectedUser || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Affected user email</span><b>{ticket.affectedUserEmail || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Created</span><b>{created}</b></div>
-      <div className="record-field"><span>Resolution due</span><b>{due}</b></div>
-      <div className="record-field"><span>Time logged</span><b>{logged}</b></div>
-      <div className="record-field"><span>Escalation tier</span><b>Tier {ticket.currentTier}</b></div>
-      <div className="record-field"><span>Impact</span><b>{ticket.impact || 'Not assessed'}</b></div>
-      <div className="record-field"><span>Urgency</span><b>{ticket.urgency || 'Not assessed'}</b></div>
-      <div className="record-field"><span>Resolved at</span><b>{ticket.resolvedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.resolvedAt)) : ticket.status === 'Resolved' ? 'Not recorded' : 'Open'}</b></div>
+    <div className="record-layout-two-col">
+      <div className="record-main">
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Short description</h3></div>
+          <p>{ticket.title}</p>
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Description</h3></div>
+          <p>{ticket.description || 'No description recorded.'}</p>
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Tags</h3></div>
+          {ticket.tags?.length ? <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <p>No tags added.</p>}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Work notes</h3></div>
+          <p>{ticket.notes || 'No work notes recorded.'}</p>
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
+          {ticket.activity?.length ? <div className="record-activity">{[...ticket.activity].reverse().map((event, index) => <div key={`${event.at}-${index}`}><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.at))}</time><b>{event.label}</b><span>{event.detail}</span></div>)}</div> : <p>Created {created}. Later changes made in this prototype will appear here.</p>}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Requester follow-up</h3><span>{ticket.universalTasks.filter((task) => task.done).length}/{ticket.universalTasks.length} complete</span></div>
+          {ticket.universalTasks.length ? <div className="record-followups">{ticket.universalTasks.map((task) => <div className={task.done ? 'done' : ''} key={task.id}><Check size={13} /><span>{task.title}<small>For {task.assignee}</small></span></div>)}</div> : <p>No follow-up tasks recorded.</p>}
+        </section>
+      </div>
+      <aside className="record-sidebar">
+        <section className="record-sidebar-section">
+          <h4>Key information</h4>
+          <div className="sidebar-fields">
+            <div className="sidebar-field">
+              <span>Status</span>
+              <b className={`status-badge ${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Priority</span>
+              <b className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Assignment group</span>
+              <b>{ticket.assignmentGroup || 'Unassigned'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Assigned to</span>
+              <b>{ticket.assignee || 'Unassigned'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Department</span>
+              <b>{ticket.department || 'Field Services'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Impact</span>
+              <b>{ticket.impact || 'Not assessed'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Urgency</span>
+              <b>{ticket.urgency || 'Not assessed'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Escalation tier</span>
+              <b>Tier {ticket.currentTier}</b>
+            </div>
+          </div>
+        </section>
+        <section className="record-sidebar-section">
+          <h4>Dates</h4>
+          <div className="sidebar-fields">
+            <div className="sidebar-field">
+              <span>Created</span>
+              <b>{created}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Due</span>
+              <b>{due}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Resolved</span>
+              <b>{ticket.resolvedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.resolvedAt)) : ticket.status === 'Resolved' ? 'Not recorded' : 'Open'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Time logged</span>
+              <b>{logged}</b>
+            </div>
+          </div>
+        </section>
+        <section className="record-sidebar-section">
+          <h4>Related</h4>
+          <div className="sidebar-fields">
+            <div className="sidebar-field">
+              <span>Record type</span>
+              <b>{ticket.recordType}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Linked asset</span>
+              <b>{linkedAssetId || ticket.assetId || 'Not linked'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Requested by</span>
+              <b>{ticket.requester || 'Not recorded'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Created by</span>
+              <b>{ticket.createdBy || 'Not recorded'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Affected user</span>
+              <b>{ticket.affectedUser || 'Not recorded'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Email</span>
+              <b>{ticket.affectedUserEmail || 'Not recorded'}</b>
+            </div>
+          </div>
+        </section>
+      </aside>
     </div>
-    <section className="record-section"><h3>Short description</h3><p>{ticket.title}</p></section>
-    <section className="record-section"><h3>Tags</h3>{ticket.tags?.length ? <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <p>No tags added.</p>}</section>
-    <section className="record-section"><h3>Description</h3><p>{ticket.description || 'No description recorded.'}</p></section>
-    <section className="record-section"><h3>Work notes</h3><p>{ticket.notes || 'No work notes recorded.'}</p></section>
-    <section className="record-section"><div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>{ticket.activity?.length ? <div className="record-activity">{[...ticket.activity].reverse().map((event, index) => <div key={`${event.at}-${index}`}><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.at))}</time><b>{event.label}</b><span>{event.detail}</span></div>)}</div> : <p>Created {created}. Later changes made in this prototype will appear here.</p>}</section>
-    <section className="record-section"><div className="record-section-heading"><h3>Requester follow-up</h3><span>{ticket.universalTasks.filter((task) => task.done).length}/{ticket.universalTasks.length} complete</span></div>{ticket.universalTasks.length ? <div className="record-followups">{ticket.universalTasks.map((task) => <div className={task.done ? 'done' : ''} key={task.id}><Check size={13} /><span>{task.title}<small>For {task.assignee}</small></span></div>)}</div> : <p>No follow-up tasks recorded.</p>}</section>
   </>
 }
 
