@@ -18,13 +18,17 @@ export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
 
     try {
       if (isSignUp) {
-        await signup(email, password, name)
+        const result = await signup(email, password, name)
+        console.log('Signup completed, result:', result)
       } else {
-        await login(email, password)
+        const result = await login(email, password)
+        console.log('Login completed, result:', result)
       }
       onSignIn()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      const msg = err instanceof Error ? err.message : 'Authentication failed'
+      console.error('Auth error:', msg, err)
+      setError(msg)
     } finally {
       setLoading(false)
     }
