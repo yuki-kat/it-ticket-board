@@ -215,4 +215,10 @@
 .inventory-filters-menu label { display: flex; flex-direction: column; gap: 4px; color: #59727d; font-size: 10px; font-weight: 700; }
 .inventory-filters-menu label span { color: #667d87; font-size: 9px; }
 .inventory-filters-menu select { height: 32px; padding: 0 6px; border: 1px solid #dbe5e8; border-radius: 5px; background: #fff; color: #42606c; font-size: 11px; }
+
+/* Table column filters */
+.table-filters-row th { padding: 8px 13px; background: #f0f5f7; border-bottom: 1px solid #dfe8eb; }
+.table-filters-row input, .table-filters-row select { width: 100%; height: 30px; padding: 5px 7px; border: 1px solid #d4dfe4; border-radius: 4px; background: #fff; color: #516a75; font-size: 10px; }
+.table-filters-row input::placeholder { color: #9aaab1; }
+
 @media (max-width: 900px) { .inventory-toolbar { align-items: stretch; }.inventory-controls { justify-content: flex-start; }.device-health-legend { width: 100%; margin: 7px 0 0; flex-wrap: wrap; } }
