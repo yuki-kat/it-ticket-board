@@ -28,7 +28,22 @@ export function setAuthUser(user: unknown) {
 
 export function getAuthUser() {
   const user = localStorage.getItem('auth_user');
-  return user ? JSON.parse(user) : null;
+  if (user) return JSON.parse(user);
+
+  // Fallback: if no stored user but we have a token, extract from JWT
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        return { id: payload.user_id, email: payload.email, name: payload.email.split('@')[0] };
+      }
+    } catch (e) {
+      console.error('Failed to extract user from token:', e);
+    }
+  }
+  return null;
 }
 
 export function getAuthToken(): string | null {
