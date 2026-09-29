@@ -318,3 +318,12 @@
 :root[data-theme="dark"] .description-section p { color: #cbd5e1; }
 :root[data-theme="dark"] .description-open-btn { background: #1a3a37; border-color: #2d7e6f; color: #7dd3ca; }
 :root[data-theme="dark"] .description-open-btn:hover { background: #1f4844; }
+
+/* Work notes see more toggle */
+.work-notes-display { display: flex; flex-direction: column; gap: 10px; }
+.work-notes-display p { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.see-more-btn { align-self: flex-start; padding: 6px 12px; border: 1px solid #3e7a72; background: transparent; color: #3e7a72; font-size: 12px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: background 0.2s, color 0.2s; }
+.see-more-btn:hover { background: #d4f0eb; }
+
+:root[data-theme="dark"] .see-more-btn { border-color: #2d7e6f; color: #7dd3ca; }
+:root[data-theme="dark"] .see-more-btn:hover { background: #1a3a37; }

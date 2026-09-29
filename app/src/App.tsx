@@ -716,7 +716,6 @@ function App() {
   const toggleTicketStar = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
   const saveTicketTags = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, tags: parseTicketTags(value) } : ticket))
   const saveTicketNotes = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, notes: value } : ticket))
-  const logTicketActivity = (id: string, action: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, activity: [...(ticket.activity || []), { at: new Date().toISOString(), label: 'Troubleshooting step', detail: action }] } : ticket))
   const selectedAssetId = selectedTicket ? selectedTicket.assetId || assets.find((asset) => asset.linkedTicketIds.includes(selectedTicket.id))?.id || '' : ''
   const standaloneTicket = tickets.find((ticket) => ticket.id === standaloneTicketId)
 
@@ -977,7 +976,7 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onLogActivity={(action) => logTicketActivity(selectedTicket.id, action)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
     {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
 
@@ -1351,9 +1350,12 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
 }
 
 function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
+  const [expandedNotes, setExpandedNotes] = useState(false)
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
+  const notesLength = ticket.notes?.length || 0
+  const shouldShowToggle = notesLength > 200
   return <>
     <RecordStatusStrip ticket={ticket} now={now} />
     <div className="record-layout-two-col">
@@ -1372,7 +1374,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Work notes</h3></div>
-          {onSaveNotes ? <textarea defaultValue={ticket.notes || ''} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <p>{ticket.notes || 'No work notes recorded.'}</p>}
+          {onSaveNotes ? <textarea defaultValue={ticket.notes || ''} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <div className="work-notes-display">{shouldShowToggle ? <><p>{expandedNotes ? ticket.notes : `${ticket.notes?.substring(0, 200)}...`}</p><button className="see-more-btn" onClick={() => setExpandedNotes(!expandedNotes)}>{expandedNotes ? 'See less' : 'See more'}</button></> : <p>{ticket.notes || 'No work notes recorded.'}</p>}</div>}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
@@ -1476,7 +1478,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onLogActivity, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onLogActivity?: (action: string) => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showLogAction, setShowLogAction] = useState(false)
   const [actionText, setActionText] = useState('')
@@ -1487,7 +1489,6 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     const entry = `[${timestamp}] ${actionText}`
     const updatedNotes = ticket.notes ? `${ticket.notes}\n${entry}` : entry
     onSaveNotes(updatedNotes)
-    if (onLogActivity) onLogActivity(actionText)
     setActionText('')
     setShowLogAction(false)
   }
