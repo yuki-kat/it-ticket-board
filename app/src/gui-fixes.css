@@ -484,3 +484,27 @@
 :root[data-theme="dark"] .suggestion-item:first-child { color: #f3f4f6; }
 :root[data-theme="dark"] .small-icon-button { color: #a0aec0; }
 :root[data-theme="dark"] .small-icon-button:hover { background: #1a2434; color: #f3f4f6; }
+/* Ticket record panel: "Suggested fix" from Gemini (AiSuggestFix.tsx). */
+.ai-suggest-fix { margin: 0 0 12px; border-color: #cfe0f0; background: #f8fbfe; }
+.ai-suggest-fix > p { margin-bottom: 10px; }
+.ai-suggest-button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid #bdd2da; border-radius: 6px; background: #fff; color: #347189; font-size: 11px; font-weight: 700; cursor: pointer; }
+.ai-suggest-button:hover { border-color: #8fb4c2; background: #f2f8f9; }
+.ai-suggest-status.is-error { color: #a34a3c; }
+.ai-suggest-result h4 { margin: 12px 0 5px; color: #3d5964; font-size: 11px; }
+.ai-suggest-result h4:first-child { margin-top: 2px; }
+.ai-suggest-result ul, .ai-suggest-result ol { margin: 0; padding-left: 20px; color: #3f5963; font-size: 12px; line-height: 1.6; }
+.ai-suggest-result ul { list-style: disc; }
+.ai-suggest-result ol { list-style: decimal; }
+.ai-suggest-result li { display: list-item; margin: 2px 0; }
+.ai-suggest-result .ai-suggest-button { margin-top: 12px; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ai-suggest-fix { border-color: #2c4453; background: #15222b; }
+  :root:not([data-theme="light"]) .ai-suggest-button { border-color: #35505e; background: #1b2b35; color: #9fd0e2; }
+  :root:not([data-theme="light"]) .ai-suggest-result h4 { color: #a0b8c2; }
+  :root:not([data-theme="light"]) .ai-suggest-result ul, :root:not([data-theme="light"]) .ai-suggest-result ol { color: #d5e1e6; }
+}
+:root[data-theme="dark"] .ai-suggest-fix { border-color: #2c4453; background: #15222b; }
+:root[data-theme="dark"] .ai-suggest-button { border-color: #35505e; background: #1b2b35; color: #9fd0e2; }
+:root[data-theme="dark"] .ai-suggest-result h4 { color: #a0b8c2; }
+:root[data-theme="dark"] .ai-suggest-result ul, :root[data-theme="dark"] .ai-suggest-result ol { color: #d5e1e6; }
