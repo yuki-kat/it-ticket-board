@@ -2852,7 +2852,7 @@ h1 { margin-top: 5px; color: #173443; font-size: 29px; letter-spacing: -.04em; }
 
 .record-activity > div {
   display: grid;
-  grid-template-columns: 128px 160px minmax(0, 1fr);
+  grid-template-columns: 110px 120px minmax(0, 1fr);
   align-items: baseline;
   gap: 8px;
   padding: 6px 0;
@@ -2872,7 +2872,7 @@ h1 { margin-top: 5px; color: #173443; font-size: 29px; letter-spacing: -.04em; }
 .record-activity span {
   color: #6b8089;
   font-size: 10px;
-  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .record-layout-two-col {
