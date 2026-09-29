@@ -53,16 +53,24 @@ async function request(endpoint: string, options: RequestInit = {}) {
 
 // Auth
 export async function signup(email: string, password: string, name: string) {
-  const result = await request('/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify({ email, password, name })
-  });
-  console.log('Signup result:', result);
-  console.log('result.user:', result.user);
-  setAuthToken(result.token);
-  setAuthUser(result.user);
-  console.log('After setAuthUser, localStorage.auth_user:', localStorage.getItem('auth_user'));
-  return result;
+  try {
+    const result = await request('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name })
+    });
+    console.log('=== SIGNUP SUCCESS ===');
+    console.log('Full result:', result);
+    console.log('Token:', result.token);
+    console.log('User object:', result.user);
+    setAuthToken(result.token);
+    console.log('Token set, checking localStorage:', localStorage.getItem('auth_token'));
+    setAuthUser(result.user);
+    console.log('User set, checking localStorage:', localStorage.getItem('auth_user'));
+    return result;
+  } catch (error) {
+    console.error('=== SIGNUP ERROR ===', error);
+    throw error;
+  }
 }
 
 export async function login(email: string, password: string) {
