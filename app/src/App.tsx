@@ -25,7 +25,7 @@ import { exportCsv } from './lib/exportCsv'
 import { exportXlsx } from './lib/exportXlsx'
 import SearchPage from './SearchPage'
 import './search.css'
-import { useTicketSummary, useDescriptionAssist } from './useGemini'
+import { useTicketSummary, useDescriptionAssist, useWorkNotesSuggestions } from './useGemini'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -1375,13 +1375,16 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [cachedSummaryId, setCachedSummaryId] = useState<string | null>(null)
   const { loading: summaryLoading, error: summaryError, result: summaryResult, generate: generateSummary } = useTicketSummary()
+  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false)
+  const [cachedSuggestionsId, setCachedSuggestionsId] = useState<string | null>(null)
+  const { loading: suggestionsLoading, error: suggestionsError, result: suggestionsResult, suggest: suggestWorkNotes } = useWorkNotesSuggestions()
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
   const notesLength = notesText?.length || 0
   const shouldShowToggle = notesLength > 200
   useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
-  useEffect(() => { setCachedSummaryId(null) }, [ticket.id])
+  useEffect(() => { setCachedSummaryId(null); setCachedSuggestionsId(null) }, [ticket.id])
   const handleGetSummary = async () => {
     if (cachedSummaryId === ticket.id) return
     try {
@@ -1390,6 +1393,16 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
       setSummaryExpanded(true)
     } catch (err) {
       console.error('Summary generation failed:', err)
+    }
+  }
+  const handleGetSuggestions = async () => {
+    if (cachedSuggestionsId === ticket.id) return
+    try {
+      await suggestWorkNotes(ticket.title, ticket.description || '', notesText)
+      setCachedSuggestionsId(ticket.id)
+      setShowSuggestionsPanel(true)
+    } catch (err) {
+      console.error('Suggestions failed:', err)
     }
   }
   return <>
@@ -1447,8 +1460,39 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
           {ticket.tags?.length ? <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <p>No tags added.</p>}
         </section>
         <section className="record-section">
-          <div className="record-section-heading"><h3>Work notes</h3></div>
-          {onSaveNotes ? <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} /> : <div className="work-notes-display">{shouldShowToggle ? <><p>{expandedNotes ? notesText : `${notesText?.substring(0, 200)}...`}</p><button className="see-more-btn" onClick={() => setExpandedNotes(!expandedNotes)}>{expandedNotes ? 'See less' : 'See more'}</button></> : <p>{notesText || 'No work notes recorded.'}</p>}</div>}
+          <div className="record-section-heading">
+            <h3>Work notes</h3>
+            {onSaveNotes && <button className="primary-button" onClick={handleGetSuggestions} disabled={suggestionsLoading}><Sparkles size={16} />Get suggestions</button>}
+          </div>
+          {onSaveNotes ? (
+            <>
+              <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
+              {showSuggestionsPanel && cachedSuggestionsId === ticket.id && (
+                <div className="suggestions-panel">
+                  {suggestionsLoading && <p className="text-muted">Getting suggestions...</p>}
+                  {suggestionsError && <p className="ai-error">{suggestionsError.message}</p>}
+                  {suggestionsResult && !suggestionsLoading && (
+                    <div className="suggestions-content">
+                      {suggestionsResult.split('\n').filter(Boolean).map((line: string, idx: number) => (
+                        <p key={idx} className="suggestion-item">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="work-notes-display">
+              {shouldShowToggle ? (
+                <>
+                  <p>{expandedNotes ? notesText : `${notesText?.substring(0, 200)}...`}</p>
+                  <button className="see-more-btn" onClick={() => setExpandedNotes(!expandedNotes)}>{expandedNotes ? 'See less' : 'See more'}</button>
+                </>
+              ) : (
+                <p>{notesText || 'No work notes recorded.'}</p>
+              )}
+            </div>
+          )}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
