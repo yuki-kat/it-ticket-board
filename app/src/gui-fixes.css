@@ -124,6 +124,37 @@
 .board-filters-menu label span { color: #667d87; font-size: 9px; }
 .board-filters-menu select { height: 32px; padding: 0 6px; border: 1px solid #d7e3e8; border-radius: 5px; background: #fff; color: #42606c; font-size: 11px; }
 
+/* Search & AI Results modal */
+.ticket-search-results { position: absolute; top: 60px; right: 16px; width: 360px; max-height: 400px; border: 1px solid #dde6e8; border-radius: 8px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; flex-direction: column; z-index: 50; }
+.search-results-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #dde6e8; }
+.search-results-header h5 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #5a7280; letter-spacing: 0.5px; }
+.search-results-header button { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: none; background: transparent; color: #5a7280; cursor: pointer; }
+.search-results-header button:hover { color: #0d1924; }
+.search-results-content { flex: 1; padding: 12px 16px; overflow-y: auto; }
+.search-results-content p { margin: 0 0 12px 0; font-size: 13px; line-height: 1.5; color: #3d5461; white-space: pre-wrap; word-break: break-word; }
+.search-add-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; margin-top: 8px; border: none; border-radius: 5px; background: #d0f0e3; color: #186f4b; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.search-add-btn:hover { background: #bde8d7; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ticket-search-results { background: #1a2332; border-color: #334155; }
+  :root:not([data-theme="light"]) .search-results-header { border-bottom-color: #334155; }
+  :root:not([data-theme="light"]) .search-results-header h5 { color: #a0aec0; }
+  :root:not([data-theme="light"]) .search-results-header button { color: #a0aec0; }
+  :root:not([data-theme="light"]) .search-results-header button:hover { color: #f3f4f6; }
+  :root:not([data-theme="light"]) .search-results-content p { color: #cbd5e1; }
+  :root:not([data-theme="light"]) .search-add-btn { background: #064e3b; color: #86efac; }
+  :root:not([data-theme="light"]) .search-add-btn:hover { background: #065f46; }
+}
+
+:root[data-theme="dark"] .ticket-search-results { background: #1a2332; border-color: #334155; }
+:root[data-theme="dark"] .search-results-header { border-bottom-color: #334155; }
+:root[data-theme="dark"] .search-results-header h5 { color: #a0aec0; }
+:root[data-theme="dark"] .search-results-header button { color: #a0aec0; }
+:root[data-theme="dark"] .search-results-header button:hover { color: #f3f4f6; }
+:root[data-theme="dark"] .search-results-content p { color: #cbd5e1; }
+:root[data-theme="dark"] .search-add-btn { background: #064e3b; color: #86efac; }
+:root[data-theme="dark"] .search-add-btn:hover { background: #065f46; }
+
 /* AI Guidance button and panel for tickets. */
 .ai-guidance-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
 
