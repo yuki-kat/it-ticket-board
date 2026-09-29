@@ -327,3 +327,25 @@
 
 :root[data-theme="dark"] .see-more-btn { border-color: #2d7e6f; color: #7dd3ca; }
 :root[data-theme="dark"] .see-more-btn:hover { background: #1a3a37; }
+
+/* Search results modal */
+.ticket-search-results { padding: 14px 18px; border-bottom: 1px solid #dde6e8; background: #f4f8fb; }
+.search-results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.search-results-header h5 { margin: 0; font-size: 12px; font-weight: 600; color: #596f79; text-transform: uppercase; }
+.search-results-header button { background: none; border: none; cursor: pointer; color: #596f79; padding: 4px; }
+.search-results-header button:hover { color: #0c2d3f; }
+.search-results-content { color: #596f79; font-size: 12px; line-height: 1.6; display: flex; flex-direction: column; gap: 10px; }
+.search-results-content p { margin: 0; white-space: pre-wrap; }
+.search-add-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1px solid #2d7e6f; background: #d4f0eb; color: #1a5f55; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+.search-add-btn:hover { background: #c0ebe3; }
+
+.list-search-btn:hover { color: #3e7a72; }
+
+:root[data-theme="dark"] .ticket-search-results { background: #1f2530; border-bottom-color: #3a3f47; }
+:root[data-theme="dark"] .search-results-header h5 { color: #8b95a3; }
+:root[data-theme="dark"] .search-results-header button { color: #8b95a3; }
+:root[data-theme="dark"] .search-results-header button:hover { color: #cbd5e1; }
+:root[data-theme="dark"] .search-results-content { color: #cbd5e1; }
+:root[data-theme="dark"] .search-add-btn { background: #1a3a37; border-color: #2d7e6f; color: #7dd3ca; }
+:root[data-theme="dark"] .search-add-btn:hover { background: #1f4844; }
+:root[data-theme="dark"] .list-search-btn:hover { color: #7dd3ca; }

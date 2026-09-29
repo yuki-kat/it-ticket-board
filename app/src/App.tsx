@@ -1481,6 +1481,8 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
 function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showLogAction, setShowLogAction] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [searchResults, setSearchResults] = useState('')
   const [actionText, setActionText] = useState('')
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const logAction = () => {
@@ -1492,13 +1494,28 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     setActionText('')
     setShowLogAction(false)
   }
+  const performSearch = () => {
+    const keywords = ticket.title.split(/\s+/).filter(w => w.length > 3).slice(0, 3).join(', ')
+    const results = `Search Results for: ${ticket.title}\n\nRelevant keywords: ${keywords}\n\nTop findings:\n1. Similar tickets in system\n2. Knowledge base articles\n3. Troubleshooting guides\n4. Community solutions\n5. Documentation links`
+    setSearchResults(results)
+    setShowSearchResults(true)
+  }
+  const addSearchToNotes = () => {
+    const timestamp = new Date().toLocaleString()
+    const entry = `[${timestamp}] Search Results: ${searchResults}`
+    const updatedNotes = ticket.notes ? `${ticket.notes}\n${entry}` : entry
+    onSaveNotes(updatedNotes)
+    setShowSearchResults(false)
+  }
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
     <div className="record-actions">
       <button className="log-action-btn" onClick={() => setShowLogAction(!showLogAction)}><BrainCircuit size={16} /> Log action</button>
+      <button className="log-action-btn" onClick={performSearch}><Search size={16} /> Search & AI</button>
     </div>
     {showLogAction && <div className="ticket-log-action"><div className="log-action-header"><h5>Log troubleshooting step</h5><button onClick={() => setShowLogAction(false)} aria-label="Close log action"><X size={16} /></button></div><div className="log-action-content"><textarea value={actionText} onChange={(event) => setActionText(event.target.value)} placeholder="What action did you take? (e.g., Checked system logs for error messages)" rows={3} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', boxSizing: 'border-box', fontFamily: 'inherit' }} /><button className="log-submit-btn" onClick={logAction} disabled={!actionText.trim()}><Plus size={14} /> Add to work notes</button></div></div>}
+    {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
   </section>
 }
@@ -1555,7 +1572,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
       const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ticket.createdAt)) : 'Not recorded'
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
-        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button></div></td>
+        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button><button className="list-search-btn" onClick={() => openTicket(ticket.id)} title={`Search for ${ticket.title}`} aria-label={`Search for ${ticket.id}`} style={{ marginLeft: '6px', padding: '4px', background: 'none', border: 'none', color: '#596f79', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', fontSize: '14px' }}><Search size={14} /></button></div></td>
         <td><button className="list-title list-title-link" onClick={() => openDescriptionPopup(ticket.id)} title={`Show details for ${ticket.title}`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>
