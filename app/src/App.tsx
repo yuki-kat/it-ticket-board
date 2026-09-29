@@ -1447,10 +1447,20 @@ function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketIte
 
 function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onClose: () => void }) {
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
+  const [showAiGuidance, setShowAiGuidance] = useState(false)
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
+  const handleSearch = () => {
+    const query = `${ticket.id} ${ticket.title}`.replace(/\s+/g, '+')
+    window.open(`https://www.google.com/search?q=${query}`, '_blank')
+  }
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
+    <div className="record-actions">
+      <button className="ai-guidance-btn" onClick={() => setShowAiGuidance(!showAiGuidance)}><BrainCircuit size={16} /> Ask AI</button>
+      <button className="search-resolution-btn" onClick={handleSearch}><Search size={16} /> Search resolution</button>
+    </div>
+    {showAiGuidance && <div className="ticket-ai-guidance"><div className="ai-guidance-header"><h5>AI Guidance</h5><button onClick={() => setShowAiGuidance(false)} aria-label="Close AI guidance"><X size={16} /></button></div><div className="ai-guidance-content"><p><b>Ticket context:</b></p><p className="ai-guidance-context">ID: {ticket.id} | Status: {ticket.status} | Priority: {ticket.severity} | Assignment: {ticket.assignee || 'Unassigned'}</p><p><b>Suggested next steps:</b></p><ul><li>Review the description and work notes for clues</li><li>Check if a similar ticket has been resolved before</li><li>Reach out to the affected user for more information</li><li>Escalate to Tier 2 if beyond current scope</li></ul></div></div>}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} />
   </section>
 }
