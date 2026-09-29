@@ -11,12 +11,14 @@ export interface GeminiResponse {
 }
 
 export class GeminiError extends Error {
+  code: 'API_KEY_MISSING' | 'API_ERROR' | 'TIMEOUT' | 'RATE_LIMIT' | 'UNKNOWN';
   constructor(
     message: string,
-    public code: 'API_KEY_MISSING' | 'API_ERROR' | 'TIMEOUT' | 'RATE_LIMIT' | 'UNKNOWN' = 'UNKNOWN'
+    code: 'API_KEY_MISSING' | 'API_ERROR' | 'TIMEOUT' | 'RATE_LIMIT' | 'UNKNOWN' = 'UNKNOWN'
   ) {
     super(message);
     this.name = 'GeminiError';
+    this.code = code;
   }
 }
 

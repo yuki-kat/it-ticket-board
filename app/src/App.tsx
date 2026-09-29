@@ -25,6 +25,7 @@ import { exportCsv } from './lib/exportCsv'
 import { exportXlsx } from './lib/exportXlsx'
 import SearchPage from './SearchPage'
 import './search.css'
+import { useTicketSummary } from './useGemini'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -1352,12 +1353,26 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
 function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
   const [expandedNotes, setExpandedNotes] = useState(false)
   const [notesText, setNotesText] = useState(ticket.notes || '')
+  const [summaryExpanded, setSummaryExpanded] = useState(false)
+  const [cachedSummaryId, setCachedSummaryId] = useState<string | null>(null)
+  const { loading: summaryLoading, error: summaryError, result: summaryResult, generate: generateSummary } = useTicketSummary()
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
   const notesLength = notesText?.length || 0
   const shouldShowToggle = notesLength > 200
   useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
+  useEffect(() => { setCachedSummaryId(null) }, [ticket.id])
+  const handleGetSummary = async () => {
+    if (cachedSummaryId === ticket.id) return
+    try {
+      await generateSummary(ticket.title, ticket.description || '', notesText)
+      setCachedSummaryId(ticket.id)
+      setSummaryExpanded(true)
+    } catch (err) {
+      console.error('Summary generation failed:', err)
+    }
+  }
   return <>
     <RecordStatusStrip ticket={ticket} now={now} />
     <div className="record-layout-two-col">
@@ -1369,6 +1384,44 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         <section className="record-section">
           <div className="record-section-heading"><h3>Description</h3></div>
           <p>{ticket.description || 'No description recorded.'}</p>
+        </section>
+        <section className="record-section ai-summary-section">
+          <div className="record-section-heading">
+            <h3>AI Summary</h3>
+            <button className="primary-button" onClick={handleGetSummary} disabled={summaryLoading}>
+              <Sparkles size={14} />
+              <span>{summaryLoading ? 'Generating...' : 'Get Summary'}</span>
+            </button>
+          </div>
+          {summaryError && <div className="ai-error">⚠️ {summaryError.message}</div>}
+          {summaryResult && (
+            <div className="ai-summary-content">
+              {summaryExpanded ? (
+                <>
+                  <div className="summary-item">
+                    <strong>What's the issue?</strong>
+                    <p>{summaryResult.split('\n').slice(0, 3).join('\n')}</p>
+                  </div>
+                  <div className="summary-item">
+                    <strong>What's been tried?</strong>
+                    <p>{summaryResult.split('\n').slice(4, 7).join('\n')}</p>
+                  </div>
+                  <div className="summary-item">
+                    <strong>Suggested next step</strong>
+                    <p>{summaryResult.split('\n').slice(8, 11).join('\n')}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="summary-preview">{summaryResult.split('\n')[0]}</p>
+              )}
+              <button className="summary-toggle" onClick={() => setSummaryExpanded(!summaryExpanded)}>
+                {summaryExpanded ? 'Show less' : 'Show more'}
+              </button>
+            </div>
+          )}
+          {!summaryResult && !summaryLoading && !summaryError && (
+            <p className="text-muted">Click "Get Summary" to analyze this ticket with AI.</p>
+          )}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Tags</h3></div>

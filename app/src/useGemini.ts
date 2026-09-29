@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { callGemini, GeminiError, buildTicketSummaryPrompt, buildDescriptionAssistPrompt, buildWorkNotesSuggestionsPrompt, buildQueueAssistPrompt, buildPriorityAssistPrompt } from './gemini';
 
 export interface UseGeminiState {
@@ -92,14 +92,12 @@ export function usePriorityAssist() {
 
 // Utility to check if Gemini API is available
 export function useGeminiAvailable() {
-  const [available, setAvailable] = useState(() => {
+  return useMemo(() => {
     try {
       const key = import.meta.env.VITE_GEMINI_API_KEY;
       return !!key;
     } catch {
       return false;
     }
-  });
-
-  return available;
+  }, []);
 }
