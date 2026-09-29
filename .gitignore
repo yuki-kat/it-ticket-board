@@ -13,3 +13,8 @@ tests/test-results/
 tests/playwright-report/
 test-results/
 playwright-report/
+
+# Local secrets
+.env
+.env.*
+!.env.example
