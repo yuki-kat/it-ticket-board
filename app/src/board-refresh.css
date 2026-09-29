@@ -2775,8 +2775,8 @@ h1 { margin-top: 5px; color: #173443; font-size: 29px; letter-spacing: -.04em; }
 }
 
 .record-section {
-  margin-top: 12px;
-  padding: 17px 18px;
+  margin-top: 10px;
+  padding: 12px 15px;
   background: #fff;
   border: 1px solid #dde6e8;
   border-radius: 9px;
@@ -2854,8 +2854,8 @@ h1 { margin-top: 5px; color: #173443; font-size: 29px; letter-spacing: -.04em; }
   display: grid;
   grid-template-columns: 128px 160px minmax(0, 1fr);
   align-items: baseline;
-  gap: 10px;
-  padding: 9px 0;
+  gap: 8px;
+  padding: 6px 0;
   border-top: 1px solid #edf1f2;
 }
 
