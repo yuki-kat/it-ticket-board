@@ -287,3 +287,34 @@
 :root[data-theme="dark"] .log-action-content textarea { background: #2a2f37; border-color: #3a3f47; color: #cbd5e1; }
 :root[data-theme="dark"] .log-submit-btn { background: #1a3a37; border-color: #2d7e6f; color: #7dd3ca; }
 :root[data-theme="dark"] .log-submit-btn:hover:not(:disabled) { background: #1f4844; }
+
+/* Description popup for short description preview */
+.description-popup-overlay { display: flex; align-items: flex-start; justify-content: center; padding-top: 60px; }
+.description-popup { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+.description-popup-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid #dde6e8; }
+.description-popup-header h3 { margin: 0; font-size: 16px; font-weight: 600; color: #0c2d3f; }
+.description-popup-header button { background: none; border: none; cursor: pointer; color: #596f79; padding: 4px; display: flex; align-items: center; }
+.description-popup-header button:hover { color: #0c2d3f; }
+.description-popup-content { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.description-section { display: flex; flex-direction: column; gap: 6px; }
+.description-section h5 { margin: 0; font-size: 12px; font-weight: 600; color: #596f79; text-transform: uppercase; letter-spacing: 0.5px; }
+.description-section p { margin: 0; font-size: 13px; color: #0c2d3f; line-height: 1.6; }
+.description-actions { display: flex; gap: 8px; margin-top: 8px; }
+.description-open-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid #3e7a72; background: #d4f0eb; color: #1a5f55; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; transition: background 0.2s; }
+.description-open-btn:hover { background: #c0ebe3; }
+
+@media (max-width: 600px) {
+  .description-popup { width: 95%; max-width: 100%; max-height: 70vh; }
+  .description-popup-header { padding: 12px 14px; }
+  .description-popup-content { padding: 12px 14px; gap: 12px; }
+}
+
+:root[data-theme="dark"] .description-popup { background: #1a1f26; }
+:root[data-theme="dark"] .description-popup-header { border-bottom-color: #3a3f47; }
+:root[data-theme="dark"] .description-popup-header h3 { color: #cbd5e1; }
+:root[data-theme="dark"] .description-popup-header button { color: #8b95a3; }
+:root[data-theme="dark"] .description-popup-header button:hover { color: #cbd5e1; }
+:root[data-theme="dark"] .description-section h5 { color: #8b95a3; }
+:root[data-theme="dark"] .description-section p { color: #cbd5e1; }
+:root[data-theme="dark"] .description-open-btn { background: #1a3a37; border-color: #2d7e6f; color: #7dd3ca; }
+:root[data-theme="dark"] .description-open-btn:hover { background: #1f4844; }

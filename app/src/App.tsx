@@ -546,6 +546,7 @@ function App() {
   const [dragOverLane, setDragOverLane] = useState('')
   const [selectedTicketId, setSelectedTicketId] = useState('')
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
+  const [descriptionPopupTicketId, setDescriptionPopupTicketId] = useState('')
   const [inventoryFocusId, setInventoryFocusId] = useState('')
   const [inventoryFocusRevision, setInventoryFocusRevision] = useState(0)
   const [inventoryCommand, setInventoryCommand] = useState<InventoryCommand | null>(null)
@@ -958,7 +959,7 @@ function App() {
       <label><span>Group</span><select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} aria-label="Filter by assignment group"><option>All groups</option>{groupOptions.map((group) => <option key={group}>{group}</option>)}</select></label>
       <label><span>Assignee</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} aria-label="Filter by assignee"><option>All assignees</option>{assigneeOptions.map((assignee) => <option key={assignee}>{assignee}</option>)}<option>Unassigned</option></select></label>
       <label><span>Tag</span><select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filter tickets by tag"><option>All tags</option>{ticketTags.map((tag) => <option key={tag}>{tag}</option>)}</select></label></div></div>}</div><button className={"ticket-star-filter" + (starredOnly ? " active" : "")} aria-pressed={starredOnly} onClick={() => setStarredOnly((value) => !value)}><Star size={14} fill={starredOnly ? "currentColor" : "none"} /> Starred</button>{filtersActive && <button className="clear-filters-button" onClick={clearFilters}><X size={13} />Clear filters</button>}</div></div>
-      {cardSize === 'list' ? <ListView tickets={visible} now={clock} openTicket={setSelectedTicketId} toggleStar={toggleTicketStar} selectedIds={selectedTicketIds} onSelectionChange={setSelectedTicketIds} /> : cardSize === 'small' || cardSize === 'regular' ? <section className="kanban" id="board" aria-label="Kanban task lanes">
+      {cardSize === 'list' ? <ListView tickets={visible} now={clock} openTicket={setSelectedTicketId} openDescriptionPopup={setDescriptionPopupTicketId} toggleStar={toggleTicketStar} selectedIds={selectedTicketIds} onSelectionChange={setSelectedTicketIds} /> : cardSize === 'small' || cardSize === 'regular' ? <section className="kanban" id="board" aria-label="Kanban task lanes">
         {laneLabels.map((laneLabel, index) => {
           const lane = visible.filter((ticket) => boardBy === 'State' ? ticket.status === laneLabel : boardBy === 'Task type' ? ticket.recordType === laneLabel : (ticket.assignmentGroup || 'No group') === laneLabel)
           const addSeed = boardBy === 'Task type' ? { recordType: laneLabel as RecordType } : boardBy === 'Assignment group' ? { assignmentGroup: laneLabel === 'No group' ? '' : laneLabel } : {}
@@ -977,6 +978,8 @@ function App() {
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
     {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onLogActivity={(action) => logTicketActivity(selectedTicket.id, action)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+
+    {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
@@ -1118,6 +1121,32 @@ function SettingsPanel({ screenPattern, onScreenPatternChange, view, onViewChang
     <section className="settings-section screen-pattern-settings"><h3>Screen pattern</h3><p>Choose the background texture used across the workspace.</p><div className="screen-pattern-grid">{SCREEN_PATTERNS.map((pattern) => <button key={pattern.id} type="button" className={'screen-pattern-option' + (pattern.id === screenPattern ? ' active' : '')} data-pattern={pattern.id} aria-pressed={pattern.id === screenPattern} onClick={() => onScreenPatternChange(pattern.id)}><b>{pattern.label}</b><small>{pattern.detail}</small></button>)}</div></section>
     <div className="settings-footer"><button className="primary-button" onClick={onClose}>Done</button></div>
   </section>
+}
+
+function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketItem; onClose: () => void; onOpenTicket: () => void }) {
+  return <div className="description-popup">
+    <div className="description-popup-header">
+      <h3>{ticket.title}</h3>
+      <button onClick={onClose} aria-label="Close"><X size={18} /></button>
+    </div>
+    <div className="description-popup-content">
+      <div className="description-section">
+        <h5>Short description</h5>
+        <p>{ticket.title}</p>
+      </div>
+      <div className="description-section">
+        <h5>Full description</h5>
+        <p>{ticket.description || 'No description recorded.'}</p>
+      </div>
+      <div className="description-section">
+        <h5>Record type</h5>
+        <p>{ticket.recordType}</p>
+      </div>
+      <div className="description-actions">
+        <button onClick={onOpenTicket} className="description-open-btn">Open full ticket <ArrowRight size={14} /></button>
+      </div>
+    </div>
+  </div>
 }
 
 function ReportsPanel({ tickets, now, onClose }: { tickets: TicketItem[]; now: number; onClose: () => void }) {
@@ -1481,7 +1510,7 @@ function TicketRecordPage({ ticket, now }: { ticket: TicketItem; now: number }) 
   </div>
 }
 
-function ListView({ tickets, now, openTicket, toggleStar, selectedIds, onSelectionChange }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void; toggleStar: (id: string) => void; selectedIds: string[]; onSelectionChange: (ids: string[]) => void }) {
+function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, selectedIds, onSelectionChange }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void; openDescriptionPopup: (id: string) => void; toggleStar: (id: string) => void; selectedIds: string[]; onSelectionChange: (ids: string[]) => void }) {
   const [filters, setFilters] = useState({ number: '', description: '', department: '', assignmentGroup: '', assignee: '', priority: '', state: '', created: '', sla: '' })
   const selectionAnchor = useRef<string>('')
   const setFilter = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value }))
@@ -1526,7 +1555,7 @@ function ListView({ tickets, now, openTicket, toggleStar, selectedIds, onSelecti
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
         <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button></div></td>
-        <td><button className="list-title list-title-link" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
+        <td><button className="list-title list-title-link" onClick={() => openDescriptionPopup(ticket.id)} title={`Show details for ${ticket.title}`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>
         <td>{ticket.assignee || 'Unassigned'}</td>
