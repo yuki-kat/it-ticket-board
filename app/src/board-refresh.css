@@ -3406,7 +3406,7 @@ textarea:focus-visible {
 .home-kpi strong { margin-top: 2px; color: #193747; font-size: 30px; line-height: 1.15; letter-spacing: -.05em; }
 .home-kpi-action { display: flex; align-items: center; gap: 5px; margin-top: auto; color: #367187; font-size: 11px; font-weight: 700; }
 .home-insights-heading { margin-top: 33px; }
-.home-chart-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.home-chart-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
 .home-chart-card { min-height: 275px; padding: 22px 23px; border: 1px solid #e2e9ed; border-radius: 11px; background: #fff; box-shadow: 0 2px 8px rgb(23 52 67 / 3%); }
 .home-chart-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .home-chart-heading h3 { margin: 0; color: #1f3b49; font-size: 15px; letter-spacing: -.025em; }
