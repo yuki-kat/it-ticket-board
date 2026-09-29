@@ -273,6 +273,9 @@
 .ai-guidance-context { color: #80939a; font-size: 11px; background: #e3eef1; padding: 8px; border-radius: 4px; margin: 6px 0 10px; font-family: monospace; }
 .ai-guidance-content ul { margin: 8px 0; padding-left: 18px; }
 .ai-guidance-content li { margin-bottom: 6px; }
+.ai-suggestion-box { background: #fff; padding: 10px; border: 1px solid #d4dfe4; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 11px; line-height: 1.5; color: #385966; white-space: pre-wrap; }
+.add-to-notes-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; margin-top: 8px; border: 1px solid #3e7a72; background: #e0f2f1; color: #1a5f5a; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+.add-to-notes-btn:hover { background: #b2dfdb; }
 
 :root[data-theme="dark"] .record-actions { background: #242b34; border-bottom-color: #3a3f47; }
 :root[data-theme="dark"] .ai-guidance-btn, :root[data-theme="dark"] .search-resolution-btn { background: #1a1f26; border-color: #3a3f47; color: #a0a4a8; }
@@ -284,3 +287,6 @@
 :root[data-theme="dark"] .ai-guidance-content { color: #cbd5e1; }
 :root[data-theme="dark"] .ai-guidance-content p:first-child { color: #a0aec0; }
 :root[data-theme="dark"] .ai-guidance-context { background: #242b34; color: #8b95a3; }
+:root[data-theme="dark"] .ai-suggestion-box { background: #242b34; border-color: #3a3f47; color: #cbd5e1; }
+:root[data-theme="dark"] .add-to-notes-btn { background: #1f3f3b; border-color: #4a9b93; color: #81d4cc; }
+:root[data-theme="dark"] .add-to-notes-btn:hover { background: #2a5450; }
