@@ -3,6 +3,7 @@ import type { CsvValue } from './exportCsv'
 const encoder = new TextEncoder()
 
 function xml(value: string): string {
+  // eslint-disable-next-line no-control-regex
   return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 }
 
@@ -92,8 +93,18 @@ function zip(parts: { name: string; data: Uint8Array }[]): Uint8Array {
   return bytes
 }
 
+/**
+ * Definition of a worksheet within an Excel workbook.
+ * @property name - Sheet name (up to 31 chars, special chars removed automatically)
+ * @property headers - Column headers for the sheet
+ * @property rows - Data rows, each row is an array of cell values
+ */
 export type XlsxSheet = { name: string; headers: string[]; rows: CsvValue[][] }
 
+/**
+ * Generate Excel worksheet XML with auto-filtering on header row, frozen panes,
+ * and auto-sized columns based on header width.
+ */
 function sheetXml(headers: string[], rows: CsvValue[][]): string {
   const data = [headers, ...rows]
   const sheetRows = data.map((row, index) => `<row r="${index + 1}">${row.map((value, cellIndex) => cell(value, index + 1, cellIndex)).join('')}</row>`).join('')
@@ -102,11 +113,18 @@ function sheetXml(headers: string[], rows: CsvValue[][]): string {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="${range}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${widths}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="${range}"/></worksheet>`
 }
 
-/** Downloads one .xlsx workbook with a sheet for each entry in `sheets`. */
+/**
+ * Export multiple sheets as a single .xlsx workbook with automatic download.
+ * Generates proper Excel XML structure with relationships and ZIP compression.
+ * Auto-adjusts sheet names to avoid duplicates (>31 chars, invalid chars removed).
+ *
+ * @param filename - Name for the downloaded file (e.g., "inventory.xlsx")
+ * @param sheets - Array of sheets with headers and data rows
+ */
 export function exportXlsxWorkbook(filename: string, sheets: XlsxSheet[]): void {
   const used = new Set<string>()
   const names = sheets.map((sheet, index) => {
-    const base = sheet.name.replace(/[\\/*?:\[\]]/g, '').slice(0, 31) || `Sheet${index + 1}`
+    const base = sheet.name.replace(/[\\/*?:[\]]/g, '').slice(0, 31) || `Sheet${index + 1}`
     let name = base
     for (let copy = 2; used.has(name.toLowerCase()); copy++) name = `${base.slice(0, 28)} ${copy}`
     used.add(name.toLowerCase())
@@ -133,6 +151,15 @@ export function exportXlsxWorkbook(filename: string, sheets: XlsxSheet[]): void 
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+/**
+ * Export a single sheet as an .xlsx file with automatic download.
+ * Convenience wrapper around exportXlsxWorkbook for single-sheet exports.
+ *
+ * @param filename - Name for the downloaded file (e.g., "tickets.xlsx")
+ * @param sheetName - Name for the single sheet (max 31 chars)
+ * @param headers - Column headers for the sheet
+ * @param rows - Data rows, each row is an array of cell values
+ */
 export function exportXlsx(filename: string, sheetName: string, headers: string[], rows: CsvValue[][]): void {
   exportXlsxWorkbook(filename, [{ name: sheetName, headers, rows }])
 }

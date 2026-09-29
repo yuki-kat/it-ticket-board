@@ -1,10 +1,16 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, Search, X } from 'lucide-react'
 
+/** Status values for tickets in the service desk workflow */
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
+
+/** Severity levels for prioritizing tickets */
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
+
+/** Classification of service desk records */
 type RecordType = 'Incident' | 'Problem' | 'Change Request' | 'Work Order'
 
+/** Ticket data structure for search and display */
 interface TicketItem {
   id: string
   recordType: RecordType
@@ -19,9 +25,42 @@ interface TicketItem {
   affectedUser: string
 }
 
+/** Column names available for sorting results */
 type SortBy = 'id' | 'title' | 'status' | 'severity' | 'assignee' | 'requester' | 'created' | 'due'
+
+/** Sort direction for result ordering */
 type SortDir = 'asc' | 'desc'
 
+/**
+ * Sortable column header button for the search results table.
+ * Shows sort direction indicator (▼) when this column is active.
+ */
+function SortHeader({ field, label, sortBy, sortDir, onSort }: { field: SortBy; label: string; sortBy: SortBy; sortDir: SortDir; onSort: (field: SortBy) => void }) {
+  return (
+    <button
+      className="sort-header"
+      onClick={() => onSort(field)}
+      title={`Sort by ${label}`}
+    >
+      {label}
+      {sortBy === field && <span className={`sort-indicator ${sortDir}`}>▼</span>}
+    </button>
+  )
+}
+
+/**
+ * SearchPage component for full-text search and filtering across all tickets.
+ *
+ * Features:
+ * - Real-time search across ticket ID, title, description, requester, assignee, and affected user
+ * - Filter by status, severity, assignee, requester, and record type
+ * - Sortable columns with toggle between ascending and descending order
+ * - Color-coded status and severity badges for quick visual scanning
+ * - Responsive table layout that adapts to screen size
+ *
+ * @param tickets - Array of all tickets available for searching
+ * @param openTicket - Callback to open a ticket record when clicked
+ */
 function SearchPage({
   tickets,
   openTicket
@@ -130,17 +169,6 @@ function SearchPage({
     }
   }
 
-  const SortHeader = ({ field, label }: { field: SortBy; label: string }) => (
-    <button
-      className="sort-header"
-      onClick={() => toggleSort(field)}
-      title={`Sort by ${label}`}
-    >
-      {label}
-      {sortBy === field && <span className={`sort-indicator ${sortDir}`}>▼</span>}
-    </button>
-  )
-
   return (
     <main className="main-content search-page">
       <section className="page-section search-header">
@@ -235,13 +263,13 @@ function SearchPage({
           <table className="results-table">
             <thead>
               <tr>
-                <th><SortHeader field="id" label="ID" /></th>
-                <th><SortHeader field="title" label="Title" /></th>
-                <th><SortHeader field="status" label="Status" /></th>
-                <th><SortHeader field="severity" label="Severity" /></th>
-                <th><SortHeader field="assignee" label="Assignee" /></th>
-                <th><SortHeader field="requester" label="Requester" /></th>
-                <th><SortHeader field="created" label="Created" /></th>
+                <th><SortHeader field="id" label="ID" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} /></th>
+                <th><SortHeader field="title" label="Title" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} /></th>
+                <th><SortHeader field="status" label="Status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} /></th>
+                <th><SortHeader field="severity" label="Severity" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} /></th>
+                <th><SortHeader field="assignee" label="Assignee" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} /></th>
+                <th><SortHeader field="requester" label="Requester" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} /></th>
+                <th><SortHeader field="created" label="Created" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} /></th>
               </tr>
             </thead>
             <tbody>

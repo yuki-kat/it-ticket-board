@@ -8,6 +8,7 @@ export type ScreenPattern = typeof SCREEN_PATTERNS[number]['id']
 
 const SCREEN_PATTERN_KEY = 'it-ticket-kanban-screen-pattern-v1'
 
+/** Load the saved background pattern preference, defaulting to 'plain' if not set or on error. */
 export function loadScreenPattern(): ScreenPattern {
   try {
     const saved = localStorage.getItem(SCREEN_PATTERN_KEY)

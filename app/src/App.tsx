@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Moon, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Package, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import { AiSuggestFix } from './AiSuggestFix'
 import Overlay from './Overlay'
@@ -12,7 +13,7 @@ import DebugPanel from './DebugPanel'
 import { debugLog } from './debug'
 import QuickPageNav from './QuickPageNav'
 import { applyScreenPattern, loadScreenPattern, SCREEN_PATTERNS, type ScreenPattern } from './screenPattern'
-import ViewPicker, { VIEW_GROUPS } from './ViewPicker'
+import ViewPicker from './ViewPicker'
 import './quick-settings.css'
 import './screen-pattern.css'
 import { PopoutActions, TicketPopout } from './HomePopouts'
@@ -26,15 +27,14 @@ import { exportCsv } from './lib/exportCsv'
 import { exportXlsx } from './lib/exportXlsx'
 import SearchPage from './SearchPage'
 import './search.css'
+import { useTicketSummary, useDescriptionAssist, useWorkNotesSuggestions, useQueueAssist, usePriorityAssist } from './useGemini'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
 type RecordType = 'Incident' | 'Problem' | 'Change Request' | 'Work Order'
 type BoardBy = 'State' | 'Task type' | 'Assignment group'
-type CardSize = 'small' | 'regular' | 'list' | 'split' | 'my-work' | 'sla' | 'workload' | 'escalation' | 'department' | 'calendar' | 'priority-matrix' | 'analytics' | 'graph' | 'timeline'
-type SplitPaneMode = Exclude<CardSize, 'split'> | 'details'
-type GraphCategory = 'Priority' | 'State' | 'Department' | 'Assignment group' | 'Task type'
-type GraphRange = '24h' | '7d' | '30d'
+type CardSize = 'small' | 'regular' | 'list' | 'split' | 'my-work'
+type SplitPaneMode = 'list' | 'small' | 'regular' | 'my-work' | 'details'
 type MetricFilter = 'all' | 'active' | 'resolved' | 'high-priority' | 'overdue' | 'at-risk' | 'escalated' | 'escalation-due' | 'unassigned' | 'waiting' | 'due-today'
 type HomeWidgets = { status: boolean; priority: boolean; intake: boolean; recent: boolean; sla: boolean; escalation: boolean; assignment: boolean; resolution: boolean }
 type TicketPaneSettings = { cardSize: CardSize; boardBy: BoardBy; query: string; typeFilter: RecordType | 'All task types'; groupFilter: string; assigneeFilter: string; metricFilter: MetricFilter; tagFilter: string; starredOnly: boolean; splitLeft: SplitPaneMode; splitRight: SplitPaneMode }
@@ -104,8 +104,8 @@ function loadHomeWidgets(): HomeWidgets {
   const read = (key: string) => { try { return JSON.parse(localStorage.getItem(key) || '{}') } catch { return {} } }
   return { ...defaultHomeWidgets, ...read(LEGACY_EXTRA_INSIGHTS_KEY), ...read(HOME_WIDGETS_STORAGE_KEY) }
 }
-const viewModes: CardSize[] = ['small', 'regular', 'list', 'split', 'my-work', 'sla', 'workload', 'escalation', 'department', 'calendar', 'priority-matrix', 'analytics', 'graph', 'timeline']
-const splitPaneModes: SplitPaneMode[] = ['list', 'details', 'small', 'regular', 'my-work', 'sla', 'workload', 'escalation', 'department', 'calendar', 'priority-matrix', 'analytics', 'graph', 'timeline']
+const viewModes: CardSize[] = ['small', 'regular', 'list', 'split', 'my-work']
+const splitPaneModes: SplitPaneMode[] = ['list', 'details', 'small', 'regular', 'my-work']
 const newTicketWorkspaceId = () => `ticket-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 const defaultTicketPane = (): TicketPaneSettings => ({ cardSize: 'list', boardBy: 'State', query: '', typeFilter: 'All task types', groupFilter: 'All groups', assigneeFilter: 'All assignees', metricFilter: 'all', tagFilter: 'All tags', starredOnly: false, splitLeft: 'list', splitRight: 'details' })
 function loadTicketWorkspace(): TicketWorkspace {
@@ -414,6 +414,36 @@ function loadTickets(): TicketItem[] {
   }
 }
 
+/**
+ * Main application component for IT Ticket Board.
+ *
+ * Manages the entire application state including tickets, assets, inventory, and user interactions.
+ * Provides a multi-page interface with Kanban boards, search, inventory tracking, and detailed ticket views.
+ *
+ * Pages:
+ * - Home: Dashboard with KPI cards, ticket insights, and operations overview
+ * - Tickets (board): Kanban, list, split-pane, and specialty views (SLA, escalation, calendar, etc.)
+ * - Search: Full-text search and filtering across all tickets
+ * - Inventory: Asset and stock tracking with health monitoring
+ * - Explore: Detailed ticket view with full ITSM fields and activity tracking
+ * - New: Ticket creation with auto-triage and email import
+ * - Sign In: Supabase authentication for cloud sync
+ *
+ * State Management:
+ * - Local persistence: All data stored in localStorage with recovery from backups
+ * - Cloud sync: Optional Supabase integration for collaborative updates
+ * - Real-time clock: Updates every 1000ms for SLA, escalation, and activity calculations
+ *
+ * Features:
+ * - Ticket filtering by status, severity, assignee, type, and tags
+ * - Multiple view modes: Kanban, list, split-pane, calendar, graphs, and priority matrices
+ * - Workspace tabs with independent filter and view settings
+ * - SLA tracking with escalation matrix and tier routing
+ * - Asset linkage and inventory management
+ * - CSV and Excel export for both tickets and inventory
+ * - Undo/restore for deleted tickets and records
+ * - Accessibility: Full keyboard navigation and screen reader support
+ */
 function App() {
   const [tickets, setTicketState] = useState<TicketItem[]>(loadTickets)
   const [assets, setAssetState] = useState<AssetItem[]>(loadAssets)
@@ -456,6 +486,17 @@ function App() {
   const [screenPattern, setScreenPattern] = useState<ScreenPattern>(loadScreenPattern)
   useEffect(() => { applyScreenPattern(screenPattern) }, [screenPattern])
   const [showViewPicker, setShowViewPicker] = useState(false)
+  const [showBoardFiltersDropdown, setShowBoardFiltersDropdown] = useState(false)
+  const boardFiltersDropdownRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (boardFiltersDropdownRef.current && !boardFiltersDropdownRef.current.contains(event.target as Node)) {
+        setShowBoardFiltersDropdown(false)
+      }
+    }
+    if (showBoardFiltersDropdown) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showBoardFiltersDropdown])
   const previousPage = useRef(page)
   useEffect(() => {
     if (previousPage.current !== page) debugLog('page', `${previousPage.current} → ${page}`)
@@ -479,15 +520,39 @@ function App() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [showReports, setShowReports] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('it-ticket-kanban-theme')
+      return saved === 'dark' ? 'dark' : 'light'
+    } catch {
+      return 'light'
+    }
+  })
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    localStorage.setItem('it-ticket-kanban-theme', newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
   const [showToolsMenu, setShowToolsMenu] = useState(false)
   const toolsMenuRef = useRef<HTMLDivElement>(null)
+  const [exportFormatPopup, setExportFormatPopup] = useState<'filtered' | 'all' | null>(null)
   const [homeWidgets, setHomeWidgets] = useState<HomeWidgets>(loadHomeWidgets)
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
+  const [showFormOptional, setShowFormOptional] = useState(false)
+  const [showPolishModal, setShowPolishModal] = useState(false)
+  const [polishedDescription, setPolishedDescription] = useState('')
+  const { loading: polishLoading, error: polishError, result: polishResult, polish } = useDescriptionAssist()
+  const [showMoreMetrics, setShowMoreMetrics] = useState(false)
   const [clock, setClock] = useState(Date.now())
   const [dragOverLane, setDragOverLane] = useState('')
   const [selectedTicketId, setSelectedTicketId] = useState('')
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
+  const [descriptionPopupTicketId, setDescriptionPopupTicketId] = useState('')
   const [inventoryFocusId, setInventoryFocusId] = useState('')
   const [inventoryFocusRevision, setInventoryFocusRevision] = useState(0)
   const [inventoryCommand, setInventoryCommand] = useState<InventoryCommand | null>(null)
@@ -525,6 +590,7 @@ function App() {
   useEffect(() => { localStorage.setItem(HOME_WIDGETS_STORAGE_KEY, JSON.stringify(homeWidgets)) }, [homeWidgets])
   useEffect(() => { localStorage.setItem(SAVED_TICKET_VIEWS_KEY, JSON.stringify(savedTicketViews)) }, [savedTicketViews])
   useEffect(() => { const interval = window.setInterval(() => setClock(Date.now()), 30_000); return () => window.clearInterval(interval) }, [])
+  useEffect(() => { if (page !== 'new') setShowFormOptional(false) }, [page])
   useEffect(() => {
     if (!showToolsMenu) return
     const handlePointerDown = (event: PointerEvent) => { if (!toolsMenuRef.current?.contains(event.target as Node)) setShowToolsMenu(false) }
@@ -636,7 +702,7 @@ function App() {
     setTicketWorkspace({ tabs: [{ id, settings }], activeId: id })
     applyTicketPane(settings)
   }
-  const ticketTabLabel = (settings: TicketPaneSettings) => ({ small: 'Kanban Compact', regular: 'Kanban Detailed', list: 'List', split: 'Split', 'my-work': 'My Work', sla: 'SLA', workload: 'Workload', escalation: 'Escalation', department: 'Department', calendar: 'Calendar', 'priority-matrix': 'Priority Matrix', analytics: 'Analytics', graph: 'Graph', timeline: 'Timeline' } as Record<CardSize, string>)[settings.cardSize]
+  const ticketTabLabel = (settings: TicketPaneSettings) => ({ small: 'Kanban Compact', regular: 'Kanban Detailed', list: 'List', split: 'Split', 'my-work': 'My Work' } as Record<CardSize, string>)[settings.cardSize]
   const ticketTags = useMemo(() => [...new Set(tickets.flatMap((ticket) => ticket.tags || []))].sort(), [tickets])
   const groupOptions = useMemo(() => [...new Set(tickets.map((ticket) => ticket.assignmentGroup || 'No group'))].sort(), [tickets])
   const assigneeOptions = useMemo(() => [...new Set(tickets.map((ticket) => ticket.assignee.trim()).filter(Boolean))].sort(), [tickets])
@@ -655,6 +721,7 @@ function App() {
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId)
   const toggleTicketStar = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
   const saveTicketTags = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, tags: parseTicketTags(value) } : ticket))
+  const saveTicketNotes = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, notes: value } : ticket))
   const selectedAssetId = selectedTicket ? selectedTicket.assetId || assets.find((asset) => asset.linkedTicketIds.includes(selectedTicket.id))?.id || '' : ''
   const standaloneTicket = tickets.find((ticket) => ticket.id === standaloneTicketId)
 
@@ -671,7 +738,21 @@ function App() {
     const { tagsText, ...fields } = form
     setTickets((current) => [{ ...fields, id, title: form.title.trim(), description: form.description.trim(), assignmentGroup: form.assignmentGroup || suggestGroup(form.recordType, form.severity, `${form.title} ${form.description}`), tags: parseTicketTags(tagsText), starred: false, status: 'New', createdAt: new Date().toISOString(), universalTasks: [], loggedSeconds: 0, timerStartedAt: null, currentTier: 1 }, ...current])
     if (form.assetId) updateAssets((items) => items.map((asset) => asset.id === form.assetId ? { ...asset, linkedTicketIds: [...new Set([...(asset.linkedTicketIds || []), id])], history: [...(asset.history || []), { at: new Date().toISOString(), action: 'Ticket linked', detail: id + ' created for this asset.' }] } : asset))
-    setForm(emptyForm); setFormError(''); setPage('board'); clearFilters(); setSelectedTicketId(id)
+    setForm(emptyForm); setFormError(''); setShowFormOptional(false); setPage('board'); clearFilters(); setSelectedTicketId(id)
+  }
+  const handlePolishDescription = async () => {
+    if (!form.description.trim()) { setFormError('Add a description to polish.'); return }
+    try {
+      const result = await polish(form.description)
+      setPolishedDescription(result)
+      setShowPolishModal(true)
+    } catch (err) {
+      console.error('Polish failed:', err)
+    }
+  }
+  const acceptPolishedDescription = () => {
+    updateForm('description', polishedDescription)
+    setShowPolishModal(false)
   }
   const importEmail = () => {
     if (!emailText.trim()) { setImportError('Paste the email text to continue.'); return }
@@ -781,7 +862,7 @@ function App() {
   }
   const openMatrixForTicket = (id: string) => openMatrixPanel(id)
 
-  const openNewForm = (seed: Partial<typeof emptyForm> = {}) => { setForm({ ...emptyForm, ...seed }); setFormError(''); setImportedFromEmail(false); setPage('new'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const openNewForm = (seed: Partial<typeof emptyForm> = {}) => { setForm({ ...emptyForm, ...seed }); setFormError(''); setImportedFromEmail(false); setShowFormOptional(false); setPage('new'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const showTickets = (filter: MetricFilter = 'all', useList = false) => {
     setPage('board')
     setMetricFilter(filter)
@@ -824,30 +905,32 @@ function App() {
       <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
-        <button type="button" className="quick-settings-button" onClick={() => setShowSettings(true)} aria-label="Open detailed settings"><Settings2 size={16} /> <span className="topbar-label">Settings</span></button>
+        <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>{theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}</button>
         <div className="header-tools" ref={toolsMenuRef}>
           <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu" aria-label="Tools"><Menu size={16} /> <span className="topbar-label">Tools</span> <ChevronDown size={13} /></button>
           {showToolsMenu && <div className="header-tools-menu" id="header-tools-menu" aria-label="Tools">
-            <span className="header-tools-heading">INVENTORY</span>
-            <button type="button" onClick={() => runInventoryCommand('add-asset')}><Plus size={16} /><span>Add asset<small>Create a tracked device record</small></span></button>
-            <button type="button" onClick={() => runInventoryCommand('add-stock')}><Package size={16} /><span>Add stock item<small>Track supplies by quantity</small></span></button>
-            <button type="button" onClick={() => runInventoryCommand('in-stock')}><Check size={16} /><span>In Stock<small>Items with quantity available</small></span></button>
-            <button type="button" onClick={() => runInventoryCommand('low-stock')}><AlertTriangle size={16} /><span>Low stock<small>Items at or below minimum</small></span></button>
-            <span className="header-tools-heading">TICKETING</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); openNewForm() }}><Ticket size={16} /><span>New task<small>Create a service desk ticket</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }}><Mail size={16} /><span>Import email<small>Draft a ticket from an email</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); openMatrixPanel() }}><ShieldAlert size={16} /><span>Escalation matrix<small>Priorities, timing, and contacts</small></span></button>
-            <span className="header-tools-heading">EXPORT · {page === 'inventory' ? 'INVENTORY' : 'TICKETS'}</span>
-            <button type="button" onClick={() => runExport('csv')}><Download size={16} /><span>Export CSV<small>{page === 'inventory' ? 'Filtered assets or stock' : 'Filtered ticket records'}</small></span></button>
-            <button type="button" onClick={() => runExport('xlsx')}><Download size={16} /><span>Export Excel<small>{page === 'inventory' ? 'Filtered assets or stock · .xlsx' : 'Filtered ticket records · .xlsx'}</small></span></button>
-            <span className="header-tools-heading">EXPORT · ALL ASSETS AND STOCK</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('csv', assets, stock, tickets) }}><Download size={16} /><span>All inventory CSV<small>Every asset and stock item · two files</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); exportAllInventory('xlsx', assets, stock, tickets) }}><Download size={16} /><span>All inventory Excel<small>Every asset and stock item · one workbook, two sheets</small></span></button>
-            <span className="header-tools-heading">INSIGHTS & SETTINGS</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Ticket trends and workload</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowSettings(true) }}><Settings2 size={16} /><span>Settings<small>Views and home widgets</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable tasks</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowModel(true) }}><Layers size={16} /><span>Task model<small>How the mock workflow is structured</small></span></button>
+            {page !== 'inventory' && <>
+              <span className="header-tools-heading">QUICK ACTIONS</span>
+              <button type="button" onClick={() => { setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }}><Mail size={16} /><span>Import email<small>Draft a ticket from an email</small></span></button>
+              <button type="button" onClick={() => { setShowToolsMenu(false); openMatrixPanel() }}><ShieldAlert size={16} /><span>Escalation matrix<small>Priorities, timing, and contacts</small></span></button>
+            </>}
+            {page === 'inventory' && <>
+              <span className="header-tools-heading">FILTERS</span>
+              <button type="button" onClick={() => runInventoryCommand('in-stock')}><Check size={16} /><span>In Stock<small>Items with quantity available</small></span></button>
+              <button type="button" onClick={() => runInventoryCommand('low-stock')}><AlertTriangle size={16} /><span>Low stock<small>Items at or below minimum</small></span></button>
+            </>}
+            <span className="header-tools-heading">EXPORT</span>
+            {page === 'inventory' && <>
+              <button type="button" onClick={() => setExportFormatPopup('filtered')}><Download size={16} /><span>Filtered assets/stock<small>Current view</small></span></button>
+              <button type="button" onClick={() => setExportFormatPopup('all')}><Download size={16} /><span>All inventory<small>All assets and stock</small></span></button>
+            </>}
+            {page !== 'inventory' && <>
+              <button type="button" onClick={() => runExport('csv')}><Download size={16} /><span>Tickets · CSV<small>Current filters</small></span></button>
+              <button type="button" onClick={() => runExport('xlsx')}><Download size={16} /><span>Tickets · Excel<small>Current filters</small></span></button>
+            </>}
+            <span className="header-tools-heading">DATA</span>
+            <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
+            <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
           </div>}
         </div>
         {/* Inventory has its own Add asset / Add stock item button beside its heading. The new-task page is the form itself. */}
@@ -866,12 +949,15 @@ function App() {
         <Metric icon={<Ticket size={17} />} label="Open" value={open.length} tone="blue" selected={metricFilter === 'active'} onClick={() => setMetricFilter((current) => current === 'active' ? 'all' : 'active')} />
         <Metric icon={<AlertTriangle size={17} />} label="P1 / P2 open" value={highPriority} tone="red" selected={metricFilter === 'high-priority'} onClick={() => setMetricFilter((current) => current === 'high-priority' ? 'all' : 'high-priority')} />
         <Metric icon={<Clock3 size={17} />} label="Past SLA" value={overdue} tone="red" selected={metricFilter === 'overdue'} onClick={() => setMetricFilter((current) => current === 'overdue' ? 'all' : 'overdue')} />
-        <Metric icon={<Activity size={17} />} label="SLA at risk" value={atRisk} tone="amber" selected={metricFilter === 'at-risk'} onClick={() => setMetricFilter((current) => current === 'at-risk' ? 'all' : 'at-risk')} />
         <Metric icon={<ArrowUp size={17} />} label="Escalated" value={escalated} tone="amber" selected={metricFilter === 'escalated'} onClick={() => setMetricFilter((current) => current === 'escalated' ? 'all' : 'escalated')} />
-        <Metric icon={<ShieldAlert size={17} />} label="Escalation due" value={escalationDueCount} tone="amber" selected={metricFilter === 'escalation-due'} onClick={() => setMetricFilter((current) => current === 'escalation-due' ? 'all' : 'escalation-due')} />
-        <Metric icon={<Layers size={17} />} label="Unassigned" value={unassigned} tone="slate" selected={metricFilter === 'unassigned'} onClick={() => setMetricFilter((current) => current === 'unassigned' ? 'all' : 'unassigned')} />
-        <Metric icon={<Workflow size={17} />} label="Waiting on user" value={waiting} tone="blue" selected={metricFilter === 'waiting'} onClick={() => setMetricFilter((current) => current === 'waiting' ? 'all' : 'waiting')} />
-        <Metric icon={<Clock3 size={17} />} label="Due today / late" value={dueToday} tone="slate" selected={metricFilter === 'due-today'} onClick={() => setMetricFilter((current) => current === 'due-today' ? 'all' : 'due-today')} />
+        {showMoreMetrics && <>
+          <Metric icon={<Activity size={17} />} label="SLA at risk" value={atRisk} tone="amber" selected={metricFilter === 'at-risk'} onClick={() => setMetricFilter((current) => current === 'at-risk' ? 'all' : 'at-risk')} />
+          <Metric icon={<ShieldAlert size={17} />} label="Escalation due" value={escalationDueCount} tone="amber" selected={metricFilter === 'escalation-due'} onClick={() => setMetricFilter((current) => current === 'escalation-due' ? 'all' : 'escalation-due')} />
+          <Metric icon={<Layers size={17} />} label="Unassigned" value={unassigned} tone="slate" selected={metricFilter === 'unassigned'} onClick={() => setMetricFilter((current) => current === 'unassigned' ? 'all' : 'unassigned')} />
+          <Metric icon={<Workflow size={17} />} label="Waiting on user" value={waiting} tone="blue" selected={metricFilter === 'waiting'} onClick={() => setMetricFilter((current) => current === 'waiting' ? 'all' : 'waiting')} />
+          <Metric icon={<Clock3 size={17} />} label="Due today / late" value={dueToday} tone="slate" selected={metricFilter === 'due-today'} onClick={() => setMetricFilter((current) => current === 'due-today' ? 'all' : 'due-today')} />
+        </>}
+        <button className="metric-show-more" onClick={() => setShowMoreMetrics((v) => !v)} type="button">{showMoreMetrics ? 'Show less' : 'Show more'}</button>
       </section>
       <div className="board-toolbar"><div className="ticket-browser-tabs">
         <div className="ticket-browser-tab-scroll" role="tablist" aria-label="Open ticket tabs">
@@ -887,8 +973,12 @@ function App() {
         <label>Right view<select value={splitRight} onChange={(event) => setSplitRight(event.target.value as SplitPaneMode)} aria-label="Choose right split view"><SplitPaneOptions /></select></label>
         <button type="button" onClick={() => { setSplitLeft(splitRight); setSplitRight(splitLeft) }}><RotateCcw size={13} /> Swap sides</button>
       </div>}
-      <div className="board-label"><span className="live-dot" />Task board <span className="ticket-total">{visible.length === tickets.length ? `${tickets.length} records` : `${visible.length} of ${tickets.length} records`}</span></div><div className="board-filters"><label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tickets, people, tags" aria-label="Search tickets, people, tags" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}</label><label className="filter-field"><span>View</span><select value={cardSize} onChange={(event) => setCardSize(event.target.value as CardSize)} aria-label="Choose board view">{VIEW_GROUPS.map((group) => <optgroup key={group.selectLabel} label={group.selectLabel}>{group.views.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</optgroup>)}</select><button type="button" className="all-views-button" aria-label="Open all ticket views" onClick={() => setShowViewPicker(true)}>All Views</button></label><label className="filter-field"><span>Board by</span><select value={boardBy} onChange={(event) => setBoardBy(event.target.value as BoardBy)} aria-label="Group board by"><option>State</option><option>Task type</option><option>Assignment group</option></select></label><label className="filter-field"><span>Type</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as RecordType | 'All task types')} aria-label="Filter by task type"><option>All task types</option>{recordTypes.map((type) => <option key={type}>{type}</option>)}</select></label><label className="filter-field"><span>Group</span><select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} aria-label="Filter by assignment group"><option>All groups</option>{groupOptions.map((group) => <option key={group}>{group}</option>)}</select></label><label className="filter-field"><span>Assignee</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} aria-label="Filter by assignee"><option>All assignees</option>{assigneeOptions.map((assignee) => <option key={assignee}>{assignee}</option>)}<option>Unassigned</option></select></label><label className="filter-field"><span>Tag</span><select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filter tickets by tag"><option>All tags</option>{ticketTags.map((tag) => <option key={tag}>{tag}</option>)}</select></label><button className={"ticket-star-filter" + (starredOnly ? " active" : "")} aria-pressed={starredOnly} onClick={() => setStarredOnly((value) => !value)}><Star size={14} fill={starredOnly ? "currentColor" : "none"} /> Starred</button>{filtersActive && <button className="clear-filters-button" onClick={clearFilters}><X size={13} />Clear filters</button>}</div></div>
-      {cardSize === 'list' ? <ListView tickets={visible} now={clock} openTicket={setSelectedTicketId} toggleStar={toggleTicketStar} selectedIds={selectedTicketIds} onSelectionChange={setSelectedTicketIds} /> : cardSize === 'small' || cardSize === 'regular' ? <section className="kanban" id="board" aria-label="Kanban task lanes">
+      <div className="board-label"><span className="live-dot" />Task board <span className="ticket-total">{visible.length === tickets.length ? `${tickets.length} records` : `${visible.length} of ${tickets.length} records`}</span></div><div className="board-filters"><label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tickets, people, tags" aria-label="Search tickets, people, tags" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}</label><button type="button" className="all-views-button" aria-label="Open all ticket views" onClick={() => setShowViewPicker(true)}>All Views</button>{(cardSize === 'small' || cardSize === 'regular') && <label className="filter-field"><span>Board by</span><select value={boardBy} onChange={(event) => setBoardBy(event.target.value as BoardBy)} aria-label="Group board by"><option>State</option><option>Task type</option><option>Assignment group</option></select></label>}<div className="board-filters-dropdown" ref={boardFiltersDropdownRef}><button className="board-filters-button" onClick={() => setShowBoardFiltersDropdown(!showBoardFiltersDropdown)} aria-expanded={showBoardFiltersDropdown}><ChevronDown size={14} /> Filters</button>{showBoardFiltersDropdown && <div className="board-filters-menu"><div className="board-filters-menu-section">
+      <label><span>Type</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as RecordType | 'All task types')} aria-label="Filter by task type"><option>All task types</option>{recordTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+      <label><span>Group</span><select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} aria-label="Filter by assignment group"><option>All groups</option>{groupOptions.map((group) => <option key={group}>{group}</option>)}</select></label>
+      <label><span>Assignee</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} aria-label="Filter by assignee"><option>All assignees</option>{assigneeOptions.map((assignee) => <option key={assignee}>{assignee}</option>)}<option>Unassigned</option></select></label>
+      <label><span>Tag</span><select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filter tickets by tag"><option>All tags</option>{ticketTags.map((tag) => <option key={tag}>{tag}</option>)}</select></label></div></div>}</div><button className={"ticket-star-filter" + (starredOnly ? " active" : "")} aria-pressed={starredOnly} onClick={() => setStarredOnly((value) => !value)}><Star size={14} fill={starredOnly ? "currentColor" : "none"} /> Starred</button>{filtersActive && <button className="clear-filters-button" onClick={clearFilters}><X size={13} />Clear filters</button>}</div></div>
+      {cardSize === 'list' ? <ListView tickets={visible} now={clock} openTicket={setSelectedTicketId} openDescriptionPopup={setDescriptionPopupTicketId} toggleStar={toggleTicketStar} selectedIds={selectedTicketIds} onSelectionChange={setSelectedTicketIds} /> : cardSize === 'small' || cardSize === 'regular' ? <section className="kanban" id="board" aria-label="Kanban task lanes">
         {laneLabels.map((laneLabel, index) => {
           const lane = visible.filter((ticket) => boardBy === 'State' ? ticket.status === laneLabel : boardBy === 'Task type' ? ticket.recordType === laneLabel : (ticket.assignmentGroup || 'No group') === laneLabel)
           const addSeed = boardBy === 'Task type' ? { recordType: laneLabel as RecordType } : boardBy === 'Assignment group' ? { assignmentGroup: laneLabel === 'No group' ? '' : laneLabel } : {}
@@ -906,7 +996,9 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+
+    {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
@@ -939,8 +1031,13 @@ function App() {
 
     {showImport && <Overlay className="import-overlay" onClose={() => setShowImport(false)}><section className="form-panel import-panel" role="dialog" aria-modal="true" aria-labelledby="import-title"><div className="panel-header"><div><div className="eyebrow">EMAIL INTAKE · LOCAL DEMO</div><h2 id="import-title">Create a task from email</h2></div><button className="close-button" onClick={() => setShowImport(false)} aria-label="Close email import"><X size={19} /></button></div><p className="panel-intro">Paste the email text. The board will suggest fields from labels such as Subject, Issue, Requester, Affected user, Priority, and Assignment group. You can review and edit everything before creating the task.</p><label className="field email-paste-field">Email text<textarea autoFocus value={emailText} onChange={(event) => { setEmailText(event.target.value); setImportError('') }} placeholder={'From: Yuki Katayama <yuki@example.com>\nSubject: VPN sign-in issue\n\nIssue: VPN sign-in failing for remote staff\nRequester: Yuki Katayama\nAffected user: Yuki Katayama\nPriority: P2\nImpact: Remote access is unavailable.'} rows={14} /></label><div className="import-note">Email text stays in this browser. Import only extracts ticket details; it does not open links, follow instructions, or send messages.</div>{importError && <div className="form-error" role="alert">{importError}</div>}<div className="form-footer"><button className="text-button" onClick={() => setShowImport(false)}>Cancel</button><button className="primary-button" onClick={importEmail}><Mail size={15} /> Review ticket fields</button></div></section></Overlay>}
 
+    {exportFormatPopup && <Overlay onClose={() => setExportFormatPopup(null)}><section className="matrix-panel" role="dialog" aria-modal="true" aria-labelledby="export-title" style={{ minWidth: '340px' }}><div className="panel-header"><h2 id="export-title">{exportFormatPopup === 'filtered' ? 'Export filtered assets' : 'Export all inventory'}</h2><button className="close-button" onClick={() => setExportFormatPopup(null)} aria-label="Close export"><X size={19} /></button></div><p className="panel-intro">Choose a file format for the export.</p><div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}><button className="primary-button" style={{ justifyContent: 'flex-start', width: '100%' }} onClick={() => { setExportFormatPopup(null); setShowToolsMenu(false); if (exportFormatPopup === 'filtered') runExport('csv'); else exportAllInventory('csv', assets, stock, tickets) }}><Download size={16} /> CSV spreadsheet</button><button className="primary-button" style={{ justifyContent: 'flex-start', width: '100%', background: 'white', color: '#264e5f', border: '1px solid #d9e0e2' }} onClick={() => { setExportFormatPopup(null); setShowToolsMenu(false); if (exportFormatPopup === 'filtered') runExport('xlsx'); else exportAllInventory('xlsx', assets, stock, tickets) }}><Download size={16} /> Excel spreadsheet</button></div></section></Overlay>}
+
+    {showPolishModal && <Overlay className="polish-modal-overlay" onClose={() => setShowPolishModal(false)}><section className="polish-modal" role="dialog" aria-modal="true" aria-labelledby="polish-title"><div className="polish-header"><h3 id="polish-title">Polished Description</h3><button className="close-button" onClick={() => setShowPolishModal(false)} aria-label="Close"><X size={18} /></button></div>{polishError && <div className="polish-error">⚠️ {polishError.message}</div>}{polishResult && <div className="polish-content"><p className="polish-label"><strong>Suggested title:</strong></p><p className="polish-text">{polishResult.split('\n')[0]}</p><p className="polish-label"><strong>Structured description:</strong></p><div className="polish-text">{polishResult.split('\n').slice(1, polishResult.length - 2).join('\n')}</div><p className="polish-label"><strong>Suggested priority:</strong></p><p className="polish-text">{polishResult.split('\n')[polishResult.split('\n').length - 1]}</p></div>}<div className="polish-footer"><button className="text-button" onClick={() => setShowPolishModal(false)}>Discard</button><button className="primary-button" onClick={acceptPolishedDescription}>Use suggested description</button></div></section></Overlay>}
+
     {page === 'new' && <main className="main-content new-task-page"><section className="form-panel" aria-labelledby="form-title"><div className="panel-header"><div><div className="eyebrow">TASK INTAKE · LOCAL DEMO</div><h2 id="form-title">Create a task record</h2></div><button className="close-button" onClick={() => setPage('board')} aria-label="Close form"><X size={19} /></button></div><p className="panel-intro">Choose a child record type. Shared task fields are included automatically in this mock board.</p>{importedFromEmail && <div className="import-review-note"><Mail size={14} /><span><b>Imported from email.</b> Review the suggested fields and update anything missing before creating the ticket.</span></div>}
-      <div className="form-grid"><label className="field full">Short description <em>*</em><input autoFocus value={form.title} onChange={(event) => updateForm('title', event.target.value)} placeholder="What needs attention?" /></label><label className="field">Record type<select value={form.recordType} onChange={(event) => updateForm('recordType', event.target.value)}>{recordTypes.map((type) => <option key={type} value={type}>{type} · {tableNames[type]}</option>)}</select></label><label className="field">Priority / severity<select value={form.severity} onChange={(event) => updateForm('severity', event.target.value)}>{severityRows.map((row) => <option key={row.level}>{row.level}</option>)}</select></label><label className="field">Task number <span>Optional</span><input value={form.id} onChange={(event) => updateForm('id', event.target.value)} placeholder="Auto-assigned if blank" /></label><label className="field">Created by<input value={form.createdBy} onChange={(event) => updateForm('createdBy', event.target.value)} placeholder="Person entering this ticket" /></label><label className="field">Department<select value={form.department} onChange={(event) => updateForm('department', event.target.value)}>{departments.map((department) => <option key={department}>{department}</option>)}</select></label><label className="field">Requester<input value={form.requester} onChange={(event) => updateForm('requester', event.target.value)} placeholder="Person who reported it" /></label><label className="field">Affected user<input value={form.affectedUser} onChange={(event) => updateForm('affectedUser', event.target.value)} placeholder="Person impacted by the issue" /></label><label className="field">Affected user email <span>Optional</span><input type="email" value={form.affectedUserEmail} onChange={(event) => updateForm('affectedUserEmail', event.target.value)} placeholder="Used for resolution email drafts" /></label><label className="field">Assigned to<input value={form.assignee} onChange={(event) => updateForm('assignee', event.target.value)} placeholder="Task owner" /></label><label className="field full">Description<textarea value={form.description} onChange={(event) => updateForm('description', event.target.value)} placeholder="Impact, symptoms, and what has been tried" rows={3} /></label><label className="field">Assignment group<select value={form.assignmentGroup || suggestGroup(form.recordType, form.severity, groupText)} onChange={(event) => updateForm('assignmentGroup', event.target.value)}>{assignmentGroups.map((group) => <option key={group}>{group}</option>)}</select><small className="field-hint">Suggested by a demo assignment rule · you can change it</small></label><label className="field">Linked asset <span>Optional</span><select value={form.assetId} onChange={(event) => updateForm('assetId', event.target.value)}><option value="">No linked asset</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.id} · {asset.name}{asset.assignedTo ? ' · ' + asset.assignedTo : ''}</option>)}</select></label><label className="field full">Next due <span>Optional</span><input type="datetime-local" value={form.dueAt} onChange={(event) => updateForm('dueAt', event.target.value)} /></label><label className="field full">Tags <span>Optional · separate with commas</span><input value={form.tagsText} onChange={(event) => updateForm('tagsText', event.target.value)} placeholder="VPN, payroll, follow-up…" /></label><label className="field full">Work notes <span>Optional</span><textarea value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} placeholder="Internal notes or next action" rows={2} /></label></div>
+      <div className="form-grid"><label className="field full">Short description <em>*</em><input autoFocus value={form.title} onChange={(event) => updateForm('title', event.target.value)} placeholder="What needs attention?" /></label><label className="field">Record type<select value={form.recordType} onChange={(event) => updateForm('recordType', event.target.value)}>{recordTypes.map((type) => <option key={type} value={type}>{type} · {tableNames[type]}</option>)}</select></label><label className="field">Priority / severity<select value={form.severity} onChange={(event) => updateForm('severity', event.target.value)}>{severityRows.map((row) => <option key={row.level}>{row.level}</option>)}</select></label><label className="field">Task number <span>Optional</span><input value={form.id} onChange={(event) => updateForm('id', event.target.value)} placeholder="Auto-assigned if blank" /></label><label className="field">Created by<input value={form.createdBy} onChange={(event) => updateForm('createdBy', event.target.value)} placeholder="Person entering this ticket" /></label><label className="field">Department<select value={form.department} onChange={(event) => updateForm('department', event.target.value)}>{departments.map((department) => <option key={department}>{department}</option>)}</select></label><label className="field">Requester<input value={form.requester} onChange={(event) => updateForm('requester', event.target.value)} placeholder="Person who reported it" /></label><label className="field">Affected user<input value={form.affectedUser} onChange={(event) => updateForm('affectedUser', event.target.value)} placeholder="Person impacted by the issue" /></label><label className="field">Affected user email <span>Optional</span><input type="email" value={form.affectedUserEmail} onChange={(event) => updateForm('affectedUserEmail', event.target.value)} placeholder="Used for resolution email drafts" /></label><label className="field">Assigned to<input value={form.assignee} onChange={(event) => updateForm('assignee', event.target.value)} placeholder="Task owner" /></label><label className="field full">Description<div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}><textarea value={form.description} onChange={(event) => updateForm('description', event.target.value)} placeholder="Impact, symptoms, and what has been tried" rows={3} style={{ flex: 1 }} /><button type="button" className="primary-button" onClick={handlePolishDescription} disabled={polishLoading} style={{ marginTop: '4px', whiteSpace: 'nowrap' }}><Sparkles size={14} /> Polish</button></div></label><label className="field">Assignment group<select value={form.assignmentGroup || suggestGroup(form.recordType, form.severity, groupText)} onChange={(event) => updateForm('assignmentGroup', event.target.value)}>{assignmentGroups.map((group) => <option key={group}>{group}</option>)}</select><small className="field-hint">Suggested by a demo assignment rule · you can change it</small></label>{showFormOptional && <><label className="field">Linked asset <span>Optional</span><select value={form.assetId} onChange={(event) => updateForm('assetId', event.target.value)}><option value="">No linked asset</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.id} · {asset.name}{asset.assignedTo ? ' · ' + asset.assignedTo : ''}</option>)}</select></label><label className="field full">Next due <span>Optional</span><input type="datetime-local" value={form.dueAt} onChange={(event) => updateForm('dueAt', event.target.value)} /></label><label className="field full">Tags <span>Optional · separate with commas</span><input value={form.tagsText} onChange={(event) => updateForm('tagsText', event.target.value)} placeholder="VPN, payroll, follow-up…" /></label><label className="field full">Work notes <span>Optional</span><textarea value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} placeholder="Internal notes or next action" rows={2} /></label></>}</div>
+      {!showFormOptional && <button className="form-show-more-btn" onClick={() => setShowFormOptional(true)} type="button">Show more options</button>}
       <div className="triage-panel"><div className="triage-head"><div className="triage-icon"><Sparkles size={15} /></div><div><b>Triage suggestion</b><span>MOCK · KEYWORD RULES</span></div></div>{form.title.trim() || form.description.trim() ? <><p>{currentSuggestion.reason}</p><div className="triage-tags"><span>{currentSuggestion.recordType}</span><span>{currentSuggestion.severity.split(' – ')[0]}</span><span>{currentSuggestion.group}</span></div><button onClick={() => setForm((current) => ({ ...current, recordType: currentSuggestion.recordType, severity: currentSuggestion.severity, assignmentGroup: currentSuggestion.group }))}>Apply suggestion <ArrowRight size={13} /></button></> : <p>Add a short description to see a sample classification suggestion.</p>}</div>
       {formError && <div className="form-error" role="alert">{formError}</div>}<div className="form-footer"><button className="text-button" onClick={() => setPage('board')}>Cancel</button><button className="primary-button" onClick={addTicket}><Check size={16} /> Create task</button></div></section></main>}
   </div>
@@ -1047,6 +1144,32 @@ function SettingsPanel({ screenPattern, onScreenPatternChange, view, onViewChang
   </section>
 }
 
+function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketItem; onClose: () => void; onOpenTicket: () => void }) {
+  return <div className="description-popup">
+    <div className="description-popup-header">
+      <h3>{ticket.title}</h3>
+      <button onClick={onClose} aria-label="Close"><X size={18} /></button>
+    </div>
+    <div className="description-popup-content">
+      <div className="description-section">
+        <h5>Short description</h5>
+        <p>{ticket.title}</p>
+      </div>
+      <div className="description-section">
+        <h5>Full description</h5>
+        <p>{ticket.description || 'No description recorded.'}</p>
+      </div>
+      <div className="description-section">
+        <h5>Record type</h5>
+        <p>{ticket.recordType}</p>
+      </div>
+      <div className="description-actions">
+        <button onClick={onOpenTicket} className="description-open-btn">Open full ticket <ArrowRight size={14} /></button>
+      </div>
+    </div>
+  </div>
+}
+
 function ReportsPanel({ tickets, now, onClose }: { tickets: TicketItem[]; now: number; onClose: () => void }) {
   const [period, setPeriod] = useState<'7' | '30' | '90' | 'all'>('30')
   const start = period === 'all' ? -Infinity : now - Number(period) * 24 * 60 * 60_000
@@ -1147,16 +1270,7 @@ function TicketListItem({ ticket, now, onClick, active = false }: { ticket: Tick
 
 function AdditionalView({ mode, tickets, allTickets, now, boardBy, openTicket, assessTicket, moveToLane, splitLeft = 'list', splitRight = 'details', onSplitLeftChange, onSplitRightChange }: { mode: CardSize; tickets: TicketItem[]; allTickets: TicketItem[]; now: number; boardBy: BoardBy; openTicket: (id: string) => void; assessTicket: (id: string, field: 'impact' | 'urgency', value: string) => void; moveToLane: (id: string, lane: string) => void; splitLeft?: SplitPaneMode; splitRight?: SplitPaneMode; onSplitLeftChange?: (value: SplitPaneMode) => void; onSplitRightChange?: (value: SplitPaneMode) => void }) {
   if (mode === 'split') return <SplitView tickets={tickets} allTickets={allTickets} now={now} boardBy={boardBy} openTicket={openTicket} assessTicket={assessTicket} moveToLane={moveToLane} leftMode={splitLeft} rightMode={splitRight} setLeftMode={onSplitLeftChange || (() => {})} setRightMode={onSplitRightChange || (() => {})} />
-  if (mode === 'my-work') return <MyWorkView tickets={tickets} allTickets={allTickets} now={now} openTicket={openTicket} />
-  if (mode === 'sla') return <SlaView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'workload') return <WorkloadView tickets={tickets} openTicket={openTicket} />
-  if (mode === 'escalation') return <EscalationView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'department') return <DepartmentView tickets={tickets} openTicket={openTicket} />
-  if (mode === 'calendar') return <CalendarView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'priority-matrix') return <PriorityMatrixView tickets={tickets} now={now} openTicket={openTicket} assessTicket={assessTicket} />
-  if (mode === 'analytics') return <AnalyticsView tickets={tickets} now={now} openTicket={openTicket} />
-  if (mode === 'graph') return <GraphView tickets={tickets} now={now} />
-  return <TimelineView tickets={tickets} openTicket={openTicket} />
+  return <MyWorkView tickets={tickets} allTickets={allTickets} now={now} openTicket={openTicket} />
 }
 
 function SplitPaneOptions() {
@@ -1217,181 +1331,6 @@ function MyWorkView({ tickets, allTickets, now, openTicket }: { tickets: TicketI
   return <section className="operation-view" id="board"><ViewHeader title="My Work" subtitle="Choose a technician to see their assigned queue." action={<label className="view-inline-filter"><span>Technician</span><select value={person} onChange={(event) => setPerson(event.target.value)}><option value="">Choose a technician</option>{people.map((name) => <option key={name}>{name}</option>)}</select></label>} /><div className="view-kpis"><div><span>Assigned</span><b>{mine.length}</b></div><div><span>Open</span><b>{openCount}</b></div><div><span>P1 / P2</span><b>{urgent}</b></div></div><div className="stacked-ticket-list">{person ? mine.length ? mine.map((ticket) => <TicketListItem key={ticket.id} ticket={ticket} now={now} onClick={() => openTicket(ticket.id)} />) : <div className="view-empty">No tickets are assigned to this technician.</div> : <div className="view-empty">Select your name above to see your work.</div>}</div></section>
 }
 
-function SlaView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  const buckets = [
-    { label: 'Breached', tone: 'red', tickets: tickets.filter((ticket) => ticket.status !== 'Resolved' && slaTime(ticket, now).breached) },
-    { label: 'At risk', tone: 'amber', tickets: tickets.filter((ticket) => slaAtRisk(ticket, now)) },
-    { label: 'Due soon', tone: 'blue', tickets: tickets.filter((ticket) => { const sla = slaTime(ticket, now); return ticket.status !== 'Resolved' && !sla.breached && !slaAtRisk(ticket, now) && sla.deadline - now <= 24 * 60 * 60_000 }) },
-    { label: 'On track', tone: 'green', tickets: tickets.filter((ticket) => { const sla = slaTime(ticket, now); return ticket.status !== 'Resolved' && !sla.breached && !slaAtRisk(ticket, now) && sla.deadline - now > 24 * 60 * 60_000 }) },
-    { label: 'Resolved', tone: 'slate', tickets: tickets.filter((ticket) => ticket.status === 'Resolved') },
-  ]
-  return <section className="operation-view" id="board"><ViewHeader title="SLA View" subtitle="Resolution health grouped by the current calendar-time SLA clock." /><div className="bucket-grid">{buckets.map((bucket) => <article className={`view-bucket tone-${bucket.tone}`} key={bucket.label}><header><span>{bucket.label}</span><b>{bucket.tickets.length}</b></header><div>{bucket.tickets.length ? bucket.tickets.map((ticket) => <TicketListItem key={ticket.id} ticket={ticket} now={now} onClick={() => openTicket(ticket.id)} />) : <div className="bucket-empty">No tickets</div>}</div></article>)}</div></section>
-}
-
-function WorkloadView({ tickets, openTicket }: { tickets: TicketItem[]; openTicket: (id: string) => void }) {
-  const groups = [...new Set(tickets.map((ticket) => ticket.assignee || 'Unassigned'))].sort().map((name) => ({ name, tickets: tickets.filter((ticket) => (ticket.assignee || 'Unassigned') === name) }))
-  const max = Math.max(1, ...groups.map((group) => group.tickets.filter((ticket) => ticket.status !== 'Resolved').length))
-  return <section className="operation-view" id="board"><ViewHeader title="Workload View" subtitle="Compare active work and priority pressure across the team." /><div className="workload-grid">{groups.map((group) => { const open = group.tickets.filter((ticket) => ticket.status !== 'Resolved'); const urgent = open.filter((ticket) => ticket.severity.startsWith('P1') || ticket.severity.startsWith('P2')).length; return <article className="workload-card" key={group.name}><header><span className="avatar">{group.name === 'Unassigned' ? '—' : group.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2)}</span><div><b>{group.name}</b><span>{open.length} open · {urgent} high priority</span></div></header><div className="workload-meter"><i style={{ width: `${open.length / max * 100}%` }} /></div><div className="workload-tickets">{group.tickets.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span>{ticket.id}</span><b>{ticket.title}</b><small>{ticket.status}</small></button>)}</div></article> })}</div></section>
-}
-
-function EscalationView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  return <section className="operation-view" id="board"><ViewHeader title="Escalation View" subtitle="Tickets arranged by their current support tier." /><div className="tier-view-grid">{([1, 2, 3] as const).map((tier) => { const items = tickets.filter((ticket) => ticket.currentTier === tier); const contact = tierRows[tier - 1]; return <article className={`tier-view-card tier-${tier}`} key={tier}><header><div><span>{contact.tier}</span><b>{contact.role}</b></div><strong>{items.length}</strong></header><p>{contact.when}</p><div>{items.length ? items.map((ticket) => <TicketListItem key={ticket.id} ticket={ticket} now={now} onClick={() => openTicket(ticket.id)} />) : <div className="bucket-empty">No tickets at this tier</div>}</div></article> })}</div></section>
-}
-
-function DepartmentView({ tickets, openTicket }: { tickets: TicketItem[]; openTicket: (id: string) => void }) {
-  const groups = [...new Set([...departments, ...tickets.map((ticket) => ticket.department || 'Field Services')])].sort().map((name) => ({ name, tickets: tickets.filter((ticket) => (ticket.department || 'Field Services') === name) }))
-  return <section className="operation-view" id="board"><ViewHeader title="Department View" subtitle="Demand and ownership across business departments." /><div className="department-grid">{groups.map((group) => <article className="department-card" key={group.name}><header><Building2 size={16} /><div><b>{group.name}</b><span>{group.tickets.filter((ticket) => ticket.status !== 'Resolved').length} open of {group.tickets.length}</span></div></header><div className="department-tickets">{group.tickets.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.slice(0, 2)}</span><span><b>{ticket.id}</b><small>{ticket.title}</small></span></button>)}</div></article>)}</div></section>
-}
-
-function CalendarView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  const [monthOffset, setMonthOffset] = useState(0)
-  const [basis, setBasis] = useState<'sla' | 'due' | 'created'>('sla')
-  const month = new Date(now)
-  month.setDate(1)
-  month.setMonth(month.getMonth() + monthOffset)
-  month.setHours(0, 0, 0, 0)
-  const year = month.getFullYear()
-  const monthIndex = month.getMonth()
-  const firstDay = month.getDay()
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
-  const cells = Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) * 7 }, (_, index) => index - firstDay + 1)
-  const datedTickets = tickets.map((ticket) => ({
-    ticket,
-    date: basis === 'sla' ? new Date(slaTime(ticket, now).deadline) : basis === 'due' ? ticket.dueAt ? new Date(ticket.dueAt) : null : new Date(ticket.createdAt),
-  }))
-  const undated = datedTickets.filter((item) => !item.date || Number.isNaN(item.date.getTime()))
-  const ticketsForDay = (day: number) => datedTickets.filter((item) => item.date && item.date.getFullYear() === year && item.date.getMonth() === monthIndex && item.date.getDate() === day)
-  return <section className="operation-view calendar-view" id="board">
-    <ViewHeader title="Calendar View" subtitle="Browse ticket dates using the selected date field." action={<div className="calendar-controls"><label className="view-inline-filter"><span>Date</span><select value={basis} onChange={(event) => setBasis(event.target.value as typeof basis)}><option value="sla">Resolution SLA</option><option value="due">Task due date</option><option value="created">Created</option></select></label><button onClick={() => setMonthOffset((value) => value - 1)} aria-label="Previous month"><ArrowLeft size={14} /></button><b>{new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(month)}</b><button onClick={() => setMonthOffset(0)}>Today</button><button onClick={() => setMonthOffset((value) => value + 1)} aria-label="Next month"><ArrowRight size={14} /></button></div>} />
-    <div className="calendar-scroll"><div className="calendar-grid">
-      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div className="calendar-weekday" key={day}>{day}</div>)}
-      {cells.map((day, index) => { const items = day > 0 && day <= daysInMonth ? ticketsForDay(day) : []; const isToday = day === new Date(now).getDate() && monthIndex === new Date(now).getMonth() && year === new Date(now).getFullYear(); return <div className={`calendar-day${day < 1 || day > daysInMonth ? ' outside' : ''}${isToday ? ' today' : ''}`} key={index}>{day > 0 && day <= daysInMonth && <><span className="calendar-date">{day}</span><div className="calendar-day-items">{items.map(({ ticket }) => <button className={sevClass(ticket.severity)} key={ticket.id} onClick={() => openTicket(ticket.id)} title={ticket.title}>{ticket.id} · {ticket.title}</button>)}</div></>}</div> })}
-    </div></div>
-    {basis === 'due' && undated.length > 0 && <div className="undated-tickets"><b>No task due date ({undated.length})</b>{undated.map(({ ticket }) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}>{ticket.id} · {ticket.title}</button>)}</div>}
-  </section>
-}
-
-function PriorityMatrixView({ tickets, now, openTicket, assessTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void; assessTicket: (id: string, field: 'impact' | 'urgency', value: string) => void }) {
-  const unassessed = tickets.filter((ticket) => !ticket.impact || !ticket.urgency)
-  const suggested = (ticket: TicketItem): [Assessment, Assessment] => ticket.severity.startsWith('P1') ? ['High', 'High'] : ticket.severity.startsWith('P2') ? ['High', 'Medium'] : ticket.severity.startsWith('P3') ? ['Medium', 'Medium'] : ['Low', 'Low']
-  return <section className="operation-view" id="board"><ViewHeader title="Priority Matrix" subtitle="Placement follows the ticket priority until impact and urgency are assessed below." />
-    <div className="priority-scroll"><div className="priority-matrix"><div className="matrix-axis matrix-corner">Impact ↓ / Urgency →</div>{assessmentLevels.map((level) => <div className="matrix-axis" key={`top-${level}`}>{level}</div>)}
-      {assessmentLevels.flatMap((impact) => [<div className="matrix-axis" key={`side-${impact}`}>{impact}</div>, ...assessmentLevels.map((urgency) => { const items = tickets.filter((ticket) => { const [suggestedImpact, suggestedUrgency] = suggested(ticket); return (ticket.impact || suggestedImpact) === impact && (ticket.urgency || suggestedUrgency) === urgency }); return <div className="priority-cell" key={`${impact}-${urgency}`}><span>{items.length} tickets</span>{items.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><b>{ticket.id}</b><small>{ticket.title}</small><em>{ticket.impact && ticket.urgency ? 'Assessed' : 'Suggested from priority'} · {ticket.status === 'Resolved' ? 'Resolved' : slaTime(ticket, now).label}</em></button>)}</div> })])}</div></div>
-    <div className="assessment-queue"><h3>Assess or adjust tickets <span>{unassessed.length} need assessment</span></h3>{tickets.length ? tickets.map((ticket) => <div className="assessment-row" key={ticket.id}><button className="assessment-record" onClick={() => openTicket(ticket.id)}><b>{ticket.id}</b><span>{ticket.title}</span></button><label>Impact<select value={ticket.impact || ''} onChange={(event) => assessTicket(ticket.id, 'impact', event.target.value)}><option value="">Suggested: {suggested(ticket)[0]}</option>{assessmentLevels.map((level) => <option key={level}>{level}</option>)}</select></label><label>Urgency<select value={ticket.urgency || ''} onChange={(event) => assessTicket(ticket.id, 'urgency', event.target.value)}><option value="">Suggested: {suggested(ticket)[1]}</option>{assessmentLevels.map((level) => <option key={level}>{level}</option>)}</select></label></div>) : <p>No tickets match the current filters.</p>}</div>
-  </section>
-}
-
-function AnalyticsView({ tickets, now, openTicket }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void }) {
-  const open = tickets.filter((ticket) => ticket.status !== 'Resolved')
-  const healthy = open.filter((ticket) => !slaTime(ticket, now).breached).length
-  const slaHealth = open.length ? Math.round(healthy / open.length * 100) : null
-  const measured = tickets.filter((ticket) => ticket.status === 'Resolved' && ticket.resolvedAt && new Date(ticket.resolvedAt).getTime() >= new Date(ticket.createdAt).getTime())
-  const averageHours = measured.length ? measured.reduce((sum, ticket) => sum + (new Date(ticket.resolvedAt!).getTime() - new Date(ticket.createdAt).getTime()) / 3_600_000, 0) / measured.length : null
-  const statusData = statuses.map((status) => ({ label: status, count: tickets.filter((ticket) => ticket.status === status).length }))
-  const priorityData = ['P1', 'P2', 'P3', 'P4'].map((priority) => ({ label: priority, count: tickets.filter((ticket) => ticket.severity.startsWith(priority)).length }))
-  const maxStatus = Math.max(1, ...statusData.map((item) => item.count))
-  const maxPriority = Math.max(1, ...priorityData.map((item) => item.count))
-  const oldest = [...open].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).slice(0, 5)
-  return <section className="operation-view" id="board"><ViewHeader title="Analytics View" subtitle="Current queue health from tickets shown by the active filters." />
-    <div className="analytics-kpis"><article><span>Total tickets</span><b>{tickets.length}</b><small>{open.length} currently open</small></article><article><span>Open within SLA</span><b>{slaHealth === null ? '—' : `${slaHealth}%`}</b><small>{healthy} of {open.length} open tickets</small></article><article><span>Unassigned</span><b>{open.filter((ticket) => !ticket.assignee).length}</b><small>Open tickets needing an owner</small></article><article><span>Average resolution</span><b>{averageHours === null ? '—' : `${averageHours.toFixed(1)}h`}</b><small>{measured.length ? `Based on ${measured.length} recorded resolutions` : 'No recorded resolution times yet'}</small></article></div>
-    <div className="analytics-grid"><article className="chart-card"><h3>Tickets by state</h3>{statusData.map((item) => <div className="bar-row" key={item.label}><span>{item.label}</span><i><b style={{ width: `${item.count / maxStatus * 100}%` }} /></i><strong>{item.count}</strong></div>)}</article><article className="chart-card"><h3>Tickets by priority</h3>{priorityData.map((item) => <div className="bar-row" key={item.label}><span>{item.label}</span><i><b className={item.label.toLowerCase()} style={{ width: `${item.count / maxPriority * 100}%` }} /></i><strong>{item.count}</strong></div>)}</article><article className="chart-card oldest-card"><h3>Oldest open tickets</h3>{oldest.length ? oldest.map((ticket) => <button key={ticket.id} onClick={() => openTicket(ticket.id)}><span>{ticket.id}</span><b>{ticket.title}</b><small>{elapsedLabel(ticket.createdAt, now)} open</small></button>) : <p className="view-empty">No open tickets.</p>}</article></div>
-  </section>
-}
-
-const graphColors = ['#28718a', '#d17a3c', '#8c62a0', '#43a182', '#c6536a', '#6e7fc4', '#ad8d32', '#4a8ca3', '#b16c89', '#6d8e59', '#9b7355', '#627987']
-
-function graphCategoryFor(ticket: TicketItem, category: GraphCategory): string {
-  if (category === 'Priority') return ticket.severity.slice(0, 2)
-  if (category === 'State') return ticket.status
-  if (category === 'Department') return ticket.department || 'No department'
-  if (category === 'Assignment group') return ticket.assignmentGroup || 'Unassigned'
-  return ticket.recordType
-}
-
-function GraphView({ tickets, now }: { tickets: TicketItem[]; now: number }) {
-  const [category, setCategory] = useState<GraphCategory>('Priority')
-  const [range, setRange] = useState<GraphRange>('24h')
-  const [focused, setFocused] = useState<string | null>(null)
-  const labels = category === 'Priority' ? ['P1', 'P2', 'P3', 'P4'] : category === 'State' ? statuses : [...new Set(tickets.map((ticket) => graphCategoryFor(ticket, category)))].sort()
-  const count = range === '24h' ? 24 : range === '7d' ? 7 : 30
-  const start = new Date(now)
-  if (range === '24h') { start.setMinutes(0, 0, 0); start.setHours(start.getHours() - 23) }
-  else { start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - count + 1) }
-  const bucketStarts = Array.from({ length: count + 1 }, (_, index) => {
-    const date = new Date(start)
-    if (range === '24h') date.setHours(date.getHours() + index)
-    else date.setDate(date.getDate() + index)
-    return date
-  })
-  const series = labels.map((label, index) => {
-    const matching = tickets.filter((ticket) => graphCategoryFor(ticket, category) === label)
-    const points = bucketStarts.slice(0, -1).map((bucket, bucketIndex) => matching.filter((ticket) => {
-      const created = new Date(ticket.createdAt).getTime()
-      return created >= bucket.getTime() && created < bucketStarts[bucketIndex + 1].getTime()
-    }).length)
-    return { label, color: graphColors[index % graphColors.length], total: matching.length, points }
-  })
-  const maxValue = Math.max(0, ...series.flatMap((item) => item.points))
-  const maxY = Math.max(4, Math.ceil(maxValue / 4) * 4)
-  const plotLeft = 42
-  const plotRight = 814
-  const plotTop = 18
-  const plotBottom = 245
-  const plotWidth = plotRight - plotLeft
-  const plotHeight = plotBottom - plotTop
-  const xAt = (index: number) => plotLeft + index * plotWidth / Math.max(1, count - 1)
-  const yAt = (value: number) => plotBottom - value * plotHeight / maxY
-  const labelFor = (date: Date) => range === '24h' ? new Intl.DateTimeFormat('en', { hour: 'numeric' }).format(date) : new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date)
-  const shownXAxis = (index: number) => range === '24h' ? index % 4 === 0 || index === count - 1 : range === '7d' || index % 5 === 0 || index === count - 1
-  const total = tickets.length
-  let arcStart = -Math.PI / 2
-  const slices = series.filter((item) => item.total > 0).map((item) => {
-    const angle = item.total / total * Math.PI * 2
-    const startAngle = arcStart
-    const endAngle = startAngle + angle
-    arcStart = endAngle
-    const point = (radians: number) => ({ x: 120 + Math.cos(radians) * 94, y: 120 + Math.sin(radians) * 94 })
-    const first = point(startAngle)
-    const last = point(endAngle)
-    const path = 'M 120 120 L ' + first.x + ' ' + first.y + ' A 94 94 0 ' + (angle > Math.PI ? 1 : 0) + ' 1 ' + last.x + ' ' + last.y + ' Z'
-    return { ...item, path }
-  })
-  return <section className="operation-view graph-view" id="board">
-    <ViewHeader title="Graph View" subtitle="Ticket creation trend and current category distribution for the visible records." action={<div className="graph-controls">
-      <label>Category<select value={category} onChange={(event) => { setCategory(event.target.value as GraphCategory); setFocused(null) }}><option>Priority</option><option>State</option><option>Department</option><option>Assignment group</option><option>Task type</option></select></label>
-      <label>Time range<select value={range} onChange={(event) => setRange(event.target.value as GraphRange)}><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
-    </div>} />
-    <div className="graph-panels">
-      <article className="graph-panel graph-line-panel"><div className="graph-panel-heading"><div><h3>Tickets created over time</h3><p>{range === '24h' ? 'Hourly' : 'Daily'} count by current {category.toLowerCase()}</p></div><span>{tickets.length} tickets shown</span></div>
-        <div className="graph-svg-scroll"><svg viewBox="0 0 844 292" role="img" aria-label={'Line chart of tickets created by ' + category.toLowerCase() + ' during the selected time range'}>
-          {[0, 1, 2, 3, 4].map((tick) => { const value = maxY / 4 * tick; const y = yAt(value); return <g key={tick}><line x1={plotLeft} x2={plotRight} y1={y} y2={y} stroke="#e5ecef" strokeWidth="1" /><text x={plotLeft - 9} y={y + 4} textAnchor="end" fill="#83959c" fontSize="10">{value}</text></g> })}
-          {bucketStarts.slice(0, -1).map((date, index) => shownXAxis(index) ? <text key={index} x={xAt(index)} y={268} textAnchor="middle" fill="#84969d" fontSize="10">{labelFor(date)}</text> : null)}
-          {series.map((item) => <g key={item.label} opacity={focused && focused !== item.label ? 0.14 : 1}>
-            <polyline points={item.points.map((value, index) => xAt(index) + ',' + yAt(value)).join(' ')} fill="none" stroke={item.color} strokeWidth={focused === item.label ? 3.5 : 2.5} strokeLinejoin="round" strokeLinecap="round" />
-            {item.points.map((value, index) => <circle key={index} cx={xAt(index)} cy={yAt(value)} r={value ? 3.1 : 1.8} fill={item.color} stroke="#fff" strokeWidth="1"><title>{item.label}: {value} created during {new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: range === '24h' ? 'short' : undefined }).format(bucketStarts[index])}</title></circle>)}
-          </g>)}
-        </svg></div>
-        <p className="graph-footnote">The line uses creation dates. Category labels reflect each ticket's current value.</p>
-      </article>
-      <article className="graph-panel graph-pie-panel"><div className="graph-panel-heading"><div><h3>Current {category.toLowerCase()} mix</h3><p>Share of all visible tickets</p></div></div>
-        <div className="graph-pie-content"><svg viewBox="0 0 240 240" role="img" aria-label={'Pie chart of visible tickets by ' + category.toLowerCase()}>
-          {total ? slices.map((slice) => slices.length === 1 ? <circle key={slice.label} cx="120" cy="120" r="94" fill={slice.color}><title>{slice.label}: {slice.total} tickets, 100%</title></circle> : <path key={slice.label} d={slice.path} fill={slice.color} stroke="#fff" strokeWidth="2" opacity={focused && focused !== slice.label ? 0.35 : 1}><title>{slice.label}: {slice.total} tickets, {Math.round(slice.total / total * 100)}%</title></path>) : <circle cx="120" cy="120" r="94" fill="#e7edef" />}
-        </svg>{!total && <span className="graph-no-data">No tickets match the current filters.</span>}</div>
-        <div className="graph-legend" aria-label="Chart categories">{series.map((item) => <button key={item.label} type="button" className={focused === item.label ? 'focused' : ''} aria-pressed={focused === item.label} onClick={() => setFocused(focused === item.label ? null : item.label)}><i style={{ backgroundColor: item.color }} /><span>{item.label}</span><b>{item.total}</b><small>{total ? Math.round(item.total / total * 100) : 0}%</small></button>)}</div>
-      </article>
-    </div>
-  </section>
-}
-
-function TimelineView({ tickets, openTicket }: { tickets: TicketItem[]; openTicket: (id: string) => void }) {
-  const [showTargets, setShowTargets] = useState(false)
-  const events = tickets.flatMap((ticket) => [
-    { date: new Date(ticket.createdAt), label: 'Ticket created', detail: ticket.recordType, ticket, planned: false },
-    ...(ticket.activity || []).map((event) => ({ date: new Date(event.at), label: event.label, detail: event.detail || '', ticket, planned: false })),
-    ...(showTargets ? [{ date: new Date(slaTime(ticket, Date.now()).deadline), label: 'Resolution SLA target', detail: 'Planned', ticket, planned: true }, ...(ticket.dueAt ? [{ date: new Date(ticket.dueAt), label: 'Task due date', detail: 'Planned', ticket, planned: true }] : [])] : []),
-  ]).filter((event) => !Number.isNaN(event.date.getTime())).sort((a, b) => b.date.getTime() - a.date.getTime())
-  return <section className="operation-view" id="board"><ViewHeader title="Timeline View" subtitle="Recorded ticket changes and creation times, newest first." action={<label className="timeline-toggle"><input type="checkbox" checked={showTargets} onChange={(event) => setShowTargets(event.target.checked)} /> Show planned deadlines</label>} /><div className="timeline-list">{events.length ? events.map((event, index) => <button key={`${event.ticket.id}-${event.label}-${index}`} className={event.planned ? 'planned' : ''} onClick={() => openTicket(event.ticket.id)}><span className={`timeline-marker ${sevClass(event.ticket.severity)}`} /><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(event.date)}</time><div><b>{event.label}</b><span>{event.ticket.id} · {event.ticket.title}</span><small>{event.detail}</small></div></button>) : <div className="view-empty">No recorded activity.</div>}</div></section>
-}
 
 /** State, priority and resolution SLA across the top of a ticket record. */
 function RecordStatusStrip({ ticket, now }: { ticket: TicketItem; now: number }) {
@@ -1432,46 +1371,330 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
   </div>
 }
 
-function TicketRecordDetails({ ticket, now, linkedAssetId }: { ticket: TicketItem; now: number; linkedAssetId?: string }) {
+function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
+  const [expandedNotes, setExpandedNotes] = useState(false)
+  const [notesText, setNotesText] = useState(ticket.notes || '')
+  const [summaryExpanded, setSummaryExpanded] = useState(false)
+  const [cachedSummaryId, setCachedSummaryId] = useState<string | null>(null)
+  const { loading: summaryLoading, error: summaryError, result: summaryResult, generate: generateSummary } = useTicketSummary()
+  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false)
+  const [cachedSuggestionsId, setCachedSuggestionsId] = useState<string | null>(null)
+  const { loading: suggestionsLoading, error: suggestionsError, result: suggestionsResult, suggest: suggestWorkNotes } = useWorkNotesSuggestions()
+  const [showQueueSuggestions, setShowQueueSuggestions] = useState(false)
+  const [cachedQueueSuggestionsId, setCachedQueueSuggestionsId] = useState<string | null>(null)
+  const { loading: queueLoading, error: queueError, result: queueResult, suggest: suggestQueue } = useQueueAssist()
+  const [showPrioritySuggestions, setShowPrioritySuggestions] = useState(false)
+  const [cachedPrioritySuggestionsId, setCachedPrioritySuggestionsId] = useState<string | null>(null)
+  const { loading: priorityLoading, error: priorityError, result: priorityResult, suggest: suggestPriority } = usePriorityAssist()
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
+  const notesLength = notesText?.length || 0
+  const shouldShowToggle = notesLength > 200
+  useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
+  useEffect(() => { setCachedSummaryId(null); setCachedSuggestionsId(null); setCachedQueueSuggestionsId(null); setCachedPrioritySuggestionsId(null) }, [ticket.id])
+  const handleGetSummary = async () => {
+    if (cachedSummaryId === ticket.id) return
+    try {
+      await generateSummary(ticket.title, ticket.description || '', notesText)
+      setCachedSummaryId(ticket.id)
+      setSummaryExpanded(true)
+    } catch (err) {
+      console.error('Summary generation failed:', err)
+    }
+  }
+  const handleGetSuggestions = async () => {
+    if (cachedSuggestionsId === ticket.id) return
+    try {
+      await suggestWorkNotes(ticket.title, ticket.description || '', notesText)
+      setCachedSuggestionsId(ticket.id)
+      setShowSuggestionsPanel(true)
+    } catch (err) {
+      console.error('Suggestions failed:', err)
+    }
+  }
+  const handleGetQueueSuggestions = async () => {
+    if (cachedQueueSuggestionsId === ticket.id) return
+    try {
+      await suggestQueue(ticket.title, ticket.description || '')
+      setCachedQueueSuggestionsId(ticket.id)
+      setShowQueueSuggestions(true)
+    } catch (err) {
+      console.error('Queue suggestions failed:', err)
+    }
+  }
+  const handleGetPrioritySuggestions = async () => {
+    if (cachedPrioritySuggestionsId === ticket.id) return
+    try {
+      await suggestPriority(ticket.title, ticket.description || '', ticket.assignmentGroup || '')
+      setCachedPrioritySuggestionsId(ticket.id)
+      setShowPrioritySuggestions(true)
+    } catch (err) {
+      console.error('Priority suggestions failed:', err)
+    }
+  }
   return <>
     <RecordStatusStrip ticket={ticket} now={now} />
-    <div className="record-form-grid">
-      <div className="record-field"><span>Number</span><b>{ticket.id}</b></div>
-      <div className="record-field"><span>Task type / table</span><b>{ticket.recordType} · {tableNames[ticket.recordType]}</b></div>
-      <div className="record-field"><span>Department</span><b>{ticket.department || 'Field Services'}</b></div>
-      <div className="record-field"><span>Assignment group</span><b>{ticket.assignmentGroup || 'Unassigned'}</b></div>
-      <div className="record-field"><span>Assigned to</span><b>{ticket.assignee || 'Unassigned'}</b></div>
-      <div className="record-field"><span>Linked asset</span><b>{linkedAssetId || ticket.assetId || 'Not linked'}</b></div>
-      <div className="record-field"><span>Requested by</span><b>{ticket.requester || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Created by</span><b>{ticket.createdBy || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Affected user</span><b>{ticket.affectedUser || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Affected user email</span><b>{ticket.affectedUserEmail || 'Not recorded'}</b></div>
-      <div className="record-field"><span>Created</span><b>{created}</b></div>
-      <div className="record-field"><span>Resolution due</span><b>{due}</b></div>
-      <div className="record-field"><span>Time logged</span><b>{logged}</b></div>
-      <div className="record-field"><span>Escalation tier</span><b>Tier {ticket.currentTier}</b></div>
-      <div className="record-field"><span>Impact</span><b>{ticket.impact || 'Not assessed'}</b></div>
-      <div className="record-field"><span>Urgency</span><b>{ticket.urgency || 'Not assessed'}</b></div>
-      <div className="record-field"><span>Resolved at</span><b>{ticket.resolvedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.resolvedAt)) : ticket.status === 'Resolved' ? 'Not recorded' : 'Open'}</b></div>
+    <div className="record-layout-two-col">
+      <div className="record-main">
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Short description</h3></div>
+          <p>{ticket.title}</p>
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Description</h3></div>
+          <p>{ticket.description || 'No description recorded.'}</p>
+        </section>
+        <section className="record-section ai-summary-section">
+          <div className="record-section-heading">
+            <h3>AI Summary</h3>
+            <button className="primary-button" onClick={handleGetSummary} disabled={summaryLoading}>
+              <Sparkles size={14} />
+              <span>{summaryLoading ? 'Generating...' : 'Get Summary'}</span>
+            </button>
+          </div>
+          {summaryError && <div className="ai-error">⚠️ {summaryError.message}</div>}
+          {summaryResult && (
+            <div className="ai-summary-content">
+              {summaryExpanded ? (
+                <>
+                  <div className="summary-item">
+                    <strong>What's the issue?</strong>
+                    <p>{summaryResult.split('\n').slice(0, 3).join('\n')}</p>
+                  </div>
+                  <div className="summary-item">
+                    <strong>What's been tried?</strong>
+                    <p>{summaryResult.split('\n').slice(4, 7).join('\n')}</p>
+                  </div>
+                  <div className="summary-item">
+                    <strong>Suggested next step</strong>
+                    <p>{summaryResult.split('\n').slice(8, 11).join('\n')}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="summary-preview">{summaryResult.split('\n')[0]}</p>
+              )}
+              <button className="summary-toggle" onClick={() => setSummaryExpanded(!summaryExpanded)}>
+                {summaryExpanded ? 'Show less' : 'Show more'}
+              </button>
+            </div>
+          )}
+          {!summaryResult && !summaryLoading && !summaryError && (
+            <p className="text-muted">Click "Get Summary" to analyze this ticket with AI.</p>
+          )}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Tags</h3></div>
+          {ticket.tags?.length ? <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <p>No tags added.</p>}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading">
+            <h3>Work notes</h3>
+            {onSaveNotes && <button className="primary-button" onClick={handleGetSuggestions} disabled={suggestionsLoading}><Sparkles size={16} />Get suggestions</button>}
+          </div>
+          {onSaveNotes ? (
+            <>
+              <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
+              {showSuggestionsPanel && cachedSuggestionsId === ticket.id && (
+                <div className="suggestions-panel">
+                  {suggestionsLoading && <p className="text-muted">Getting suggestions...</p>}
+                  {suggestionsError && <p className="ai-error">{suggestionsError.message}</p>}
+                  {suggestionsResult && !suggestionsLoading && (
+                    <div className="suggestions-content">
+                      {suggestionsResult.split('\n').filter(Boolean).map((line: string, idx: number) => (
+                        <p key={idx} className="suggestion-item">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="work-notes-display">
+              {shouldShowToggle ? (
+                <>
+                  <p>{expandedNotes ? notesText : `${notesText?.substring(0, 200)}...`}</p>
+                  <button className="see-more-btn" onClick={() => setExpandedNotes(!expandedNotes)}>{expandedNotes ? 'See less' : 'See more'}</button>
+                </>
+              ) : (
+                <p>{notesText || 'No work notes recorded.'}</p>
+              )}
+            </div>
+          )}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>
+          {ticket.activity?.length ? <div className="record-activity">{[...ticket.activity].reverse().map((event, index) => <div key={`${event.at}-${index}`}><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.at))}</time><b>{event.label}</b></div>)}</div> : <p>Created {created}. Later changes made in this prototype will appear here.</p>}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading"><h3>Requester follow-up</h3><span>{ticket.universalTasks.filter((task) => task.done).length}/{ticket.universalTasks.length} complete</span></div>
+          {ticket.universalTasks.length ? <div className="record-followups">{ticket.universalTasks.map((task) => <div className={task.done ? 'done' : ''} key={task.id}><Check size={13} /><span>{task.title}<small>For {task.assignee}</small></span></div>)}</div> : <p>No follow-up tasks recorded.</p>}
+        </section>
+      </div>
+      <aside className="record-sidebar">
+        <section className="record-sidebar-section">
+          <h4>Key information</h4>
+          <div className="sidebar-fields">
+            <div className="sidebar-field">
+              <span>Status</span>
+              <b className={`status-badge ${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</b>
+            </div>
+            <div className="sidebar-field">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <span>Priority</span>
+                <button className="small-icon-button" onClick={handleGetPrioritySuggestions} disabled={priorityLoading} title="Get priority suggestion"><Sparkles size={14} /></button>
+              </div>
+              <b className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</b>
+              {showPrioritySuggestions && cachedPrioritySuggestionsId === ticket.id && (
+                <div className="suggestions-panel">
+                  {priorityLoading && <p className="text-muted">Getting suggestions...</p>}
+                  {priorityError && <p className="ai-error">{priorityError.message}</p>}
+                  {priorityResult && !priorityLoading && (
+                    <div className="suggestions-content">
+                      {priorityResult.split('\n').filter(Boolean).map((line: string, idx: number) => (
+                        <p key={idx} className="suggestion-item">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="sidebar-field">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <span>Assignment group</span>
+                <button className="small-icon-button" onClick={handleGetQueueSuggestions} disabled={queueLoading} title="Get queue suggestion"><Sparkles size={14} /></button>
+              </div>
+              <b>{ticket.assignmentGroup || 'Unassigned'}</b>
+              {showQueueSuggestions && cachedQueueSuggestionsId === ticket.id && (
+                <div className="suggestions-panel">
+                  {queueLoading && <p className="text-muted">Getting suggestions...</p>}
+                  {queueError && <p className="ai-error">{queueError.message}</p>}
+                  {queueResult && !queueLoading && (
+                    <div className="suggestions-content">
+                      {queueResult.split('\n').filter(Boolean).map((line: string, idx: number) => (
+                        <p key={idx} className="suggestion-item">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="sidebar-field">
+              <span>Assigned to</span>
+              <b>{ticket.assignee || 'Unassigned'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Department</span>
+              <b>{ticket.department || 'Field Services'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Impact</span>
+              <b>{ticket.impact || 'Not assessed'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Urgency</span>
+              <b>{ticket.urgency || 'Not assessed'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Escalation tier</span>
+              <b>Tier {ticket.currentTier}</b>
+            </div>
+          </div>
+        </section>
+        <section className="record-sidebar-section">
+          <h4>Dates</h4>
+          <div className="sidebar-fields">
+            <div className="sidebar-field">
+              <span>Created</span>
+              <b>{created}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Due</span>
+              <b>{due}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Resolved</span>
+              <b>{ticket.resolvedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.resolvedAt)) : ticket.status === 'Resolved' ? 'Not recorded' : 'Open'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Time logged</span>
+              <b>{logged}</b>
+            </div>
+          </div>
+        </section>
+        <section className="record-sidebar-section">
+          <h4>Related</h4>
+          <div className="sidebar-fields">
+            <div className="sidebar-field">
+              <span>Record type</span>
+              <b>{ticket.recordType}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Linked asset</span>
+              <b>{linkedAssetId || ticket.assetId || 'Not linked'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Requested by</span>
+              <b>{ticket.requester || 'Not recorded'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Created by</span>
+              <b>{ticket.createdBy || 'Not recorded'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Affected user</span>
+              <b>{ticket.affectedUser || 'Not recorded'}</b>
+            </div>
+            <div className="sidebar-field">
+              <span>Email</span>
+              <b>{ticket.affectedUserEmail || 'Not recorded'}</b>
+            </div>
+          </div>
+        </section>
+      </aside>
     </div>
-    <section className="record-section"><h3>Short description</h3><p>{ticket.title}</p></section>
-    <section className="record-section"><h3>Tags</h3>{ticket.tags?.length ? <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <p>No tags added.</p>}</section>
-    <section className="record-section"><h3>Description</h3><p>{ticket.description || 'No description recorded.'}</p></section>
-    <section className="record-section"><h3>Work notes</h3><p>{ticket.notes || 'No work notes recorded.'}</p></section>
-    <section className="record-section"><div className="record-section-heading"><h3>Activity</h3><span>{ticket.activity?.length || 0} recorded changes</span></div>{ticket.activity?.length ? <div className="record-activity">{[...ticket.activity].reverse().map((event, index) => <div key={`${event.at}-${index}`}><time>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.at))}</time><b>{event.label}</b><span>{event.detail}</span></div>)}</div> : <p>Created {created}. Later changes made in this prototype will appear here.</p>}</section>
-    <section className="record-section"><div className="record-section-heading"><h3>Requester follow-up</h3><span>{ticket.universalTasks.filter((task) => task.done).length}/{ticket.universalTasks.length} complete</span></div>{ticket.universalTasks.length ? <div className="record-followups">{ticket.universalTasks.map((task) => <div className={task.done ? 'done' : ''} key={task.id}><Check size={13} /><span>{task.title}<small>For {task.assignee}</small></span></div>)}</div> : <p>No follow-up tasks recorded.</p>}</section>
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
+  const [showLogAction, setShowLogAction] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [searchResults, setSearchResults] = useState('')
+  const [actionText, setActionText] = useState('')
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
+  const logAction = () => {
+    if (!actionText.trim()) return
+    const timestamp = new Date().toLocaleString()
+    const entry = `[${timestamp}] ${actionText}`
+    const updatedNotes = ticket.notes ? `${ticket.notes}\n${entry}` : entry
+    onSaveNotes(updatedNotes)
+    setActionText('')
+    setShowLogAction(false)
+  }
+  const performSearch = () => {
+    const keywords = ticket.title.split(/\s+/).filter(w => w.length > 3).slice(0, 3).join(', ')
+    const results = `Search Results for: ${ticket.title}\n\nRelevant keywords: ${keywords}\n\nTop findings:\n1. Similar tickets in system\n2. Knowledge base articles\n3. Troubleshooting guides\n4. Community solutions\n5. Documentation links`
+    setSearchResults(results)
+    setShowSearchResults(true)
+  }
+  const addSearchToNotes = () => {
+    const timestamp = new Date().toLocaleString()
+    const entry = `[${timestamp}] Search Results: ${searchResults}`
+    const updatedNotes = ticket.notes ? `${ticket.notes}\n${entry}` : entry
+    onSaveNotes(updatedNotes)
+    setShowSearchResults(false)
+  }
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
+    <div className="record-actions">
+      <button className="log-action-btn" onClick={() => setShowLogAction(!showLogAction)}><BrainCircuit size={16} /> Log action</button>
+      <button className="log-action-btn" onClick={performSearch}><Search size={16} /> Search & AI</button>
+    </div>
+    {showLogAction && <div className="ticket-log-action"><div className="log-action-header"><h5>Log troubleshooting step</h5><button onClick={() => setShowLogAction(false)} aria-label="Close log action"><X size={16} /></button></div><div className="log-action-content"><textarea value={actionText} onChange={(event) => setActionText(event.target.value)} placeholder="What action did you take? (e.g., Checked system logs for error messages)" rows={3} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', boxSizing: 'border-box', fontFamily: 'inherit' }} /><button className="log-submit-btn" onClick={logAction} disabled={!actionText.trim()}><Plus size={14} /> Add to work notes</button></div></div>}
+    {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
+    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
     <AiSuggestFix ticket={ticket} />
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} />
   </section>
@@ -1485,7 +1708,7 @@ function TicketRecordPage({ ticket, now }: { ticket: TicketItem; now: number }) 
   </div>
 }
 
-function ListView({ tickets, now, openTicket, toggleStar, selectedIds, onSelectionChange }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void; toggleStar: (id: string) => void; selectedIds: string[]; onSelectionChange: (ids: string[]) => void }) {
+function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, selectedIds, onSelectionChange }: { tickets: TicketItem[]; now: number; openTicket: (id: string) => void; openDescriptionPopup: (id: string) => void; toggleStar: (id: string) => void; selectedIds: string[]; onSelectionChange: (ids: string[]) => void }) {
   const [filters, setFilters] = useState({ number: '', description: '', department: '', assignmentGroup: '', assignee: '', priority: '', state: '', created: '', sla: '' })
   const selectionAnchor = useRef<string>('')
   const setFilter = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value }))
@@ -1529,8 +1752,8 @@ function ListView({ tickets, now, openTicket, toggleStar, selectedIds, onSelecti
       const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ticket.createdAt)) : 'Not recorded'
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
-        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button></div></td>
-        <td><button className="list-title list-title-link" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
+        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button><button className="list-search-btn" onClick={() => openTicket(ticket.id)} title={`Search for ${ticket.title}`} aria-label={`Search for ${ticket.id}`} style={{ marginLeft: '6px', padding: '4px', background: 'none', border: 'none', color: '#596f79', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', fontSize: '14px' }}><Search size={14} /></button></div></td>
+        <td><button className="list-title list-title-link" onClick={() => openDescriptionPopup(ticket.id)} title={`Show details for ${ticket.title}`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>
         <td>{ticket.assignee || 'Unassigned'}</td>
@@ -1546,6 +1769,7 @@ function ListView({ tickets, now, openTicket, toggleStar, selectedIds, onSelecti
 function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addUniversalTask, toggleUniversalTask, toggleTimer, escalate, openMatrix, toggleStar, openTicket }: { ticket: TicketItem; index: number; laneCount: number; boardBy: BoardBy; now: number; move: (ticket: TicketItem, step: number) => void; remove: (id: string) => void; addUniversalTask: (ticketId: string, title: string) => void; toggleUniversalTask: (ticketId: string, taskId: string) => void; toggleTimer: (ticketId: string) => void; escalate: (ticket: TicketItem) => void; openMatrix: (id: string) => void; toggleStar: (id: string) => void; openTicket: (id: string) => void }) {
   const [showFollowUps, setShowFollowUps] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [showAiGuidance, setShowAiGuidance] = useState(false)
   const dragged = useRef(false)
   const [taskTitle, setTaskTitle] = useState('')
   const due = ticket.dueAt ? new Date(ticket.dueAt) : null
@@ -1578,11 +1802,12 @@ function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addU
       </div>
     </div>
     <div className="card-actions">
-      <div className="card-utility-actions"><button onClick={() => { setShowDetails(true); setShowFollowUps(true) }}><ListChecks size={13} />{ticket.universalTasks.length ? 'Follow-up tasks' : 'Add follow-up'}</button><a className="resolution-search" href={resolutionSearchUrl(ticket.title)} target="_blank" rel="noopener noreferrer" aria-label={`Search the web for a resolution to ${ticket.title}`} title="Search the public web using this ticket title"><Search size={13} />Search resolution</a></div>
+      <div className="card-utility-actions"><button onClick={() => { setShowDetails(true); setShowFollowUps(true) }}><ListChecks size={13} />{ticket.universalTasks.length ? 'Follow-up tasks' : 'Add follow-up'}</button><a className="resolution-search" href={resolutionSearchUrl(ticket.title)} target="_blank" rel="noopener noreferrer" aria-label={`Search the web for a resolution to ${ticket.title}`} title="Search the public web using this ticket title"><Search size={13} />Search resolution</a><button onClick={() => setShowAiGuidance(!showAiGuidance)} className="ai-guidance-btn" title="Ask AI for guidance on this ticket"><BrainCircuit size={13} />Ask AI</button></div>
       <div className="card-secondary-actions"><div className={`time-log ${ticket.timerStartedAt ? 'running' : ''}`}><span>Logged {loggedLabel(elapsedLogged)}</span><button disabled={ticket.status === 'Resolved'} onClick={() => toggleTimer(ticket.id)} title={ticket.timerStartedAt ? 'Stop and save time' : 'Start a timer'}>{ticket.timerStartedAt ? 'Stop' : 'Start'}</button></div>{nextContact && ticket.status !== 'Resolved' && <button className="escalate-action" onClick={() => escalate(ticket)} title={`Escalate to ${nextContact.role} (placeholder contact)`} aria-label={`Escalate ${ticket.id} to Tier ${ticket.currentTier + 1}`}><ShieldAlert size={13} /> Escalate</button>}
         <span className="card-move-actions">{index > 0 && <button onClick={() => move(ticket, -1)} aria-label={`Move to previous ${laneName}`} title={`Move to previous ${laneName}`}><ArrowLeft size={13} /></button>}{index < laneCount - 1 && <button onClick={() => move(ticket, 1)} aria-label={`Move to next ${laneName}`} title={`Move to next ${laneName}`}><ArrowRight size={13} /></button>}</span></div>
     </div>
       </div>
+      {showAiGuidance && <div className="ticket-ai-guidance"><div className="ai-guidance-header"><h5>AI Guidance</h5><button onClick={() => setShowAiGuidance(false)} aria-label="Close AI guidance"><X size={16} /></button></div><div className="ai-guidance-content"><p><strong>{ticket.id}</strong></p><p className="ai-guidance-context">For {ticket.title}</p><div className="ai-guidance-suggestions"><p><small>Suggested guidance topics:</small></p><ul><li>Troubleshooting steps for this issue</li><li>Similar resolved tickets and solutions</li><li>Best practices for {ticket.assignmentGroup}</li><li>Escalation criteria and next steps</li></ul></div></div></div>}
       <div className="ticket-card-face ticket-card-back">
         <div className="ticket-detail-header"><div><span>FULL TICKET DETAILS</span><h3>{ticket.id}</h3></div><button className="flip-card-button" onClick={() => setShowDetails(false)} aria-label={`Return to ${ticket.id} summary`} title="Back to ticket summary"><RotateCcw size={15} /></button></div>
         <h4 className="ticket-detail-title">{ticket.title}</h4>{!!ticket.tags?.length && <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}

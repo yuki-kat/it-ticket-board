@@ -6,8 +6,7 @@ import './view-picker.css'
 export const VIEW_GROUPS: { selectLabel: string; pickerLabel: string; views: [value: string, label: string][] }[] = [
   { selectLabel: 'Records', pickerLabel: 'Records', views: [['list', 'List View'], ['split', 'Split View']] },
   { selectLabel: 'Kanban', pickerLabel: 'Kanban', views: [['small', 'Kanban Compact'], ['regular', 'Kanban Detailed']] },
-  { selectLabel: 'Operations', pickerLabel: 'Operations', views: [['my-work', 'My Work'], ['sla', 'SLA View'], ['workload', 'Workload View'], ['escalation', 'Escalation View'], ['department', 'Department View']] },
-  { selectLabel: 'Planning and insights', pickerLabel: 'Planning & insights', views: [['calendar', 'Calendar View'], ['priority-matrix', 'Priority Matrix'], ['analytics', 'Analytics View'], ['graph', 'Graph View'], ['timeline', 'Timeline View']] },
+  { selectLabel: 'Views', pickerLabel: 'Personal', views: [['my-work', 'My Work']] },
 ]
 
 /** The "All Views" popup: all the layouts in one place, with the current one marked. */

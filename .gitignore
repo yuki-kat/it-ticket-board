@@ -13,6 +13,7 @@ tests/test-results/
 tests/playwright-report/
 test-results/
 playwright-report/
+tests/pw.local.config.ts
 
 # Local secrets
 .env
