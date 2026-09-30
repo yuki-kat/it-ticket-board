@@ -591,6 +591,12 @@ function App() {
   useEffect(() => { const interval = window.setInterval(() => setClock(Date.now()), 30_000); return () => window.clearInterval(interval) }, [])
   useEffect(() => { if (page !== 'new') setShowFormOptional(false) }, [page])
   useEffect(() => {
+    if (page !== 'new') return
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setPage('board') }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [page])
+  useEffect(() => {
     if (!showToolsMenu) return
     const handlePointerDown = (event: PointerEvent) => { if (!toolsMenuRef.current?.contains(event.target as Node)) setShowToolsMenu(false) }
     const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowToolsMenu(false) }
