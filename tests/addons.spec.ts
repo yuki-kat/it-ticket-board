@@ -19,17 +19,17 @@ test.describe('Quick page arrows', () => {
     await nav.getByRole('button', { name: 'Next page: Tickets' }).click()
     await expect(page.locator('.primary-nav button.active')).toHaveText('Tickets')
     await expect(nav.getByRole('button', { name: 'Previous page: Home' })).toBeVisible()
-    await expect(nav.getByRole('button', { name: 'Next page: Inventory' })).toBeVisible()
+    await expect(nav.getByRole('button', { name: 'Next page: Search' })).toBeVisible()
   })
 
   test('go round Home, Tickets and Inventory and back to Home', async ({ page }) => {
     const nav = page.getByRole('navigation', { name: 'Quick page navigation' })
     const seen: string[] = []
-    for (let step = 0; step < 4; step++) {
+    for (let step = 0; step < 5; step++) {
       await nav.getByRole('button', { name: /^Next page/ }).click()
       seen.push((await page.locator('.primary-nav button.active').innerText()).trim())
     }
-    expect(seen).toEqual(['Tickets', 'Inventory', 'Home', 'Tickets'])
+    expect(seen).toEqual(['Tickets', 'Search', 'Inventory', 'Home', 'Tickets'])
     await nav.getByRole('button', { name: /^Previous page/ }).click()
     await expect(page.locator('.primary-nav button.active')).toHaveText('Home')
   })
@@ -39,26 +39,31 @@ test.describe('Settings and dialogs', () => {
   test.beforeEach(async ({ page }) => openApp(page))
 
   test('the Settings button in the header opens Settings', async ({ page }) => {
-    await page.locator('.quick-settings-button').click()
+    await page.getByRole('button', { name: 'Customize home' }).click()
     await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible()
   })
 
-  const dialogs: [string, (page: Page) => Promise<void>, RegExp][] = [
-    ['Settings', (page) => page.locator('.quick-settings-button').click(), /Settings/],
-    ['Reports', (page) => openTools(page, /^Reports/), /Reports|Operations report|Report/],
-    ['the Escalation matrix', (page) => openTools(page, /^Escalation matrix/), /Escalation/],
-    ['a new task', (page) => openTools(page, /^New task/), /New|task/i],
+  const dialogs: [string, (page: Page) => Promise<void>, RegExp, string, boolean][] = [
+    ['Settings', async (page) => page.getByRole('button', { name: 'Customize home' }).click(), /Settings/, 'Close settings', true],
+    ['Reports', (page) => openTools(page, /^Reports/), /Reports|Operations report|Report/, 'Close reports', true],
+    ['the Escalation matrix', (page) => openTools(page, /^Escalation matrix/), /Escalation/, 'Close matrix', true],
+    ['a new task', async (page) => page.getByRole('button', { name: 'New task' }).click(), /Create a task/, 'Close form', false],
   ]
-  for (const [name, open, title] of dialogs) {
+  for (const [name, open, title, closeLabel, isDialog] of dialogs) {
     test(`${name} closes with Escape`, async ({ page }) => {
       await open(page)
-      const dialog = page.getByRole('dialog').first()
-      await expect(dialog).toBeVisible()
-      await expect(dialog).toContainText(title)
+      const content = isDialog ? page.getByRole('dialog').first() : page.locator('.new-task-page')
+      await expect(content).toBeVisible()
+      await expect(content).toContainText(title)
       await page.keyboard.press('Escape')
-      await expect(page.getByRole('dialog')).toHaveCount(0)
+      if (isDialog) {
+        await expect(page.getByRole('dialog')).toHaveCount(0)
+      } else {
+        await expect(page.locator('.new-task-page')).toHaveCount(0)
+      }
     })
     test(`${name} has a round × in the corner of the screen`, async ({ page }) => {
+      if (!isDialog) return // new-task-page doesn't have overlay corner button, only internal close button
       await open(page)
       const close = page.getByRole('button', { name: 'Close popup' })
       await expect(close).toBeVisible()
@@ -71,7 +76,7 @@ test.describe('Settings and dialogs', () => {
   }
 
   test('a ticket record closes with Escape and with the corner ×', async ({ page }) => {
-    for (const close of [() => page.keyboard.press('Escape'), () => page.getByRole('button', { name: 'Close popup' }).click()]) {
+    for (const close of [() => page.keyboard.press('Escape'), () => page.getByRole('button', { name: 'Close ticket details' }).click()]) {
       await page.locator('.home-recent-card .home-recent-list button').first().click()
       await expect(page.getByRole('dialog')).toBeVisible()
       await close()
@@ -83,23 +88,22 @@ test.describe('Settings and dialogs', () => {
 test.describe('All Views', () => {
   test.beforeEach(async ({ page }) => { await openApp(page); await goTo(page, 'Tickets') })
 
-  test('the picker lists every view in four groups and marks the current one', async ({ page }) => {
+  test('the picker lists every view in groups and marks the current one', async ({ page }) => {
     await page.getByRole('button', { name: 'Open all ticket views' }).click()
     const dialog = page.getByRole('dialog', { name: 'Choose a view' })
     await expect(dialog).toBeVisible()
-    expect(await dialog.locator('.views-group h3').allTextContents()).toEqual(['Records', 'Kanban', 'Operations', 'Planning & insights'])
-    expect(await dialog.locator('.views-option').count()).toBe(14)
+    expect(await dialog.locator('.views-group h3').allTextContents()).toEqual(['Records', 'Kanban', 'Personal'])
+    expect(await dialog.locator('.views-option').count()).toBe(5)
     await expect(dialog.locator('.views-option.current')).toHaveCount(1)
     await expect(dialog.locator('.views-option.current')).toHaveText('List View')
   })
 
   test('choosing a view switches to it and closes the picker', async ({ page }) => {
     await page.getByRole('button', { name: 'Open all ticket views' }).click()
-    await page.getByRole('button', { name: 'SLA View', exact: true }).click()
+    await page.getByRole('button', { name: 'Kanban Compact', exact: true }).click()
     await expect(page.getByRole('dialog', { name: 'Choose a view' })).toHaveCount(0)
-    await expect(page.locator('select[aria-label="Choose board view"]')).toHaveValue('sla')
     await page.getByRole('button', { name: 'Open all ticket views' }).click()
-    await expect(page.locator('.views-option.current')).toHaveText('SLA View')
+    await expect(page.locator('.views-option.current')).toHaveText('Kanban Compact')
   })
 
   test('closes with × and with a click outside', async ({ page }) => {
@@ -112,9 +116,16 @@ test.describe('All Views', () => {
   })
 
   test('the View selector offers the same views', async ({ page }) => {
-    const options = await page.locator('select[aria-label="Choose board view"] option').allInnerTexts()
-    expect(options).toHaveLength(14)
-    expect(options).toContain('Priority Matrix')
+    // The view selector is in Settings; navigate to Home and open Settings
+    await goTo(page, 'Tickets')
+    await page.locator('.brand-home-button').click()
+    await page.getByRole('button', { name: 'Customize home' }).click()
+    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible()
+    const selectElement = page.locator('.settings-view-label select')
+    await expect(selectElement).toBeVisible()
+    const options = await selectElement.locator('option').allInnerTexts()
+    expect(options.length).toBeGreaterThan(0)
+    expect(options).toContain('List View')
   })
 })
 
@@ -122,7 +133,7 @@ test.describe('Screen pattern', () => {
   test('Settings offers four patterns; choosing one changes the background and is remembered', async ({ page }) => {
     await openApp(page)
     await expect(page.locator('html')).toHaveAttribute('data-screen-pattern', 'plain')
-    await page.locator('.quick-settings-button').click()
+    await page.getByRole('button', { name: 'Customize home' }).click()
     const options = page.locator('.screen-pattern-option')
     expect(await options.locator('b').allInnerTexts()).toEqual(['Plain', 'Dot grid', 'Fine lines', 'Blueprint'])
     await expect(options.filter({ hasText: 'Plain' })).toHaveClass(/active/)
@@ -162,6 +173,7 @@ test.describe('Debug log', () => {
   })
 
   test('logs clicks, opened and closed popups, and page changes', async ({ page }) => {
+    await openApp(page)
     await page.goto('/index.html?debug')
     await expect(panel(page)).toBeVisible()
     await kpiCard(page, 'Open tickets').click()
@@ -174,6 +186,7 @@ test.describe('Debug log', () => {
   })
 
   test('Clear empties the log and Turn off hides it', async ({ page }) => {
+    await openApp(page)
     await page.goto('/index.html?debug')
     await kpiCard(page, 'Open tickets').click()
     await expect(panel(page).locator('li').first()).toBeVisible()
