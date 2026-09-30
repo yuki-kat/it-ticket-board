@@ -17,6 +17,7 @@ const read = (reference) => {
 let html = readFileSync(resolve(dist, 'index.html'), 'utf8')
 html = html.replace(/\s*<link rel="modulepreload"[^>]*>/g, '')
 html = html.replace(/<link rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g, (_match, href) => `<style>${read(href).replace(/<\/style/gi, '<\\/style')}</style>`)
+html = html.replace(/<link rel="icon"[^>]*href="([^"]+)"[^>]*>/g, (_match, href) => `<link rel="icon" href="data:image/svg+xml;base64,${Buffer.from(read(href)).toString('base64')}">`)
 html = html.replace(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g, (_match, src) => `<script type="module">${read(src).replace(/<\/script/gi, '<\\/script')}</script>`)
 
 // Check the page around the script and styles (not the app's own code, which contains text that looks like links).
