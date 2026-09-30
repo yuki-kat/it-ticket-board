@@ -7,6 +7,7 @@ async function openInventory(page: Page) {
   await openApp(page)
   await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
   await expect(page.locator('.inventory-table tbody tr').first()).toBeVisible()
+  await expect(page.locator('.inventory-health-filter')).toBeVisible()
 }
 const badges = (page: Page) => page.locator('.inventory-table .inventory-health-badge')
 
