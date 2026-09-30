@@ -1,6 +1,6 @@
 // Gemini API wrapper for ticket board AI features
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent';
 
 export interface GeminiRequest {
   text: string;
@@ -24,9 +24,9 @@ export class GeminiError extends Error {
 
 export function getApiKey(): string {
   const key = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!key) {
+  if (!key || key.startsWith('AQ.') || key.startsWith('AAQ.')) {
     throw new GeminiError(
-      'Gemini API key not configured. Set VITE_GEMINI_API_KEY environment variable.',
+      'Gemini API key not configured or invalid. AI features are disabled. Get a valid key from https://aistudio.google.com/app/apikey',
       'API_KEY_MISSING'
     );
   }
