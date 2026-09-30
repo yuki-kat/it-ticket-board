@@ -24,8 +24,22 @@ export async function openApp(page: Page) {
   const testToken = createTestToken()
   const testUser = { id: 'test-user', name: 'Test User', email: 'test@example.com' }
 
-  // Inject auth directly into localStorage before page loads
+  // Inject auth and initial data clear into localStorage before page loads.
+  // Only clear data on the first load, not on subsequent reloads, so tests can modify state.
+  let firstLoad = true
   await page.addInitScript(({ token, user }) => {
+    // Check if this is the first load by looking for auth token
+    const hasAuth = localStorage.getItem('auth_token')
+    if (!hasAuth) {
+      // Clear all data keys to reset to sample data on first load only
+      localStorage.removeItem('it-ticket-kanban-v1')
+      localStorage.removeItem('it-ticket-kanban-deleted-v1')
+      localStorage.removeItem('it-ticket-kanban-view-v1')
+      localStorage.removeItem('it-ticket-kanban-home-widgets-v1')
+      localStorage.removeItem('it-ticket-kanban-inventory-v1')
+      localStorage.removeItem('ops-kanban-home-insight-order-v1')
+    }
+    // Always set up test auth (in case it was cleared)
     localStorage.setItem('auth_token', token)
     localStorage.setItem('auth_user', JSON.stringify(user))
   }, { token: testToken, user: testUser })

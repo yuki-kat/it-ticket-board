@@ -1,11 +1,8 @@
 
 const API_BASE = 'http://localhost:3001/api';
 
-let authToken: string | null = localStorage.getItem('auth_token');
-
 export function setAuthToken(token: string | null) {
   console.log('[setAuthToken] called with token:', token ? token.substring(0, 20) + '...' : 'null');
-  authToken = token;
   if (token) {
     localStorage.setItem('auth_token', token);
     console.log('[setAuthToken] Stored to localStorage');
@@ -51,7 +48,7 @@ export function getAuthUser() {
 }
 
 export function getAuthToken(): string | null {
-  return authToken;
+  return localStorage.getItem('auth_token');
 }
 
 async function request(endpoint: string, options: RequestInit = {}) {
@@ -60,8 +57,9 @@ async function request(endpoint: string, options: RequestInit = {}) {
     ...options.headers as Record<string, string>
   };
 
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {

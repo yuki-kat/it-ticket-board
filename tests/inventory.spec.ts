@@ -7,6 +7,8 @@ async function openInventory(page: Page) {
   await openApp(page)
   await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
   await expect(page.locator('.inventory-table tbody tr').first()).toBeVisible()
+  await page.locator('.inventory-filters-button').click()
+  await expect(page.locator('.inventory-health-filter')).toBeVisible()
 }
 const badges = (page: Page) => page.locator('.inventory-table .inventory-health-badge')
 
@@ -46,6 +48,7 @@ test.describe('Inventory device health (source)', () => {
     await page.locator('.inventory-create-panel label', { hasText: 'Device health' }).locator('select').selectOption('Critical')
     await page.getByRole('button', { name: 'Save details' }).click()
     await page.locator('.inventory-detail-panel .close-button').click()
+    await page.locator('.inventory-filters-button').click()
     await page.locator('.inventory-health-filter').selectOption('Critical')
     await expect(page.locator('.inventory-table tbody tr')).toHaveCount(1)
   })
@@ -55,6 +58,7 @@ test.describe('Inventory device health (source)', () => {
     await page.locator('.inventory-health-filter').selectOption('At Risk')
     await page.reload()
     await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
+    await page.locator('.inventory-filters-button').click()
     await expect(page.locator('.inventory-health-filter')).toHaveValue('At Risk')
   })
 
