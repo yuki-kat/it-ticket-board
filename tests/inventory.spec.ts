@@ -7,7 +7,6 @@ async function openInventory(page: Page) {
   await openApp(page)
   await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
   await expect(page.locator('.inventory-table tbody tr').first()).toBeVisible()
-  await expect(page.locator('.inventory-health-filter')).toBeVisible()
 }
 const badges = (page: Page) => page.locator('.inventory-table .inventory-health-badge')
 
@@ -21,6 +20,7 @@ test.describe('Inventory device health (source)', () => {
   })
 
   test('the health filter offers every level', async ({ page }) => {
+    await expect(page.locator('.inventory-health-filter')).toBeVisible()
     expect(await page.locator('.inventory-health-filter option').allInnerTexts()).toEqual(['All health', 'Healthy', 'Monitor', 'At Risk', 'Critical'])
   })
 
@@ -29,6 +29,7 @@ test.describe('Inventory device health (source)', () => {
     test(`filtering by ${level} lists exactly the ${level} devices`, async ({ page }) => {
       const expected = await badges(page).filter({ hasText: new RegExp(`^${level}$`) }).count()
       expect(expected).toBeGreaterThan(0)
+      await expect(page.locator('.inventory-health-filter')).toBeVisible()
       await page.locator('.inventory-health-filter').selectOption(level)
       await expect(page.locator('.inventory-table tbody tr')).toHaveCount(expected)
       for (const text of await badges(page).allInnerTexts()) expect(text).toBe(level)
@@ -36,6 +37,7 @@ test.describe('Inventory device health (source)', () => {
   }
 
   test('Critical shows nothing until a device is critical, then finds it', async ({ page }) => {
+    await expect(page.locator('.inventory-health-filter')).toBeVisible()
     await page.locator('.inventory-health-filter').selectOption('Critical')
     await expect(page.locator('.inventory-table tbody tr')).toHaveCount(0)
     await page.locator('.inventory-health-filter').selectOption('All health')
@@ -49,6 +51,7 @@ test.describe('Inventory device health (source)', () => {
   })
 
   test('the chosen health filter is remembered after a reload', async ({ page }) => {
+    await expect(page.locator('.inventory-health-filter')).toBeVisible()
     await page.locator('.inventory-health-filter').selectOption('At Risk')
     await page.reload()
     await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
