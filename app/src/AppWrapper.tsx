@@ -21,7 +21,7 @@ export default function AppWrapper() {
       <button onClick={() => {
         logout()
         window.location.reload()
-      }} style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999, padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>
+      }} style={{ position: 'fixed', bottom: '1rem', right: '1rem', zIndex: 9999, padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
         Logout ({user.name})
       </button>
       <App />
