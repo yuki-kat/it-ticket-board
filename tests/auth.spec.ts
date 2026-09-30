@@ -5,17 +5,31 @@ test.describe('Authentication', () => {
   test('signup persists both token and user to localStorage', async ({ page, context }) => {
     // Clear all cookies and storage before test
     await context.clearCookies()
+
+    // Generate unique email for this test run
+    const uniqueEmail = `test-${Date.now()}@example.com`
+    const password = 'test123456'
+    const name = 'Test User'
+
+    // Mock the signup API endpoint
+    await page.route('**/auth/signup', async (route) => {
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdC11c2VyIiwiZW1haWwiOiIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNjk2MDAwMDAwLCJleHAiOjE2OTYwODYwMDB9.signature'
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token,
+          user: { id: 'test-user', email: uniqueEmail, name }
+        })
+      })
+    })
+
     await page.goto('/index.html')
 
     // Clear localStorage on the page
     await page.evaluate(() => {
       localStorage.clear()
     })
-
-    // Generate unique email for this test run
-    const uniqueEmail = `test-${Date.now()}@example.com`
-    const password = 'test123456'
-    const name = 'Test User'
 
     console.log('Starting signup test with:', uniqueEmail)
 
@@ -39,7 +53,7 @@ test.describe('Authentication', () => {
 
     // Wait for page to redirect - look for the authenticated state
     // The app should show the main content (home page) not the signin page
-    await expect(page.locator('.home-kpi-grid, .primary-nav')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.home-kpi-grid')).toBeVisible({ timeout: 10000 })
 
     // Now check localStorage
     const storedToken = await page.evaluate(() => localStorage.getItem('auth_token'))
@@ -73,6 +87,19 @@ test.describe('Authentication', () => {
     const password = 'test123456'
     const name = 'Reload Test User'
 
+    // Mock the signup API endpoint
+    await page.route('**/auth/signup', async (route) => {
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdC11c2VyIiwiZW1haWwiOiIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNjk2MDAwMDAwLCJleHAiOjE2OTYwODYwMDB9.signature'
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token,
+          user: { id: 'test-user', email: uniqueEmail, name }
+        })
+      })
+    })
+
     // First signup
     await page.goto('/index.html')
     await page.evaluate(() => localStorage.clear())
@@ -89,7 +116,7 @@ test.describe('Authentication', () => {
     await page.locator('button[type="submit"]:has-text("Sign up")').click()
 
     // Wait for authenticated state
-    await expect(page.locator('.home-kpi-grid, .primary-nav')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.home-kpi-grid')).toBeVisible({ timeout: 10000 })
 
     // Get the stored auth data
     const tokenBefore = await page.evaluate(() => localStorage.getItem('auth_token'))
@@ -103,7 +130,7 @@ test.describe('Authentication', () => {
     await page.reload()
 
     // Should still be authenticated without needing to sign in again
-    await expect(page.locator('.home-kpi-grid, .primary-nav')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('.home-kpi-grid')).toBeVisible({ timeout: 5000 })
 
     // Verify localStorage is still intact
     const tokenAfter = await page.evaluate(() => localStorage.getItem('auth_token'))
@@ -123,6 +150,32 @@ test.describe('Authentication', () => {
     const testEmail = 'test-login@example.com'
     const testPassword = 'test123456'
 
+    // Mock signup endpoint
+    await page.route('**/auth/signup', async (route) => {
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdC11c2VyIiwiZW1haWwiOiIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNjk2MDAwMDAwLCJleHAiOjE2OTYwODYwMDB9.signature'
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token,
+          user: { id: 'test-user', email: testEmail, name: 'Test Login User' }
+        })
+      })
+    })
+
+    // Mock login endpoint
+    await page.route('**/auth/login', async (route) => {
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdC11c2VyIiwiZW1haWwiOiIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNjk2MDAwMDAwLCJleHAiOjE2OTYwODYwMDB9.signature'
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token,
+          user: { id: 'test-user', email: testEmail, name: 'Test Login User' }
+        })
+      })
+    })
+
     // First, create the account
     await page.goto('/index.html')
     await page.evaluate(() => localStorage.clear())
@@ -140,7 +193,7 @@ test.describe('Authentication', () => {
     await page.locator('button[type="submit"]:has-text("Sign up")').click()
 
     // Wait for authenticated state
-    await expect(page.locator('.home-kpi-grid, .primary-nav')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.home-kpi-grid')).toBeVisible({ timeout: 10000 })
 
     // Logout
     const logoutButton = page.locator('button:has-text("Logout")')
@@ -162,7 +215,7 @@ test.describe('Authentication', () => {
     await page.locator('button[type="submit"]:has-text("Sign in")').click()
 
     // Wait for authenticated state
-    await expect(page.locator('.home-kpi-grid, .primary-nav')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.home-kpi-grid')).toBeVisible({ timeout: 10000 })
 
     // Check localStorage
     const storedToken = await page.evaluate(() => localStorage.getItem('auth_token'))
