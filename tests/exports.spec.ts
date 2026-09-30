@@ -1,9 +1,11 @@
 import { expect, test, type Download, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { openApp } from './helpers'
-async function toolsMenu(page: Page, name: RegExp) {
+async function toolsMenu(page: Page, name: RegExp | string) {
   await page.locator('.header-tools-trigger').click()
-  await page.getByRole('button', { name }).click()
+  const button = page.getByRole('button', { name: typeof name === 'string' ? name : name })
+  await expect(button).toBeVisible({ timeout: 10000 })
+  await button.click()
 }
 async function collect(page: Page, action: () => Promise<void>, count: number): Promise<Download[]> {
   const downloads: Download[] = []
@@ -44,7 +46,11 @@ test.describe('Exports (source)', () => {
   })
 
   test('Tools > "All inventory CSV" downloads every asset and stock item as two files', async ({ page }) => {
-    const downloads = await collect(page, () => toolsMenu(page, /All inventory CSV/), 2)
+    await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
+    const downloads = await collect(page, async () => {
+      await toolsMenu(page, 'All inventory')
+      await page.getByRole('button', { name: /CSV spreadsheet/ }).click()
+    }, 2)
     const files = Object.fromEntries(await Promise.all(downloads.map(async (d) => [d.suggestedFilename().replace(/-\d{4}-\d{2}-\d{2}/, ''), await text(d)])))
     expect(Object.keys(files).sort()).toEqual(['inventory-assets.csv', 'inventory-stock.csv'])
     expect(dataRows(files['inventory-assets.csv'])).toBe(12)
@@ -53,7 +59,11 @@ test.describe('Exports (source)', () => {
   })
 
   test('Tools > "All inventory Excel" downloads one workbook with an Assets and a Stock sheet', async ({ page }) => {
-    const [download] = await collect(page, () => toolsMenu(page, /All inventory Excel/), 1)
+    await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
+    const [download] = await collect(page, async () => {
+      await toolsMenu(page, 'All inventory')
+      await page.getByRole('button', { name: /Excel spreadsheet/ }).click()
+    }, 1)
     expect(download.suggestedFilename()).toMatch(/^inventory-\d{4}-\d{2}-\d{2}\.xlsx$/)
     const bytes = (await readFile((await download.path())!)).toString('latin1') // the writer stores parts uncompressed
     expect(bytes.startsWith('PK')).toBe(true)
@@ -65,13 +75,16 @@ test.describe('Exports (source)', () => {
   })
 
   test('Tools > Export Excel still exports the tickets', async ({ page }) => {
-    const [download] = await collect(page, () => toolsMenu(page, /Export Excel/), 1)
+    const [download] = await collect(page, () => toolsMenu(page, /Tickets · Excel/), 1)
     expect(download.suggestedFilename()).toMatch(/^tickets-\d{4}-\d{2}-\d{2}\.xlsx$/)
   })
 
   test('on the Inventory page, Tools > Export CSV exports the current tab', async ({ page }) => {
     await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
-    const [download] = await collect(page, () => toolsMenu(page, /^Export CSV/), 1)
+    const [download] = await collect(page, async () => {
+      await toolsMenu(page, 'Filtered assets/stock')
+      await page.getByRole('button', { name: /CSV spreadsheet/ }).click()
+    }, 1)
     expect(download.suggestedFilename()).toMatch(/^inventory-assets-/)
   })
 })
