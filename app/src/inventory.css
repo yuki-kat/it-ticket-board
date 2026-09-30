@@ -134,7 +134,7 @@
 .inventory-view-row .inventory-status { font-size:9px; }
 .inventory-group-empty { padding:18px; color:#91a3aa; font-size:10px; }
 @media (max-width:700px) { .inventory-split { grid-template-columns:1fr; }.inventory-split-list { max-height:240px; border-right:0; border-bottom:1px solid #e3ebed; }.inventory-split-detail { padding:20px; }.inventory-view-toolbar { flex-wrap:wrap; }.inventory-view-count { display:none; } }
-@media (max-width:800px) { .inventory-browser-tabs { align-items:stretch; flex-direction:column; gap:7px; }.inventory-browser-tab-scroll { width:100%; }.inventory-browser-tabs .saved-view-controls { justify-content:flex-end; margin-bottom:7px; } }
+@media (max-width:800px) { .inventory-browser-tabs { flex-wrap:nowrap; gap:7px; }.inventory-browser-tab-scroll { flex:1; min-width:0; }.inventory-browser-tabs .saved-view-controls { flex:none; } }
 @media (max-width:520px) { .inventory-more-views { flex:1; justify-content:flex-end; }.inventory-more-views span { display:none; }.inventory-more-views select { min-width:120px; max-width:150px; }.inventory-view-buttons button { padding:0 8px; font-size:10px; }.inventory-view-grid,.inventory-grouped { grid-template-columns:1fr; } }
 
 .inventory-split-options { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:0 0 10px; padding:10px 12px; border:1px solid #dce8ec; border-radius:8px; background:#f8fbfc; }
