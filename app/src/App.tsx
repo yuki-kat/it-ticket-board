@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, Mail, Menu, Moon, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, Moon, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import { AiSuggestFix } from './AiSuggestFix'
 import Overlay from './Overlay'
 import BackupSection from './BackupSection'
 import AccountSection from './AccountSection'
 import SyncBadge from './SyncBadge'
 import { useCloudSync } from './cloudSync'
+import { useAuth } from './contexts/AuthContext'
 import type { ListName, SyncLists, SyncRecord } from './syncLogic'
 import DebugPanel from './DebugPanel'
 import { debugLog } from './debug'
@@ -444,6 +445,7 @@ function loadTickets(): TicketItem[] {
  * - Accessibility: Full keyboard navigation and screen reader support
  */
 function App() {
+  const { logout } = useAuth()
   const [tickets, setTicketState] = useState<TicketItem[]>(loadTickets)
   const [assets, setAssetState] = useState<AssetItem[]>(loadAssets)
   const [stock, setStockState] = useState<StockItem[]>(loadStock)
@@ -590,6 +592,12 @@ function App() {
   useEffect(() => { localStorage.setItem(SAVED_TICKET_VIEWS_KEY, JSON.stringify(savedTicketViews)) }, [savedTicketViews])
   useEffect(() => { const interval = window.setInterval(() => setClock(Date.now()), 30_000); return () => window.clearInterval(interval) }, [])
   useEffect(() => { if (page !== 'new') setShowFormOptional(false) }, [page])
+  useEffect(() => {
+    if (page !== 'new') return
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setPage('board') }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [page])
   useEffect(() => {
     if (!showToolsMenu) return
     const handlePointerDown = (event: PointerEvent) => { if (!toolsMenuRef.current?.contains(event.target as Node)) setShowToolsMenu(false) }
@@ -930,6 +938,8 @@ function App() {
             <span className="header-tools-heading">DATA</span>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
+            <span className="header-tools-heading">ACCOUNT</span>
+            <button type="button" onClick={() => { setShowToolsMenu(false); logout() }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
           </div>}
         </div>
         {/* Inventory has its own Add asset / Add stock item button beside its heading. The new-task page is the form itself. */}
