@@ -47,17 +47,36 @@ test.describe('Dialogs (source)', () => {
 
 test.describe('Debug log (source)', () => {
   test('reports page changes by name, popups from every dialog, and Arrange', async ({ page }) => {
+    const testToken = await page.evaluate(() => {
+      const now = Math.floor(Date.now() / 1000)
+      return btoa(JSON.stringify({ sub: 'test-user', exp: now + 3600, iat: now }))
+    })
+    const testUser = { id: 'test-user', name: 'Test User', email: 'test@example.com' }
+    await page.addInitScript(({ token, user }) => {
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('auth_user', JSON.stringify(user))
+    }, { token: testToken, user: testUser })
     await page.goto('/index.html?debug')
     await expect(panel(page)).toBeVisible()
+    await goTo(page, 'Home')
     await goTo(page, 'Tickets')
     await expect(panel(page).locator('li.page', { hasText: 'home → board' })).toBeVisible()
-    await page.locator('.quick-settings-button').click()
+    await page.getByRole('button', { name: 'Customize home' }).click()
     await expect(panel(page).locator('li.popup', { hasText: 'opened: Settings' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(panel(page).locator('li.popup', { hasText: 'closed: Settings' })).toBeVisible()
   })
 
   test('shows errors', async ({ page }) => {
+    const testToken = await page.evaluate(() => {
+      const now = Math.floor(Date.now() / 1000)
+      return btoa(JSON.stringify({ sub: 'test-user', exp: now + 3600, iat: now }))
+    })
+    const testUser = { id: 'test-user', name: 'Test User', email: 'test@example.com' }
+    await page.addInitScript(({ token, user }) => {
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('auth_user', JSON.stringify(user))
+    }, { token: testToken, user: testUser })
     await page.goto('/index.html?debug')
     await expect(panel(page)).toBeVisible()
     await page.evaluate(() => { setTimeout(() => { throw new Error('test failure') }) })
@@ -65,6 +84,15 @@ test.describe('Debug log (source)', () => {
   })
 
   test('does not log the clicks made inside the log itself', async ({ page }) => {
+    const testToken = await page.evaluate(() => {
+      const now = Math.floor(Date.now() / 1000)
+      return btoa(JSON.stringify({ sub: 'test-user', exp: now + 3600, iat: now }))
+    })
+    const testUser = { id: 'test-user', name: 'Test User', email: 'test@example.com' }
+    await page.addInitScript(({ token, user }) => {
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('auth_user', JSON.stringify(user))
+    }, { token: testToken, user: testUser })
     await page.goto('/index.html?debug')
     await kpiCard(page, 'Open tickets').click()
     await page.keyboard.press('Escape')
@@ -74,6 +102,15 @@ test.describe('Debug log (source)', () => {
   })
 
   test('keeps at most 80 lines', async ({ page }) => {
+    const testToken = await page.evaluate(() => {
+      const now = Math.floor(Date.now() / 1000)
+      return btoa(JSON.stringify({ sub: 'test-user', exp: now + 3600, iat: now }))
+    })
+    const testUser = { id: 'test-user', name: 'Test User', email: 'test@example.com' }
+    await page.addInitScript(({ token, user }) => {
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('auth_user', JSON.stringify(user))
+    }, { token: testToken, user: testUser })
     await page.goto('/index.html?debug')
     for (let index = 0; index < 90; index++) await page.locator('.home-hero-kicker').click()
     await expect.poll(() => panel(page).locator('li').count()).toBeLessThanOrEqual(80)

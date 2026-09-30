@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openApp } from './helpers'
 
 // These run against the React source build (app/dist), not the compiled index.html.
 
 async function openInventory(page: Page) {
-  await page.goto('/index.html')
-  await expect(page.locator('.home-kpi-grid .home-kpi').first()).toBeVisible()
+  await openApp(page)
   await page.locator('.primary-nav button', { hasText: 'Inventory' }).click()
   await expect(page.locator('.inventory-table tbody tr').first()).toBeVisible()
 }

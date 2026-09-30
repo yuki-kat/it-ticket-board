@@ -114,7 +114,8 @@ test.describe('Home settings', () => {
   test.beforeEach(async ({ page }) => openApp(page))
 
   test('an extra insight card can be hidden and shown again', async ({ page }) => {
-    await page.locator('.quick-settings-button').click()
+    await page.getByRole('button', { name: 'Customize home' }).click()
+    await expect(page.locator('.settings-panel')).toBeVisible()
     const toggle = page.locator('[data-extra-insight-toggle="sla"] input')
     await expect(page.locator('[data-extra-insight-toggle="sla"]')).toHaveCount(1) // no duplicate toggles
     await toggle.uncheck()

@@ -63,7 +63,7 @@ test.describe('Operations insights (source)', () => {
 
 test.describe('Extra card switches (source)', () => {
   test('switches saved by the compiled page are picked up', async ({ page }) => {
-    await page.goto('/index.html')
+    await openApp(page)
     // What a browser that used the compiled page holds: the four original switches under the Home key,
     // and the extra cards' switches under their own key.
     await page.evaluate(() => {
@@ -80,9 +80,8 @@ test.describe('Extra card switches (source)', () => {
 
   test('a switch is remembered after a reload', async ({ page }) => {
     await openApp(page)
-    await page.locator('.quick-settings-button, .header-tools-trigger').first().click()
-    // Settings is reached from the Tools menu in the source, or the quick button on the page.
-    if (!(await page.locator('.settings-panel').count())) await page.getByRole('button', { name: /^Settings/ }).click()
+    await page.getByRole('button', { name: 'Customize home' }).click()
+    await expect(page.locator('.settings-panel')).toBeVisible()
     await page.locator('[data-extra-insight-toggle="escalation"] input').uncheck()
     await page.keyboard.press('Escape')
     await page.reload()
@@ -92,7 +91,7 @@ test.describe('Extra card switches (source)', () => {
   })
 
   test('with every card switched off Home says so', async ({ page }) => {
-    await page.goto('/index.html')
+    await openApp(page)
     await page.evaluate(() => localStorage.setItem('it-ticket-kanban-home-widgets-v1', JSON.stringify({ status: false, priority: false, intake: false, recent: false, sla: false, escalation: false, assignment: false, resolution: false })))
     await page.reload()
     await expect(page.getByText('No charts selected')).toBeVisible()

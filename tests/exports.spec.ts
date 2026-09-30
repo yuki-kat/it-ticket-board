@@ -1,10 +1,6 @@
 import { expect, test, type Download, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-
-async function openApp(page: Page) {
-  await page.goto('/index.html')
-  await expect(page.locator('.home-kpi-grid .home-kpi').first()).toBeVisible()
-}
+import { openApp } from './helpers'
 async function toolsMenu(page: Page, name: RegExp) {
   await page.locator('.header-tools-trigger').click()
   await page.getByRole('button', { name }).click()
