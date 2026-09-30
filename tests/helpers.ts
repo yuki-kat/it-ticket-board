@@ -2,8 +2,34 @@ import { expect, type Locator, type Page } from '@playwright/test'
 
 export type PageName = 'Home' | 'Tickets' | 'Inventory'
 
+/** Creates a valid JWT-like test token that can be parsed */
+function createTestToken() {
+  const payload = {
+    user_id: 'test-user',
+    email: 'test@example.com',
+    name: 'Test User',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 86400
+  }
+  // Create a simple JWT: header.payload.signature
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payloadB64 = btoa(JSON.stringify(payload))
+  const signature = 'test-signature'
+  return `${header}.${payloadB64}.${signature}`
+}
+
 /** Opens the app with a fresh browser profile, so the sample data is seeded from scratch. */
 export async function openApp(page: Page) {
+  // Set up test auth in localStorage before loading the page
+  const testToken = createTestToken()
+  const testUser = { id: 'test-user', name: 'Test User', email: 'test@example.com' }
+
+  // Inject auth directly into localStorage before page loads
+  await page.addInitScript(({ token, user }) => {
+    localStorage.setItem('auth_token', token)
+    localStorage.setItem('auth_user', JSON.stringify(user))
+  }, { token: testToken, user: testUser })
+
   await page.goto('/index.html')
   await expect(page.locator('.home-kpi-grid .home-kpi').first()).toBeVisible()
 }

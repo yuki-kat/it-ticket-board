@@ -103,7 +103,7 @@ test.describe('Arrange card (source)', () => {
 
 test.describe('Saved order (source)', () => {
   test('an order saved by the compiled page is used; unknown entries are ignored and missing cards go last', async ({ page }) => {
-    await page.goto('/index.html')
+    await openApp(page)
     await page.evaluate((key) => localStorage.setItem(key, JSON.stringify(['Recently created', 'sla', 'Not a card', 'Tickets by state'])), ORDER_KEY)
     await page.reload()
     await expect(page.locator('.home-chart-grid > .home-chart-card').first()).toBeVisible()
@@ -111,7 +111,7 @@ test.describe('Saved order (source)', () => {
   })
 
   test('a corrupt saved order falls back to the default', async ({ page }) => {
-    await page.goto('/index.html')
+    await openApp(page)
     await page.evaluate((key) => localStorage.setItem(key, '{not json'), ORDER_KEY)
     await page.reload()
     await expect(page.locator('.home-chart-grid > .home-chart-card').first()).toBeVisible()
@@ -119,7 +119,7 @@ test.describe('Saved order (source)', () => {
   })
 
   test('a card that is switched off keeps its place for when it comes back', async ({ page }) => {
-    await page.goto('/index.html')
+    await openApp(page)
     await page.evaluate(() => localStorage.setItem('it-ticket-kanban-home-widgets-v1', JSON.stringify({ intake: false })))
     await page.reload()
     await expect(page.locator('.home-chart-grid > .home-chart-card').first()).toBeVisible()
