@@ -8,8 +8,8 @@ const TICKETS = 'it-ticket-kanban-v1'
 const stored = (page: Page, key: string) => page.evaluate((k) => localStorage.getItem(k), key)
 
 async function openBackup(page: Page) {
-  await page.locator('.quick-settings-button').click()
-  await expect(page.locator('.backup-settings')).toBeVisible()
+  await page.getByRole('button', { name: 'Customize home' }).click()
+  await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible()
 }
 
 async function downloadFile(page: Page, selector = '[data-backup-download]') {
