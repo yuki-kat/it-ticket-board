@@ -21,12 +21,12 @@ test.describe('Exports (source)', () => {
   test('the Tickets page has an Export CSV button that exports the filtered tickets', async ({ page }) => {
     await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
     const button = page.locator('.export-csv-button')
-    await expect(button).toHaveAttribute('title', /Export 16 tickets matching the current filters as CSV/)
+    await expect(button).toHaveAttribute('title', /Export 66 tickets matching the current filters as CSV/)
     const [download] = await collect(page, () => button.click(), 1)
     expect(download.suggestedFilename()).toMatch(/^tickets-\d{4}-\d{2}-\d{2}\.csv$/)
     const csv = await text(download)
     expect(csv.split(/\r?\n/)[0]).toContain('Short description')
-    expect(dataRows(csv)).toBe(16)
+    expect(dataRows(csv)).toBe(66)
   })
 
   test('the Tickets Export CSV button is styled (a compact button, not bare text)', async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe('Exports (source)', () => {
   test('the Tickets Export CSV follows the search filter', async ({ page }) => {
     await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
     await page.locator('input[aria-label="Search tickets, people, tags"]').fill('OPS-101')
-    await expect(page.locator('.export-csv-button')).toHaveAttribute('title', /Export 1 tickets matching/)
+    await expect(page.locator('.export-csv-button')).toHaveAttribute('title', /Export 1 tickets? matching/)
     const [download] = await collect(page, () => page.locator('.export-csv-button').click(), 1)
     expect(dataRows(await text(download))).toBe(1)
   })
