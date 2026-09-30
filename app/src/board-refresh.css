@@ -182,7 +182,9 @@ h1 { margin-top: 5px; color: #173443; font-size: 29px; letter-spacing: -.04em; }
 .filter-field select,
 .board-filters select {
   height: 40px;
-  max-width: 190px;
+  max-width: 160px;
+  min-width: 120px;
+  flex: 1 1 120px;
   padding-inline: 11px 28px;
   background-color: #fbfcfd;
   border-color: #d9e3e8;
@@ -192,7 +194,8 @@ h1 { margin-top: 5px; color: #173443; font-size: 29px; letter-spacing: -.04em; }
 }
 
 .search-box {
-  width: 260px;
+  min-width: 200px;
+  flex: 1 1 200px;
   height: 40px;
   padding-inline: 11px;
   border-color: #d9e3e8;
