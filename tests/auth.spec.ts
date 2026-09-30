@@ -195,7 +195,8 @@ test.describe('Authentication', () => {
     // Wait for authenticated state
     await expect(page.locator('.home-kpi-grid')).toBeVisible({ timeout: 10000 })
 
-    // Logout
+    // Logout - click Tools menu first, then logout
+    await page.locator('.header-tools-trigger').click()
     const logoutButton = page.locator('button:has-text("Logout")')
     await logoutButton.click()
 
