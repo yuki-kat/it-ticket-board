@@ -50,6 +50,7 @@ test.describe('Inventory device health', () => {
   })
 
   test('the health filter offers every level', async ({ page }) => {
+    await page.locator('.inventory-filters-button').click()
     const options = await page.locator('.inventory-health-filter option').allInnerTexts()
     expect(options).toEqual(['All health', 'Healthy', 'Monitor', 'At Risk', 'Critical'])
   })
@@ -57,6 +58,7 @@ test.describe('Inventory device health', () => {
   test('filtering by At Risk lists the At Risk devices', async ({ page }) => {
     const atRisk = await page.locator('.inventory-health-badge', { hasText: 'At Risk' }).count()
     expect(atRisk).toBeGreaterThan(0)
+    await page.locator('.inventory-filters-button').click()
     await page.locator('.inventory-health-filter').selectOption('At Risk')
     await expect(page.locator('.inventory-table tbody tr')).toHaveCount(atRisk)
   })
