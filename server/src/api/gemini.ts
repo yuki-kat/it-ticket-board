@@ -65,10 +65,10 @@ router.post('/ai/gemini', async (req: AuthRequest, res: Response) => {
     );
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({})) as any;
+      const error = await response.json().catch(() => ({})) as Record<string, unknown>;
       console.error('Gemini API Error:', error);
       return res.status(response.status).json({
-        error: `Gemini API Error: ${error.error?.message || response.statusText}`
+        error: `Gemini API Error: ${(error.error as Record<string, unknown>)?.message || response.statusText}`
       });
     }
 
