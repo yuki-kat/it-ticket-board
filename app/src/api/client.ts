@@ -166,20 +166,16 @@ export async function postChatMessage(ticketId: string, content: string) {
   });
 }
 
-// AI Suggestions (powered by Gemini)
+// AI Suggestions (powered by Gemini via backend proxy)
 export async function getAISuggestions(_ticketId: string, ticket?: any) {
-  // Try Gemini first if available, fall back to mock data
   try {
     const { generateTicketSuggestions } = await import('./gemini');
-    const geminiConfig = localStorage.getItem('gemini_api_key');
-    if (geminiConfig || import.meta.env.VITE_GEMINI_API_KEY) {
-      const suggestions = await generateTicketSuggestions(
-        ticket?.title || 'Ticket',
-        ticket?.description || '',
-        ticket?.priority || 'medium'
-      );
-      return { success: true, suggestions, source: 'gemini' };
-    }
+    const suggestions = await generateTicketSuggestions(
+      ticket?.title || 'Ticket',
+      ticket?.description || '',
+      ticket?.priority || 'medium'
+    );
+    return { success: true, suggestions, source: 'gemini' };
   } catch (e) {
     console.warn('Gemini unavailable, using fallback suggestions:', e);
   }

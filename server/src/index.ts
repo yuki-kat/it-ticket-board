@@ -10,6 +10,7 @@ import queueRoutes from './api/queues.js';
 import slaRoutes from './api/sla.js';
 import emailRoutes from './api/email.js';
 import chatRoutes from './api/chat.js';
+import geminiRoutes from './api/gemini.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -34,6 +35,7 @@ app.use('/api', queueRoutes);
 app.use('/api', slaRoutes);
 app.use('/api', emailRoutes);
 app.use('/api', chatRoutes);
+app.use('/api', geminiRoutes);
 
 // WebSocket handlers
 io.on('connection', (socket) => {

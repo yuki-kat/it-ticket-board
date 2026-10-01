@@ -1,55 +1,18 @@
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
-import { getGeminiConfig, setGeminiConfig } from './api/gemini'
+import { X, CheckCircle, AlertCircle } from 'lucide-react'
+import { getGeminiConfig } from './api/gemini'
 
 interface GeminiSettingsProps {
   onClose: () => void
 }
 
 export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
-  const [apiKey, setApiKey] = useState('')
   const [isConfigured, setIsConfigured] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState('')
 
   useEffect(() => {
     const config = getGeminiConfig()
-    if (config.apiKey) {
-      setApiKey(config.apiKey.substring(0, 20) + '...')
-      setIsConfigured(true)
-    }
+    setIsConfigured(config.configured)
   }, [])
-
-  const handleSave = async () => {
-    if (!apiKey.trim()) {
-      setMessage('API key cannot be empty')
-      return
-    }
-
-    setIsSaving(true)
-    try {
-      setGeminiConfig({ apiKey: apiKey.trim() })
-      setMessage('Gemini API key saved successfully!')
-      setIsConfigured(true)
-
-      // Clear message after 3 seconds
-      setTimeout(() => {
-        setMessage('')
-        onClose()
-      }, 3000)
-    } catch (error) {
-      setMessage(`Error saving API key: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleReset = () => {
-    localStorage.removeItem('gemini_api_key')
-    setApiKey('')
-    setIsConfigured(false)
-    setMessage('Gemini API key removed')
-  }
 
   return (
     <div className="modal-dialog">
@@ -58,7 +21,7 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
           <div>
             <h2 className="modal-title">Gemini AI Settings</h2>
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0, marginTop: 'var(--spacing-xs)' }}>
-              Configure Google Gemini API for AI-powered features
+              Google Gemini API status and configuration
             </p>
           </div>
           <button
@@ -72,15 +35,47 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
 
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-            {/* Info Section */}
+            {/* Status Section */}
             <div style={{
               padding: 'var(--spacing-md)',
-              background: 'var(--color-primary-bg)',
+              background: isConfigured ? 'rgba(74, 155, 111, 0.1)' : 'rgba(201, 76, 70, 0.1)',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(26, 127, 126, 0.2)'
+              border: `1px solid ${isConfigured ? 'rgba(74, 155, 111, 0.3)' : 'rgba(201, 76, 70, 0.3)'}`,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 'var(--spacing-md)'
             }}>
-              <h3 style={{ margin: 0, marginBottom: 'var(--spacing-sm)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-primary)' }}>
-                How to get your API key
+              {isConfigured ? (
+                <>
+                  <CheckCircle size={20} style={{ color: 'var(--color-accent-green)', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-accent-green)' }}>
+                      Gemini API Configured
+                    </h3>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
+                      Your server has been configured with a Gemini API key. AI features are active and ready to use.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AlertCircle size={20} style={{ color: 'var(--color-accent-red)', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-accent-red)' }}>
+                      Gemini API Not Configured
+                    </h3>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
+                      Set the GEMINI_API_KEY environment variable on your server to enable AI features.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Info Section */}
+            <div>
+              <h3 style={{ margin: 0, marginBottom: 'var(--spacing-sm)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+                How to configure Gemini API
               </h3>
               <ol style={{
                 margin: 0,
@@ -91,38 +86,10 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
               }}>
                 <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>Google AI Studio</a></li>
                 <li>Click "Create API Key"</li>
-                <li>Copy the API key and paste it below</li>
+                <li>Set the <code>GEMINI_API_KEY</code> environment variable on your server</li>
+                <li>Restart the server for changes to take effect</li>
               </ol>
             </div>
-
-            {/* API Key Input */}
-            <div className="form-field">
-              <label>Gemini API Key</label>
-              <input
-                type="password"
-                placeholder={isConfigured ? 'API key is configured' : 'Paste your Gemini API key here'}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                disabled={isSaving}
-              />
-              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', margin: 0, marginTop: 'var(--spacing-xs)' }}>
-                Your API key is stored locally in your browser and never sent to our servers.
-              </p>
-            </div>
-
-            {/* Status Message */}
-            {message && (
-              <div style={{
-                padding: 'var(--spacing-md)',
-                borderRadius: 'var(--radius-md)',
-                background: message.includes('Error') ? 'rgba(201, 76, 70, 0.1)' : 'rgba(74, 155, 111, 0.1)',
-                color: message.includes('Error') ? 'var(--color-accent-red)' : 'var(--color-accent-green)',
-                fontSize: 'var(--font-size-sm)',
-                border: `1px solid ${message.includes('Error') ? 'rgba(201, 76, 70, 0.3)' : 'rgba(74, 155, 111, 0.3)'}`
-              }}>
-                {message}
-              </div>
-            )}
 
             {/* Features Info */}
             <div>
@@ -143,32 +110,28 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
                 <li>SLA recommendations</li>
               </ul>
             </div>
+
+            {/* Security Note */}
+            <div style={{
+              padding: 'var(--spacing-md)',
+              background: 'var(--color-bg-subtle)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-border)',
+              fontSize: 'var(--font-size-xs)',
+              color: 'var(--color-text-secondary)',
+              lineHeight: '1.6'
+            }}>
+              <strong>Security:</strong> Your API key is stored securely on the server and never exposed to the client. All Gemini requests are proxied through the backend.
+            </div>
           </div>
         </div>
 
         <div className="modal-footer">
-          {isConfigured && (
-            <button
-              className="form-button danger"
-              onClick={handleReset}
-              disabled={isSaving}
-            >
-              Remove Key
-            </button>
-          )}
-          <button
-            className="form-button secondary"
-            onClick={onClose}
-            disabled={isSaving}
-          >
-            Cancel
-          </button>
           <button
             className="form-button primary"
-            onClick={handleSave}
-            disabled={isSaving || !apiKey.trim()}
+            onClick={onClose}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            Close
           </button>
         </div>
       </div>

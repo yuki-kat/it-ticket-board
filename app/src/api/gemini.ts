@@ -1,25 +1,24 @@
 /**
  * Gemini API Client
- * Integrates Google's Generative AI for ticket analysis, suggestions, and chat
+ * Proxies requests through backend endpoint for secure server-side API key handling
  */
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-const GEMINI_MODEL = 'gemini-1.5-flash';
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const API_BASE = 'http://localhost:3001/api';
 
 export interface GeminiConfig {
-  apiKey: string;
+  configured: boolean;
 }
 
 export function setGeminiConfig(config: GeminiConfig) {
-  if (config.apiKey) {
-    localStorage.setItem('gemini_api_key', config.apiKey);
+  // No longer needed - API key is server-side only
+  if (config.configured) {
+    localStorage.setItem('gemini_configured', 'true');
   }
 }
 
 export function getGeminiConfig(): GeminiConfig {
-  const apiKey = GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || '';
-  return { apiKey };
+  const configured = localStorage.getItem('gemini_configured') === 'true';
+  return { configured };
 }
 
 interface GeminiMessage {
@@ -40,50 +39,32 @@ interface GeminiRequest {
   };
 }
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{ text: string }>;
-      role: string;
-    };
-    finishReason: string;
-    index: number;
-  }>;
-  usageMetadata: {
-    promptTokenCount: number;
-    candidatesTokenCount: number;
-    totalTokenCount: number;
-  };
-}
 
 async function callGeminiAPI(request: GeminiRequest): Promise<string> {
-  const config = getGeminiConfig();
-  if (!config.apiKey) {
-    throw new Error('Gemini API key not configured. Set VITE_GEMINI_API_KEY environment variable or configure in settings.');
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    throw new Error('Not authenticated');
   }
 
-  const response = await fetch(
-    `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${config.apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    }
-  );
+  const response = await fetch(`${API_BASE}/ai/gemini`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(`Gemini API Error: ${error.error?.message || response.statusText}`);
+    throw new Error(`Server Error: ${error.error || response.statusText}`);
   }
 
-  const data = (await response.json()) as GeminiResponse;
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
+  const data = await response.json() as { text: string };
+  if (!data.text) {
     throw new Error('No response from Gemini API');
   }
-  return text;
+  return data.text;
 }
 
 /**
