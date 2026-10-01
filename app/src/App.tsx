@@ -28,6 +28,7 @@ import { exportXlsx } from './lib/exportXlsx'
 import SearchPage from './SearchPage'
 import './search.css'
 import { useTicketSummary, useDescriptionAssist, useWorkNotesSuggestions, useQueueAssist, usePriorityAssist } from './useGemini'
+import GeminiSettings from './GeminiSettings'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -521,6 +522,7 @@ function App() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [showReports, setShowReports] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showGeminiSettings, setShowGeminiSettings] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
       const saved = localStorage.getItem('it-ticket-kanban-theme')
@@ -939,6 +941,7 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
             <span className="header-tools-heading">ACCOUNT</span>
+            <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>Gemini AI Settings<small>Configure API key</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); logout() }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
           </div>}
         </div>
@@ -1011,6 +1014,7 @@ function App() {
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
+    {showGeminiSettings && <GeminiSettings onClose={() => setShowGeminiSettings(false)} />}
 
     {showDeleted && <Overlay onClose={() => setShowDeleted(false)}><section className="matrix-panel deleted-panel" role="dialog" aria-modal="true" aria-labelledby="deleted-title"><div className="panel-header"><div><div className="eyebrow">RECOVERABLE ITEMS</div><h2 id="deleted-title">Deleted tasks</h2></div><button className="close-button" onClick={() => setShowDeleted(false)} aria-label="Close deleted tasks"><X size={19} /></button></div><p className="panel-intro">Removed cards are stored here in this browser. Restore a task to put it back on the board.</p>{deletedTickets.length ? <div className="deleted-list">{deletedTickets.map((ticket) => <article className="deleted-item" key={ticket.id}><div><b>{ticket.id}</b><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span><h3>{ticket.title}</h3><p>{ticket.recordType} · Deleted {new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.deletedAt))}</p><small>Created by {ticket.createdBy || 'Not recorded'}</small></div><button className="restore-button" onClick={() => restore(ticket.id)}><RotateCcw size={14} /> Restore</button></article>)}</div> : <div className="deleted-empty"><Trash2 size={22} /><b>Nothing in Deleted</b><span>Removed tasks will appear here and can be restored.</span></div>}</section></Overlay>}
 

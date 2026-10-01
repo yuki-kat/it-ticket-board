@@ -1,0 +1,245 @@
+/* Design System: IT Ticket Board - Modern, Professional, Operational */
+
+:root {
+  /* Color Palette */
+  --color-primary: #1a7f7e;        /* Teal - primary actions, status indicators */
+  --color-primary-light: #2a9f9e;  /* Lighter teal for hover states */
+  --color-primary-dark: #0f5f5e;   /* Darker teal for active states */
+  --color-primary-bg: #f0fffe;     /* Very light teal background */
+
+  --color-accent-warm: #d97757;    /* Warm orange-brown for alerts/escalation */
+  --color-accent-red: #c94c46;     /* Red for critical/failed states */
+  --color-accent-green: #4a9b6f;   /* Green for success/resolved */
+  --color-accent-amber: #d4a036;   /* Amber for warnings/pending */
+
+  --color-neutral-white: #ffffff;  /* Pure white for cards and content */
+  --color-neutral-bg: #f8f9f8;     /* Subtle off-white background */
+  --color-neutral-light: #f0f1f0;  /* Light gray for secondary surfaces */
+  --color-neutral-border: #e2e6e4; /* Borders and dividers */
+  --color-neutral-line: #d9dcd9;   /* Subtle lines */
+
+  --color-text-primary: #1a2b2f;   /* Main text */
+  --color-text-secondary: #5a6b6f; /* Secondary text */
+  --color-text-tertiary: #8a9b9f;  /* Tertiary/muted text */
+
+  /* Typography */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-family-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 28px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.3;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(26, 43, 47, 0.06);
+  --shadow-md: 0 2px 6px rgba(26, 43, 47, 0.08);
+  --shadow-lg: 0 4px 12px rgba(26, 43, 47, 0.12);
+  --shadow-xl: 0 8px 24px rgba(26, 43, 47, 0.16);
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-neutral-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+h1 {
+  font-size: var(--font-size-3xl);
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* Links */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Form Elements */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font-family-base);
+}
+
+/* Focus Styles */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Utility Classes */
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.text-sm {
+  font-size: var(--font-size-sm);
+}
+
+.text-xs {
+  font-size: var(--font-size-xs);
+}
+
+.font-medium {
+  font-weight: var(--font-weight-medium);
+}
+
+.font-semibold {
+  font-weight: var(--font-weight-semibold);
+}
+
+.font-bold {
+  font-weight: var(--font-weight-bold);
+}
+
+.bg-white {
+  background: var(--color-neutral-white);
+}
+
+.bg-neutral {
+  background: var(--color-neutral-bg);
+}
+
+.border {
+  border: 1px solid var(--color-neutral-border);
+}
+
+.rounded-sm {
+  border-radius: var(--radius-sm);
+}
+
+.rounded-md {
+  border-radius: var(--radius-md);
+}
+
+.rounded-lg {
+  border-radius: var(--radius-lg);
+}
+
+.shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+/* Status Colors */
+.status-open {
+  color: var(--color-primary);
+}
+
+.status-in-progress {
+  color: var(--color-accent-amber);
+}
+
+.status-resolved {
+  color: var(--color-accent-green);
+}
+
+.status-critical {
+  color: var(--color-accent-red);
+}
+
+.status-escalated {
+  color: var(--color-accent-warm);
+}
