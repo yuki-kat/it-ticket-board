@@ -131,7 +131,7 @@ Please analyze this ticket and provide AI suggestions.`;
  * Generate chat response for ticket communication
  */
 export async function generateChatResponse(
-  ticketTitle: string,
+  _ticketTitle: string,
   userMessage: string,
   conversationContext: Array<{ role: string; content: string }>
 ): Promise<string> {

@@ -167,7 +167,7 @@ export async function postChatMessage(ticketId: string, content: string) {
 }
 
 // AI Suggestions (powered by Gemini)
-export async function getAISuggestions(ticketId: string, ticket?: any) {
+export async function getAISuggestions(_ticketId: string, ticket?: any) {
   // Try Gemini first if available, fall back to mock data
   try {
     const { generateTicketSuggestions } = await import('./gemini');
