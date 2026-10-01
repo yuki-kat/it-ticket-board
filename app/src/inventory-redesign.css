@@ -1,0 +1,463 @@
+/* Inventory Page Redesign - Asset & Stock Management */
+
+/* Page Container */
+.inventory-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Inventory Header */
+.inventory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-neutral-border);
+  flex-wrap: wrap;
+}
+
+.inventory-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.inventory-title h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.inventory-tabs {
+  display: flex;
+  gap: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-neutral-border);
+  margin-bottom: var(--spacing-md);
+}
+
+.inventory-tab {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: var(--font-size-sm);
+}
+
+.inventory-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.inventory-tab:hover {
+  color: var(--color-primary);
+}
+
+/* Toolbar */
+.inventory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  padding: var(--spacing-md);
+  background: var(--color-neutral-light);
+  border-radius: var(--radius-lg);
+}
+
+.inventory-controls {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inventory-search {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-neutral-white);
+  border: 1px solid var(--color-neutral-border);
+  border-radius: var(--radius-md);
+  flex: 1;
+  min-width: 200px;
+}
+
+.inventory-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  min-width: 0;
+}
+
+.inventory-search input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.view-mode-switcher {
+  display: flex;
+  gap: var(--spacing-xs);
+  background: var(--color-neutral-white);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-border);
+}
+
+.view-mode-btn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.view-mode-btn.active {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Asset/Stock List */
+.inventory-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.asset-list,
+.stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.asset-row,
+.stock-row {
+  display: grid;
+  grid-template-columns: 200px 150px 150px 1fr 80px;
+  gap: var(--spacing-md);
+  align-items: center;
+  padding: var(--spacing-md);
+  background: var(--color-neutral-white);
+  border: 1px solid var(--color-neutral-border);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.asset-row:hover,
+.stock-row:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  background: var(--color-primary-bg);
+}
+
+.asset-name,
+.stock-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asset-category,
+.stock-category {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding: 4px 8px;
+  background: var(--color-neutral-light);
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.asset-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+.asset-status.available {
+  background: rgba(74, 155, 111, 0.1);
+  color: var(--color-accent-green);
+}
+
+.asset-status.assigned {
+  background: rgba(26, 127, 126, 0.1);
+  color: var(--color-primary);
+}
+
+.asset-status.in-repair {
+  background: rgba(212, 160, 54, 0.1);
+  color: var(--color-accent-amber);
+}
+
+.asset-status.retired,
+.asset-status.lost {
+  background: rgba(201, 76, 70, 0.1);
+  color: var(--color-accent-red);
+}
+
+.stock-quantity {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.stock-quantity.low {
+  color: var(--color-accent-amber);
+}
+
+.stock-quantity.critical {
+  color: var(--color-accent-red);
+}
+
+.asset-health {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.asset-health.healthy {
+  background: var(--color-accent-green);
+}
+
+.asset-health.monitor {
+  background: var(--color-accent-amber);
+}
+
+.asset-health.at-risk {
+  background: var(--color-accent-warm);
+}
+
+.asset-health.critical {
+  background: var(--color-accent-red);
+}
+
+.row-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.asset-row:hover .row-actions,
+.stock-row:hover .row-actions {
+  opacity: 1;
+}
+
+.row-action-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.row-action-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-neutral-light);
+}
+
+/* Asset Card View */
+.asset-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.asset-card {
+  background: var(--color-neutral-white);
+  border: 1px solid var(--color-neutral-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.asset-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.asset-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.asset-card-title {
+  flex: 1;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-normal);
+}
+
+.asset-card-status {
+  display: flex;
+  align-items: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.asset-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-neutral-border);
+}
+
+.asset-card-meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.asset-card-meta-label {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Health Status Indicator */
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.health-badge.healthy {
+  background: rgba(74, 155, 111, 0.1);
+  color: var(--color-accent-green);
+}
+
+.health-badge.monitor {
+  background: rgba(212, 160, 54, 0.1);
+  color: var(--color-accent-amber);
+}
+
+.health-badge.at-risk {
+  background: rgba(217, 119, 87, 0.1);
+  color: var(--color-accent-warm);
+}
+
+.health-badge.critical {
+  background: rgba(201, 76, 70, 0.1);
+  color: var(--color-accent-red);
+}
+
+/* Empty State */
+.inventory-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  min-height: 300px;
+  border: 2px dashed var(--color-neutral-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: var(--spacing-2xl);
+}
+
+.inventory-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-neutral-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-tertiary);
+}
+
+.inventory-empty p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .asset-row,
+  .stock-row {
+    grid-template-columns: 150px 120px 1fr 60px;
+  }
+
+  .inventory-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inventory-search {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .inventory-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .asset-row,
+  .stock-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .asset-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .view-mode-switcher {
+    width: 100%;
+    justify-content: center;
+  }
+}
