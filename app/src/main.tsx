@@ -1,5 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// Modern design system - establishes color tokens and typography
+import './design-system.css'
+import './layout-redesign.css'
+// Legacy styles (will be gradually replaced)
 import './index.css'
 import './board-refresh.css'
 import './inventory.css'
