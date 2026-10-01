@@ -18,7 +18,6 @@ import './quick-settings.css'
 import './screen-pattern.css'
 import { PopoutActions, TicketPopout } from './HomePopouts'
 import ExplorePage, { type ExploreQueue } from './ExplorePage'
-import SignInPage from './SignInPage'
 import { parseRoute, routeHash, type ExploreKey, type PageId } from './route'
 import { ArrangeInsight, InsightCard, InsightDetail, loadInsightOrder, moveInsight, saveInsightOrder, type DetailKey, type InsightContext, type InsightKey } from './HomeInsights'
 import InventoryPage, { exportAllInventory, loadAssets, loadStock, saveAssets, saveStock, type AssetItem, type InventoryCommand, type StockItem } from './InventoryPage'
@@ -907,7 +906,8 @@ function App() {
 
   if (standaloneTicketId) return standaloneTicket ? <TicketRecordPage ticket={standaloneTicket} now={clock} /> : <div className="record-page-shell"><div className="record-not-found"><Ticket size={24} /><h1>Ticket not found</h1><p>The requested ticket is not available in this browser.</p><a href={window.location.href.split('#')[0]}>Return to home</a></div></div>
 
-  if (page === 'signin') return <SignInPage onSignIn={() => setPage('home')} />
+  // Sign-in disabled for demo - direct access enabled
+  // if (page === 'signin') return <SignInPage onSignIn={() => setPage('home')} />
 
   return <div className={`app-shell view-${cardSize}`}>
     <header className="topbar">
