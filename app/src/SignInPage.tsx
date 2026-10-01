@@ -25,6 +25,7 @@ export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
         console.log('Login completed, result:', result)
       }
       onSignIn()
+      window.location.reload()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Authentication failed'
       console.error('Auth error:', msg, err)
