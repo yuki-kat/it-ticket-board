@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
+
+router.use(authMiddleware);
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = 'gemini-3.8-flash';
@@ -50,18 +53,19 @@ router.post('/ai/gemini', async (req: AuthRequest, res: Response) => {
     const geminiRequest: GeminiRequest = req.body;
 
     const response = await fetch(
-      `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GEMINI_API_KEY}`,
         },
         body: JSON.stringify(geminiRequest),
       }
     );
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = await response.json().catch(() => ({})) as any;
       console.error('Gemini API Error:', error);
       return res.status(response.status).json({
         error: `Gemini API Error: ${error.error?.message || response.statusText}`
