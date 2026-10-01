@@ -6,7 +6,7 @@ const router = Router();
 router.use(authMiddleware);
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.8-flash';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 interface GeminiRequest {
@@ -53,11 +53,12 @@ router.post('/ai/gemini', async (req: AuthRequest, res: Response) => {
     const geminiRequest: GeminiRequest = req.body;
 
     const response = await fetch(
-      `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GEMINI_API_KEY}`,
         },
         body: JSON.stringify(geminiRequest),
       }

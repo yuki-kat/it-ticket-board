@@ -41,16 +41,10 @@ interface GeminiRequest {
 
 
 async function callGeminiAPI(request: GeminiRequest): Promise<string> {
-  const token = localStorage.getItem('auth_token');
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
   const response = await fetch(`${API_BASE}/ai/gemini`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(request),
   });
