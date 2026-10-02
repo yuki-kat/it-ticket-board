@@ -235,9 +235,11 @@ export function useGeminiAvailable() {
 
   useEffect(() => {
     if (state === 'loading') {
+      let mounted = true;
       const checkAvailability = async () => {
         try {
           const response = await fetch('/api/check-gemini');
+          if (!mounted) return;
           if (response.ok) {
             const data = await response.json() as { available: boolean };
             setState(data.available ? 'available' : 'unavailable');
@@ -246,10 +248,11 @@ export function useGeminiAvailable() {
             setState('unavailable');
           }
         } catch {
-          setState('unavailable');
+          if (mounted) setState('unavailable');
         }
       };
       checkAvailability();
+      return () => { mounted = false; };
     }
   }, [state]);
 
