@@ -6,7 +6,7 @@ import Overlay from './Overlay'
 import BackupSection from './BackupSection'
 import AccountSection from './AccountSection'
 import SyncBadge from './SyncBadge'
-import { useCloudSync } from './cloudSync'
+import { useCloudSync, startSync } from './cloudSync'
 import { useAuth } from './contexts/AuthContext'
 import type { ListName, SyncLists, SyncRecord } from './syncLogic'
 import DebugPanel from './DebugPanel'
@@ -470,6 +470,15 @@ function App() {
     else setStockState(apply)
   }, [])
   useCloudSync(syncLists, replaceSynced)
+
+  // Auto-start cloud sync when user is authenticated to Supabase
+  const { isCloudUser, workspace, user } = useAuth()
+  useEffect(() => {
+    if (isCloudUser && workspace && user) {
+      void startSync(workspace, user.id, 'upload')
+    }
+  }, [isCloudUser, workspace, user?.id])
+
   const [query, setQuery] = useState('')
   const [ticketWorkspace, setTicketWorkspace] = useState<TicketWorkspace>(loadTicketWorkspace)
   const [ticketWorkspaceReady, setTicketWorkspaceReady] = useState(false)
