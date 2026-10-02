@@ -1,10 +1,27 @@
 // Check if Gemini API is configured on the server
 export async function OPTIONS(request: Request) {
+  const origin = request.headers.get('origin')
   const host = request.headers.get('host') || ''
+
+  if (origin) {
+    try {
+      const originUrl = new URL(origin)
+      const hostWithoutPort = host.split(':')[0]
+      const originHostWithoutPort = originUrl.hostname
+
+      // Only allow if origin hostname matches request host hostname
+      if (originHostWithoutPort !== hostWithoutPort) {
+        return new Response(null, { status: 403 })
+      }
+    } catch {
+      return new Response(null, { status: 403 })
+    }
+  }
+
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': host,
+      'Access-Control-Allow-Origin': origin || '',
       'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
@@ -40,7 +57,7 @@ export async function GET(request: Request) {
   return Response.json({ available }, {
     headers: {
       'Cache-Control': 'no-store',
-      'Access-Control-Allow-Origin': host,
+      'Access-Control-Allow-Origin': origin || '',
       'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
