@@ -53,12 +53,11 @@ router.post('/ai/gemini', async (req: AuthRequest, res: Response) => {
     const geminiRequest: GeminiRequest = req.body;
 
     const response = await fetch(
-      `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent`,
+      `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GEMINI_API_KEY}`,
         },
         body: JSON.stringify(geminiRequest),
       }
