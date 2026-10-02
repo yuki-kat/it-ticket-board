@@ -473,14 +473,11 @@ function App() {
 
   // Auto-start cloud sync when user is authenticated to Supabase
   const { isCloudUser, workspace, user } = useAuth()
-  const syncStartedRef = useRef(false)
   useEffect(() => {
     if (isCloudUser && workspace && user) {
       void startSync(workspace, user.id, 'upload')
-      syncStartedRef.current = true
       return () => stopSync('user logged out')
     }
-    syncStartedRef.current = false
   }, [isCloudUser, workspace, user])
 
   const [query, setQuery] = useState('')
