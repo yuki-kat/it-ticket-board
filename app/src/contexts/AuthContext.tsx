@@ -64,17 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setToken(existingToken);
             setUser(existingUser);
           } else {
-            setToken(DEFAULT_TOKEN);
-            setUser(DEFAULT_USER);
+            setToken(null);
+            setUser(null);
           }
           setWorkspace(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        // Fallback to demo mode on error
+        // Fall back to an unauthenticated local session on error
         setIsCloudUser(false);
-        setToken(DEFAULT_TOKEN);
-        setUser(DEFAULT_USER);
+        setToken(null);
+        setUser(null);
       } finally {
         setLoading(false);
       }
