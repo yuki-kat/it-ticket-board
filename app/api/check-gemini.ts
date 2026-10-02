@@ -1,4 +1,39 @@
 // Check if Gemini API is configured on the server
+export async function OPTIONS(request: Request) {
+  const origin = request.headers.get('origin')
+  const host = request.headers.get('host') || ''
+
+  if (origin) {
+    try {
+      const originUrl = new URL(origin)
+      const hostWithoutPort = host.split(':')[0]
+      const originHostWithoutPort = originUrl.hostname
+
+      // Only allow if origin hostname matches request host hostname
+      if (originHostWithoutPort !== hostWithoutPort) {
+        return new Response(null, { status: 403 })
+      }
+    } catch {
+      return new Response(null, { status: 403 })
+    }
+  }
+
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin
+  }
+
+  return new Response(null, {
+    status: 204,
+    headers,
+  })
+}
+
 export async function GET(request: Request) {
   // Validate origin for CORS: allow same-origin requests or configured origins
   const origin = request.headers.get('origin')
@@ -24,5 +59,17 @@ export async function GET(request: Request) {
 
   const apiKey = process.env.GEMINI_API_KEY
   const available = !!apiKey
-  return Response.json({ available }, { headers: { 'Cache-Control': 'no-store' } })
+
+  const headers: Record<string, string> = {
+    'Cache-Control': 'no-store',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin
+  }
+
+  return Response.json({ available }, { headers })
 }

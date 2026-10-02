@@ -6,7 +6,7 @@ import Overlay from './Overlay'
 import BackupSection from './BackupSection'
 import AccountSection from './AccountSection'
 import SyncBadge from './SyncBadge'
-import { useCloudSync, startSync } from './cloudSync'
+import { useCloudSync, startSync, stopSync } from './cloudSync'
 import { useAuth } from './contexts/AuthContext'
 import type { ListName, SyncLists, SyncRecord } from './syncLogic'
 import DebugPanel from './DebugPanel'
@@ -477,7 +477,12 @@ function App() {
     if (isCloudUser && workspace && user) {
       void startSync(workspace, user.id, 'upload')
     }
-  }, [isCloudUser, workspace, user?.id])
+    return () => {
+      if (!isCloudUser) {
+        stopSync('user logged out')
+      }
+    }
+  }, [isCloudUser, workspace, user])
 
   const [query, setQuery] = useState('')
   const [ticketWorkspace, setTicketWorkspace] = useState<TicketWorkspace>(loadTicketWorkspace)
