@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setWorkspace(ws);
           }
         } else {
-          // No cloud session - use demo mode
+          // Local boards work without a signed-in user.
           setIsCloudUser(false);
           const existingToken = api.getAuthToken();
           const existingUser = api.getAuthUser();
@@ -64,17 +64,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setToken(existingToken);
             setUser(existingUser);
           } else {
-            setToken(DEFAULT_TOKEN);
-            setUser(DEFAULT_USER);
+            setToken(null);
+            setUser(null);
           }
           setWorkspace(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        // Fallback to demo mode on error
+        // Keep the local board available when authentication is unavailable.
         setIsCloudUser(false);
-        setToken(DEFAULT_TOKEN);
-        setUser(DEFAULT_USER);
+        setToken(null);
+        setUser(null);
+        setWorkspace(null);
       } finally {
         setLoading(false);
       }
