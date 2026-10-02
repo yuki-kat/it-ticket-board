@@ -234,24 +234,27 @@ export function useGeminiAvailable() {
   });
 
   useEffect(() => {
-    const checkAvailability = async () => {
-      try {
-        const response = await fetch('/api/check-gemini');
-        if (response.ok) {
-          const data = await response.json() as { available: boolean };
-          setState(data.available ? 'available' : 'unavailable');
-          localStorage.setItem('gemini-available', JSON.stringify(data.available));
-        } else {
-          setState('unavailable');
-        }
-      } catch {
-        setState('unavailable');
-      }
-    };
     if (state === 'loading') {
+      let mounted = true;
+      const checkAvailability = async () => {
+        try {
+          const response = await fetch('/api/check-gemini');
+          if (!mounted) return;
+          if (response.ok) {
+            const data = await response.json() as { available: boolean };
+            setState(data.available ? 'available' : 'unavailable');
+            localStorage.setItem('gemini-available', JSON.stringify(data.available));
+          } else {
+            setState('unavailable');
+          }
+        } catch {
+          if (mounted) setState('unavailable');
+        }
+      };
       checkAvailability();
+      return () => { mounted = false; };
     }
-  }, []);
+  }, [state]);
 
   return state === 'available';
 }
