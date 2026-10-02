@@ -5,6 +5,17 @@
 
 const API_BASE = '/api';
 
+// Escape XML special characters to prevent prompt injection
+const escapeXml = (str: string): string => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+};
+
 export interface GeminiConfig {
   configured: boolean;
 }
@@ -97,10 +108,10 @@ export async function generateTicketSuggestions(
 Keep responses concise and actionable.`;
 
   const userMessage = `
-Queue: ${queue || 'General'}
-Priority: ${priority}
-Title: ${title}
-Description: ${description}
+Queue: ${escapeXml(queue || 'General')}
+Priority: ${escapeXml(priority)}
+Title: ${escapeXml(title)}
+Description: ${escapeXml(description)}
 
 Please analyze this ticket and provide AI suggestions.`;
 
@@ -135,11 +146,11 @@ Be professional, concise, and provide clear solutions. Stay focused on the ticke
   const contents: GeminiMessage[] = [
     ...conversationContext.map((msg) => ({
       role: (msg.role === 'user' ? 'user' : 'model') as 'user' | 'model',
-      parts: [{ text: msg.content }],
+      parts: [{ text: escapeXml(msg.content) }],
     })),
     {
       role: 'user',
-      parts: [{ text: userMessage }],
+      parts: [{ text: escapeXml(userMessage) }],
     },
   ];
 
@@ -171,10 +182,10 @@ export async function analyzeAssetHealth(
 Keep recommendations practical and actionable.`;
 
   const userMessage = `
-Asset: ${assetName}
-Type: ${assetType}
-Health Status: ${health}
-Reported Issues: ${issues.join(', ') || 'None'}
+Asset: ${escapeXml(assetName)}
+Type: ${escapeXml(assetType)}
+Health Status: ${escapeXml(health)}
+Reported Issues: ${issues.map(escapeXml).join(', ') || 'None'}
 
 Please analyze the health status and provide recommendations.`;
 
@@ -208,7 +219,7 @@ export async function summarizeTickets(
 Keep the summary concise but comprehensive.`;
 
   const ticketList = tickets
-    .map((t, i) => `${i + 1}. [${t.priority}] ${t.title}\n   ${t.description}`)
+    .map((t, i) => `${i + 1}. [${escapeXml(t.priority)}] ${escapeXml(t.title)}\n   ${escapeXml(t.description)}`)
     .join('\n\n');
 
   const userMessage = `Please analyze these tickets:\n\n${ticketList}`;
@@ -247,7 +258,7 @@ export async function generateQueueInsights(
 Keep insights data-driven and specific.`;
 
   const userMessage = `
-Queue: ${queueName}
+Queue: ${escapeXml(queueName)}
 Total Tickets: ${totalTickets}
 Resolved: ${resolvedTickets}
 Pending: ${pendingTickets}
@@ -288,11 +299,11 @@ export async function generateSLARecommendations(
 Base recommendations on industry best practices and the data provided.`;
 
   const historicalSummary = historicalData
-    .map((d) => `${d.priority}: ${d.avgTime} minutes`)
+    .map((d) => `${escapeXml(d.priority)}: ${d.avgTime} minutes`)
     .join('\n');
 
   const userMessage = `
-Queue: ${queueName}
+Queue: ${escapeXml(queueName)}
 Average First Response Time: ${averageFirstResponseTime} minutes
 Average Resolution Time: ${averageResolutionTime} minutes
 
