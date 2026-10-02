@@ -28,7 +28,19 @@ const responseSchema = {
 export async function POST(request: Request) {
   // Only the board itself may use this endpoint, so other sites can't spend the Gemini quota.
   const origin = request.headers.get('origin')
-  if (origin && new URL(origin).host !== request.headers.get('host')) return json({ error: 'Not allowed.' }, 403)
+  if (origin) {
+    try {
+      const host = request.headers.get('host') || ''
+      const originUrl = new URL(origin)
+      const hostWithoutPort = host.split(':')[0]
+      const originHostWithoutPort = originUrl.hostname
+      if (originHostWithoutPort !== hostWithoutPort) {
+        return json({ error: 'Not allowed.' }, 403)
+      }
+    } catch {
+      return json({ error: 'Not allowed.' }, 403)
+    }
+  }
 
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) return json({ error: 'AI suggestions are not set up on this site (GEMINI_API_KEY is missing).' }, 500)
