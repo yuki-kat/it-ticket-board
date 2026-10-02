@@ -2,9 +2,11 @@ import { useState, useCallback, useEffect } from 'react';
 import { callGeminiWithPrompt } from './api/gemini';
 
 export class GeminiError extends Error {
-  constructor(message: string, public code?: string) {
+  code?: string;
+  constructor(message: string, code?: string) {
     super(message);
     this.name = 'GeminiError';
+    this.code = code;
   }
 }
 
