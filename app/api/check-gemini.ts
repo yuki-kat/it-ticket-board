@@ -18,14 +18,19 @@ export async function OPTIONS(request: Request) {
     }
   }
 
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin
+  }
+
   return new Response(null, {
     status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': origin || '',
-      'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
+    headers,
   })
 }
 
@@ -54,13 +59,17 @@ export async function GET(request: Request) {
 
   const apiKey = process.env.GEMINI_API_KEY
   const available = !!apiKey
-  return Response.json({ available }, {
-    headers: {
-      'Cache-Control': 'no-store',
-      'Access-Control-Allow-Origin': origin || '',
-      'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  })
+
+  const headers: Record<string, string> = {
+    'Cache-Control': 'no-store',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin
+  }
+
+  return Response.json({ available }, { headers })
 }

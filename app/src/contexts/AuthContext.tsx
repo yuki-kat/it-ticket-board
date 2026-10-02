@@ -22,17 +22,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEFAULT_USER: User = {
-  id: 'local-user',
-  email: 'user@local.example.com',
-  name: 'Local User'
-};
-
-const DEFAULT_TOKEN = 'local-token';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(DEFAULT_USER);
-  const [token, setToken] = useState<string | null>(DEFAULT_TOKEN);
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isCloudUser, setIsCloudUser] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);

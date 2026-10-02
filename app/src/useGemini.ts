@@ -251,7 +251,7 @@ export function useGeminiAvailable() {
     if (state === 'loading') {
       checkAvailability();
     }
-  }, [state]);
+  }, []);
 
   return state === 'available';
 }

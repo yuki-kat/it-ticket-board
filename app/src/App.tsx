@@ -476,9 +476,11 @@ function App() {
   useEffect(() => {
     if (isCloudUser && workspace && user) {
       void startSync(workspace, user.id, 'upload')
-      return () => stopSync('user logged out')
-    } else if (!isCloudUser) {
-      stopSync('user logged out')
+    }
+    return () => {
+      if (!isCloudUser) {
+        stopSync('user logged out')
+      }
     }
   }, [isCloudUser, workspace, user])
 
