@@ -3,7 +3,7 @@
 // the page only ever sees the answer.
 import { ApiError, GoogleGenAI, Type } from '@google/genai'
 
-const MODEL = 'gemini-1.5-flash'
+const MODEL = 'gemini-2.0-flash'
 const MAX_FIELD = 2000
 
 type SuggestFixRequest = { title?: unknown; description?: unknown; recordType?: unknown; severity?: unknown; assignmentGroup?: unknown; tags?: unknown }

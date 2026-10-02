@@ -107,18 +107,31 @@ export async function callGemini(prompt: string): Promise<string> {
   }
 }
 
+// Escape XML special characters to prevent prompt injection
+const escapeXml = (str: string): string => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+};
+
 // Prompt templates for different features
 
 export function buildTicketSummaryPrompt(title: string, description: string, workNotes: string): string {
   return `Analyze this support ticket and provide a brief summary.
 
-Title: ${title}
+<ticket_title>${escapeXml(title)}</ticket_title>
 
-Description:
-${description}
+<ticket_description>
+${escapeXml(description)}
+</ticket_description>
 
-Work Notes History:
-${workNotes || '(No notes yet)'}
+<work_notes>
+${escapeXml(workNotes) || '(No notes yet)'}
+</work_notes>
 
 Please provide:
 1. **What's the issue?** (1-2 sentences)
@@ -131,8 +144,9 @@ Keep it concise and actionable.`;
 export function buildDescriptionAssistPrompt(roughText: string): string {
   return `Polish this IT ticket description. Make it clear, concise, and professional.
 
-Raw description:
-${roughText}
+<raw_description>
+${escapeXml(roughText)}
+</raw_description>
 
 Provide:
 1. A polished title (1 line)
@@ -153,13 +167,15 @@ export function buildWorkNotesSuggestionsPrompt(
 ): string {
   return `This is an IT support ticket. Based on what's been done, suggest next steps.
 
-Title: ${title}
+<ticket_title>${escapeXml(title)}</ticket_title>
 
-Description:
-${description}
+<ticket_description>
+${escapeXml(description)}
+</ticket_description>
 
-Current work notes:
-${currentNotes}
+<current_work_notes>
+${escapeXml(currentNotes)}
+</current_work_notes>
 
 Suggest:
 1. One keyword or search term that might help
@@ -172,10 +188,11 @@ Keep suggestions brief and specific.`;
 export function buildQueueAssistPrompt(title: string, description: string): string {
   return `Categorize this IT support ticket.
 
-Title: ${title}
+<ticket_title>${escapeXml(title)}</ticket_title>
 
-Description:
-${description}
+<ticket_description>
+${escapeXml(description)}
+</ticket_description>
 
 Suggest:
 1. Most likely queue (Networking, Hardware, Software, Database, Other)
@@ -192,12 +209,13 @@ export function buildPriorityAssistPrompt(
 ): string {
   return `Assess the priority of this IT support ticket.
 
-Title: ${title}
+<ticket_title>${escapeXml(title)}</ticket_title>
 
-Description:
-${description}
+<ticket_description>
+${escapeXml(description)}
+</ticket_description>
 
-Queue: ${queue}
+<queue>${escapeXml(queue)}</queue>
 
 Suggest:
 1. Priority level: P1 (urgent, blocks work), P2 (important, affects daily work), P3 (can wait)
