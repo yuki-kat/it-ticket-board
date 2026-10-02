@@ -3,7 +3,7 @@
  * Proxies requests through backend endpoint for secure server-side API key handling
  */
 
-const API_BASE = '/api';
+import { API_BASE } from './base';
 
 // Escape XML special characters to prevent prompt injection
 const escapeXml = (str: string): string => {
@@ -52,7 +52,7 @@ interface GeminiRequest {
 
 
 async function callGeminiAPI(request: GeminiRequest): Promise<string> {
-  const response = await fetch(`${API_BASE}/ai/gemini`, {
+  const response = await fetch(`${API_BASE}/gemini`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

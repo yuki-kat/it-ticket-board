@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { API_BASE } from './api/base';
 import { callGeminiWithPrompt } from './api/gemini';
 
 export class GeminiError extends Error {
@@ -238,7 +239,7 @@ export function useGeminiAvailable() {
       let mounted = true;
       const checkAvailability = async () => {
         try {
-          const response = await fetch('/api/check-gemini');
+          const response = await fetch(`${API_BASE}/check-gemini`);
           if (!mounted) return;
           if (response.ok) {
             const data = await response.json() as { available: boolean };

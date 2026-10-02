@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setWorkspace(ws);
           }
         } else {
-          // No cloud session - use demo mode
+          // No cloud session - restore local authentication
           setIsCloudUser(false);
           const existingToken = api.getAuthToken();
           const existingUser = api.getAuthUser();
@@ -64,17 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setToken(existingToken);
             setUser(existingUser);
           } else {
-            setToken(DEFAULT_TOKEN);
-            setUser(DEFAULT_USER);
+            setToken(null);
+            setUser(null);
           }
           setWorkspace(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        // Fallback to demo mode on error
+        // Leave the user signed out if authentication cannot be restored
         setIsCloudUser(false);
-        setToken(DEFAULT_TOKEN);
-        setUser(DEFAULT_USER);
+        setToken(null);
+        setUser(null);
       } finally {
         setLoading(false);
       }
