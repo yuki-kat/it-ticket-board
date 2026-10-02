@@ -224,12 +224,12 @@ Be decisive.`;
 
 // Check if Gemini API is available (requires server-side GEMINI_API_KEY configuration)
 export function useGeminiAvailable() {
-  const [available, setAvailable] = useState(() => {
+  const [state, setState] = useState<'loading' | 'available' | 'unavailable'>(() => {
     try {
       const cached = localStorage.getItem('gemini-available');
-      return cached ? JSON.parse(cached) : false;
+      return cached ? (JSON.parse(cached) ? 'available' : 'unavailable') : 'loading';
     } catch {
-      return false;
+      return 'loading';
     }
   });
 
@@ -239,15 +239,19 @@ export function useGeminiAvailable() {
         const response = await fetch('/api/check-gemini');
         if (response.ok) {
           const data = await response.json() as { available: boolean };
-          setAvailable(data.available);
+          setState(data.available ? 'available' : 'unavailable');
           localStorage.setItem('gemini-available', JSON.stringify(data.available));
+        } else {
+          setState('unavailable');
         }
       } catch {
-        setAvailable(false);
+        setState('unavailable');
       }
     };
-    checkAvailability();
-  }, []);
+    if (state === 'loading') {
+      checkAvailability();
+    }
+  }, [state]);
 
-  return available;
+  return state === 'available';
 }
