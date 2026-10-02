@@ -1,28 +1,22 @@
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = '/api';
 
 export function setAuthToken(token: string | null) {
-  console.log('[setAuthToken] called with token:', token ? token.substring(0, 20) + '...' : 'null');
   if (token) {
     localStorage.setItem('auth_token', token);
-    console.log('[setAuthToken] Stored to localStorage');
   } else {
-    console.log('[setAuthToken] Removing from localStorage');
     localStorage.removeItem('auth_token');
   }
 }
 
 export function setAuthUser(user: unknown) {
-  console.log('[setAuthUser] called with:', user, 'Type:', typeof user, 'Is falsy:', !user);
   if (user) {
     try {
       localStorage.setItem('auth_user', JSON.stringify(user));
-      console.log('[setAuthUser] Successfully stored:', localStorage.getItem('auth_user'));
     } catch (e) {
       console.error('[setAuthUser] Failed to store:', e);
     }
   } else {
-    console.log('[setAuthUser] User is falsy, removing from localStorage');
     localStorage.removeItem('auth_user');
   }
 }
@@ -82,17 +76,11 @@ export async function signup(email: string, password: string, name: string) {
       method: 'POST',
       body: JSON.stringify({ email, password, name })
     });
-    console.log('=== SIGNUP SUCCESS ===');
-    console.log('Full result:', result);
-    console.log('Token:', result.token);
-    console.log('User object:', result.user);
     setAuthToken(result.token);
-    console.log('Token set, checking localStorage:', localStorage.getItem('auth_token'));
     setAuthUser(result.user);
-    console.log('User set, checking localStorage:', localStorage.getItem('auth_user'));
     return result;
   } catch (error) {
-    console.error('=== SIGNUP ERROR ===', error);
+    console.error('Signup failed:', error);
     throw error;
   }
 }

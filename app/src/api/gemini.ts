@@ -3,7 +3,7 @@
  * Proxies requests through backend endpoint for secure server-side API key handling
  */
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = '/api';
 
 export interface GeminiConfig {
   configured: boolean;
@@ -59,6 +59,25 @@ async function callGeminiAPI(request: GeminiRequest): Promise<string> {
     throw new Error('No response from Gemini API');
   }
   return data.text;
+}
+
+/**
+ * Call Gemini API with a custom prompt
+ * Sanitizes user input by treating the prompt as data, not instructions
+ */
+export async function callGeminiWithPrompt(prompt: string): Promise<string> {
+  return callGeminiAPI({
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: prompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 1024,
+    },
+  });
 }
 
 /**
