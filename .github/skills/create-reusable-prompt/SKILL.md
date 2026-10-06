@@ -1,10 +1,9 @@
 ---
-description: "Turn a repeated task into a reusable Copilot prompt for this workspace"
-name: "Create reusable prompt"
+name: create-reusable-prompt
+description: Turn a repeated task into a reusable Copilot prompt for this workspace
+disable-model-invocation: true
 argument-hint: "Describe the repeated task, the inputs it needs, and the output you want"
-agent: "agent"
 ---
-
 Turn the work underway into a reusable, single-purpose prompt file for this workspace.
 
 Goal:
