@@ -31,13 +31,13 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api', checkGeminiRoutes);
+app.use('/api', geminiRoutes);
 app.use('/api', ticketRoutes);
 app.use('/api', queueRoutes);
 app.use('/api', slaRoutes);
 app.use('/api', emailRoutes);
 app.use('/api', chatRoutes);
-app.use('/api', checkGeminiRoutes);
-app.use('/api', geminiRoutes);
 
 // WebSocket handlers
 io.on('connection', (socket) => {
