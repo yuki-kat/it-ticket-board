@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, Moon, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import { AiSuggestFix } from './AiSuggestFix'
+import { AiTroubleshootingGuidance } from './AiTroubleshootingGuidance'
 import Overlay from './Overlay'
 import BackupSection from './BackupSection'
 import AccountSection from './AccountSection'
@@ -1682,8 +1683,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
 function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showLogAction, setShowLogAction] = useState(false)
-  const [showSearchResults, setShowSearchResults] = useState(false)
-  const [searchResults, setSearchResults] = useState('')
+  const [showAiGuidance, setShowAiGuidance] = useState(false)
   const [actionText, setActionText] = useState('')
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const logAction = () => {
@@ -1695,28 +1695,27 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     setActionText('')
     setShowLogAction(false)
   }
-  const performSearch = () => {
-    const keywords = ticket.title.split(/\s+/).filter(w => w.length > 3).slice(0, 3).join(', ')
-    const results = `Search Results for: ${ticket.title}\n\nRelevant keywords: ${keywords}\n\nTop findings:\n1. Similar tickets in system\n2. Knowledge base articles\n3. Troubleshooting guides\n4. Community solutions\n5. Documentation links`
-    setSearchResults(results)
-    setShowSearchResults(true)
-  }
-  const addSearchToNotes = () => {
+  const addAiToNotes = (suggestion: { steps: string[]; likelyCauses: string[]; escalateIf: string }) => {
     const timestamp = new Date().toLocaleString()
-    const entry = `[${timestamp}] Search Results: ${searchResults}`
-    const updatedNotes = ticket.notes ? `${ticket.notes}\n${entry}` : entry
-    onSaveNotes(updatedNotes)
-    setShowSearchResults(false)
+    const entry = [
+      `[${timestamp}] AI troubleshooting suggestions:`,
+      ...suggestion.likelyCauses.map((cause) => `Likely cause: ${cause}`),
+      ...suggestion.steps.map((step, index) => `${index + 1}. ${step}`),
+      suggestion.escalateIf ? `Escalate if: ${suggestion.escalateIf}` : '',
+    ].filter(Boolean).join('\n')
+    onSaveNotes(ticket.notes ? `${ticket.notes}\n\n${entry}` : entry)
+    setShowAiGuidance(false)
   }
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
     <div className="record-actions">
       <button className="log-action-btn" onClick={() => setShowLogAction(!showLogAction)}><BrainCircuit size={16} /> Log action</button>
-      <button className="log-action-btn" onClick={performSearch}><Search size={16} /> Search & AI</button>
+      <button className="log-action-btn" onClick={() => setShowAiGuidance(!showAiGuidance)} aria-expanded={showAiGuidance}><BrainCircuit size={16} /> Ask AI</button>
+      <a className="log-action-btn" href={resolutionSearchUrl(ticket.title)} target="_blank" rel="noopener noreferrer" title="Search the public web using this ticket title"><Search size={16} /> Search resolution</a>
     </div>
     {showLogAction && <div className="ticket-log-action"><div className="log-action-header"><h5>Log troubleshooting step</h5><button onClick={() => setShowLogAction(false)} aria-label="Close log action"><X size={16} /></button></div><div className="log-action-content"><textarea value={actionText} onChange={(event) => setActionText(event.target.value)} placeholder="What action did you take? (e.g., Checked system logs for error messages)" rows={3} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', boxSizing: 'border-box', fontFamily: 'inherit' }} /><button className="log-submit-btn" onClick={logAction} disabled={!actionText.trim()}><Plus size={14} /> Add to work notes</button></div></div>}
-    {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
+    {showAiGuidance && <AiTroubleshootingGuidance ticket={ticket} onClose={() => setShowAiGuidance(false)} onAddToNotes={addAiToNotes} />}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
     <AiSuggestFix ticket={ticket} />
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} />
@@ -1807,7 +1806,7 @@ function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addU
   const createdLabel = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const addTask = () => { if (!taskTitle.trim()) return; addUniversalTask(ticket.id, taskTitle.trim()); setTaskTitle('') }
   const laneName = boardBy === 'State' ? 'state' : boardBy === 'Task type' ? 'task type' : 'assignment group'
-  return <article className={`ticket-card ${showDetails ? 'expanded' : ''} ${isOverdue ? 'overdue' : ''}${isAtRisk ? ' at-risk' : ''}`} draggable={!showDetails} onDragStart={(event) => { dragged.current = true; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', ticket.id) }} onDragEnd={() => { window.setTimeout(() => { dragged.current = false }, 0) }} onClick={(event) => { if (dragged.current || (event.target as HTMLElement).closest('button, a, input, select, textarea, label')) return; openTicket(ticket.id) }}>
+  return <article className={`ticket-card ${showDetails || showAiGuidance ? 'expanded' : ''} ${isOverdue ? 'overdue' : ''}${isAtRisk ? ' at-risk' : ''}`} draggable={!showDetails} onDragStart={(event) => { dragged.current = true; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', ticket.id) }} onDragEnd={() => { window.setTimeout(() => { dragged.current = false }, 0) }} onClick={(event) => { if (dragged.current || (event.target as HTMLElement).closest('button, a, input, select, textarea, label')) return; openTicket(ticket.id) }}>
     <div className={`ticket-card-inner${showDetails ? ' flipped' : ''}`}>
       <div className="ticket-card-face ticket-card-front">
     <div className="ticket-card-front-layout">
@@ -1829,8 +1828,8 @@ function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addU
       <div className="card-secondary-actions"><div className={`time-log ${ticket.timerStartedAt ? 'running' : ''}`}><span>Logged {loggedLabel(elapsedLogged)}</span><button disabled={ticket.status === 'Resolved'} onClick={() => toggleTimer(ticket.id)} title={ticket.timerStartedAt ? 'Stop and save time' : 'Start a timer'}>{ticket.timerStartedAt ? 'Stop' : 'Start'}</button></div>{nextContact && ticket.status !== 'Resolved' && <button className="escalate-action" onClick={() => escalate(ticket)} title={`Escalate to ${nextContact.role} (placeholder contact)`} aria-label={`Escalate ${ticket.id} to Tier ${ticket.currentTier + 1}`}><ShieldAlert size={13} /> Escalate</button>}
         <span className="card-move-actions">{index > 0 && <button onClick={() => move(ticket, -1)} aria-label={`Move to previous ${laneName}`} title={`Move to previous ${laneName}`}><ArrowLeft size={13} /></button>}{index < laneCount - 1 && <button onClick={() => move(ticket, 1)} aria-label={`Move to next ${laneName}`} title={`Move to next ${laneName}`}><ArrowRight size={13} /></button>}</span></div>
     </div>
+    {showAiGuidance && <AiTroubleshootingGuidance ticket={ticket} onClose={() => setShowAiGuidance(false)} />}
       </div>
-      {showAiGuidance && <div className="ticket-ai-guidance"><div className="ai-guidance-header"><h5>AI Guidance</h5><button onClick={() => setShowAiGuidance(false)} aria-label="Close AI guidance"><X size={16} /></button></div><div className="ai-guidance-content"><p><strong>{ticket.id}</strong></p><p className="ai-guidance-context">For {ticket.title}</p><div className="ai-guidance-suggestions"><p><small>Suggested guidance topics:</small></p><ul><li>Troubleshooting steps for this issue</li><li>Similar resolved tickets and solutions</li><li>Best practices for {ticket.assignmentGroup}</li><li>Escalation criteria and next steps</li></ul></div></div></div>}
       <div className="ticket-card-face ticket-card-back">
         <div className="ticket-detail-header"><div><span>FULL TICKET DETAILS</span><h3>{ticket.id}</h3></div><button className="flip-card-button" onClick={() => setShowDetails(false)} aria-label={`Return to ${ticket.id} summary`} title="Back to ticket summary"><RotateCcw size={15} /></button></div>
         <h4 className="ticket-detail-title">{ticket.title}</h4>{!!ticket.tags?.length && <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}

@@ -1,34 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { RotateCcw, Sparkles } from 'lucide-react'
+import { requestTicketSuggestion, type SuggestFixTicket, type TicketSuggestion } from './api/suggestFix'
 
 // "Suggest fix" in the ticket record panel. Gemini is called through the site's own /api/suggest-fix
 // (app/api/suggest-fix.ts), so the API key never reaches the browser. It only works on the hosted site:
 // the downloaded file and the test link have no server behind them.
 
-type Suggestion = { likelyCauses: string[]; steps: string[]; escalateIf: string }
-type SuggestFixTicket = { id: string; title: string; description: string; recordType: string; severity: string; assignmentGroup?: string; tags?: string[] }
-type State = { kind: 'idle' } | { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'done'; suggestion: Suggestion }
-
-const hostedOnly = 'AI suggestions work on the hosted site only, not in a downloaded copy.'
+type State = { kind: 'idle' } | { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'done'; suggestion: TicketSuggestion }
 
 export function AiSuggestFix({ ticket }: { ticket: SuggestFixTicket }) {
-  const [state, setState] = useState<State>({ kind: 'idle' })
-  useEffect(() => { setState({ kind: 'idle' }) }, [ticket.id])
+  const [savedState, setSavedState] = useState<{ ticketId: string; value: State }>(() => ({ ticketId: ticket.id, value: { kind: 'idle' } }))
+  const state = savedState.ticketId === ticket.id ? savedState.value : { kind: 'idle' as const }
+  const setState = (value: State) => setSavedState({ ticketId: ticket.id, value })
 
   const ask = async () => {
-    if (location.protocol === 'file:') { setState({ kind: 'error', message: hostedOnly }); return }
     setState({ kind: 'loading' })
     try {
-      const response = await fetch('api/suggest-fix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: ticket.title, description: ticket.description, recordType: ticket.recordType, severity: ticket.severity, assignmentGroup: ticket.assignmentGroup, tags: ticket.tags }),
-      })
-      const data = await response.json().catch(() => null)
-      if (!response.ok || !data) { setState({ kind: 'error', message: data?.error || (response.status === 404 ? hostedOnly : 'Could not get a suggestion.') }); return }
-      setState({ kind: 'done', suggestion: data })
-    } catch {
-      setState({ kind: 'error', message: hostedOnly })
+      const suggestion = await requestTicketSuggestion(ticket)
+      setState({ kind: 'done', suggestion })
+    } catch (error) {
+      setState({ kind: 'error', message: error instanceof Error ? error.message : 'Could not get a suggestion.' })
     }
   }
 

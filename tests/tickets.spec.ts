@@ -63,3 +63,53 @@ test.describe('Inventory device health', () => {
     await expect(page.locator('.inventory-table tbody tr')).toHaveCount(atRisk)
   })
 })
+
+test.describe('AI troubleshooting guidance', () => {
+  test.beforeEach(async ({ page }) => openApp(page))
+
+  test('Ask AI on a ticket card shows ticket-specific troubleshooting steps', async ({ page }) => {
+    await goTo(page, 'Tickets')
+    await page.getByRole('button', { name: 'Open all ticket views' }).click()
+    await page.getByRole('button', { name: 'Kanban Detailed', exact: true }).click()
+    let requestedTitle = ''
+    await page.route('**/api/suggest-fix', async (route) => {
+      requestedTitle = route.request().postDataJSON().title
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ likelyCauses: ['A test cause'], steps: ['Check the affected service', 'Review recent changes'], escalateIf: 'The service remains unavailable' }),
+      })
+    })
+
+    const card = page.locator('.ticket-card').first()
+    const title = await card.locator('.ticket-card-front h3').innerText()
+    await card.getByRole('button', { name: 'Ask AI' }).click()
+
+    const guidance = card.getByRole('region', { name: 'AI guidance' })
+    await expect(guidance.getByRole('heading', { name: 'Steps to try' })).toBeVisible()
+    await expect(guidance).toBeInViewport()
+    await expect(guidance.locator('ol li')).toHaveText(['Check the affected service', 'Review recent changes'])
+    expect(requestedTitle).toBe(title)
+  })
+
+  test('Ask AI in ticket details shows the same guidance and can add it to notes', async ({ page }) => {
+    await goTo(page, 'Tickets')
+    await page.getByRole('button', { name: 'Open all ticket views' }).click()
+    await page.getByRole('button', { name: 'Kanban Detailed', exact: true }).click()
+    await page.route('**/api/suggest-fix', async (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ likelyCauses: ['A test cause'], steps: ['Check the affected service'], escalateIf: 'The service remains unavailable' }),
+    }))
+
+    await page.locator('.ticket-card').first().click()
+    const dialog = page.locator('.ticket-record-panel')
+    await dialog.getByRole('button', { name: 'Ask AI' }).click()
+
+    const guidance = dialog.getByRole('region', { name: 'AI guidance' })
+    await expect(guidance.locator('ul li')).toHaveText(['A test cause'])
+    await expect(guidance.locator('ol li')).toHaveText(['Check the affected service'])
+    await guidance.getByRole('button', { name: 'Add to notes' }).click()
+    await expect(dialog.locator('textarea').first()).toHaveValue(/Likely cause: A test cause[\s\S]*1\. Check the affected service/)
+  })
+})

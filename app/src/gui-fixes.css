@@ -498,13 +498,34 @@
 .ai-suggest-result li { display: list-item; margin: 2px 0; }
 .ai-suggest-result .ai-suggest-button { margin-top: 12px; }
 
+.ticket-ai-guidance { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px; border: 1px solid #cfe0f0; border-radius: 8px; background: #f8fbfe; color: #38535e; }
+.ticket-ai-guidance .ai-guidance-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ticket-ai-guidance .ai-guidance-header h5 { margin: 0; font-size: 12px; }
+.ticket-ai-guidance .ai-guidance-header button { display: inline-grid; width: 24px; height: 24px; place-items: center; border: 0; border-radius: 5px; background: transparent; color: inherit; cursor: pointer; }
+.ticket-ai-guidance .ai-guidance-content { font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.ticket-ai-guidance .ai-guidance-content > p { margin: 7px 0; }
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result h4 { margin: 10px 0 4px; color: #3d5964; font-size: 11px; }
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result ul,
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result ol { margin: 0; padding-left: 18px; color: #3f5963; font-size: 11px; line-height: 1.5; }
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result ul { list-style: disc; }
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result ol { list-style: decimal; }
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result li { display: list-item; margin: 2px 0; }
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result > .search-add-btn,
+.ticket-ai-guidance .ai-guidance-content .ai-suggest-result > .ai-suggest-button { margin: 10px 8px 0 0; }
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .ai-suggest-fix { border-color: #2c4453; background: #15222b; }
   :root:not([data-theme="light"]) .ai-suggest-button { border-color: #35505e; background: #1b2b35; color: #9fd0e2; }
   :root:not([data-theme="light"]) .ai-suggest-result h4 { color: #a0b8c2; }
   :root:not([data-theme="light"]) .ai-suggest-result ul, :root:not([data-theme="light"]) .ai-suggest-result ol { color: #d5e1e6; }
+  :root:not([data-theme="light"]) .ticket-ai-guidance { border-color: #2c4453; background: #15222b; color: #d5e1e6; }
+  :root:not([data-theme="light"]) .ticket-ai-guidance .ai-guidance-content .ai-suggest-result h4 { color: #a0b8c2; }
+  :root:not([data-theme="light"]) .ticket-ai-guidance .ai-guidance-content .ai-suggest-result ul, :root:not([data-theme="light"]) .ticket-ai-guidance .ai-guidance-content .ai-suggest-result ol { color: #d5e1e6; }
 }
 :root[data-theme="dark"] .ai-suggest-fix { border-color: #2c4453; background: #15222b; }
 :root[data-theme="dark"] .ai-suggest-button { border-color: #35505e; background: #1b2b35; color: #9fd0e2; }
 :root[data-theme="dark"] .ai-suggest-result h4 { color: #a0b8c2; }
 :root[data-theme="dark"] .ai-suggest-result ul, :root[data-theme="dark"] .ai-suggest-result ol { color: #d5e1e6; }
+:root[data-theme="dark"] .ticket-ai-guidance { border-color: #2c4453; background: #15222b; color: #d5e1e6; }
+:root[data-theme="dark"] .ticket-ai-guidance .ai-guidance-content .ai-suggest-result h4 { color: #a0b8c2; }
+:root[data-theme="dark"] .ticket-ai-guidance .ai-guidance-content .ai-suggest-result ul, :root[data-theme="dark"] .ticket-ai-guidance .ai-guidance-content .ai-suggest-result ol { color: #d5e1e6; }
