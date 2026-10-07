@@ -552,6 +552,9 @@ function App() {
   const [dragOverLane, setDragOverLane] = useState('')
   const [selectedTicketId, setSelectedTicketId] = useState('')
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
+  const [toast, setToast] = useState('')
+  const toastTimer = useRef<number>(0)
+  const showToast = (message: string) => { setToast(message); window.clearTimeout(toastTimer.current); toastTimer.current = window.setTimeout(() => setToast(''), 3500) }
   const [descriptionPopupTicketId, setDescriptionPopupTicketId] = useState('')
   const [inventoryFocusId, setInventoryFocusId] = useState('')
   const [inventoryFocusRevision, setInventoryFocusRevision] = useState(0)
@@ -632,6 +635,7 @@ function App() {
     const filename = `tickets-${new Date().toISOString().slice(0, 10)}`
     if (format === 'xlsx') exportXlsx(`${filename}.xlsx`, 'Tickets', headers, rows)
     else exportCsv(`${filename}.csv`, headers, rows)
+    showToast(`Exported ${exportTickets.length} ${exportTickets.length === 1 ? 'ticket' : 'tickets'} to ${format.toUpperCase()}`)
   }
   const filtersActive = Boolean(query.trim()) || typeFilter !== 'All task types' || groupFilter !== 'All groups' || assigneeFilter !== 'All assignees' || metricFilter !== 'all' || tagFilter !== 'All tags' || starredOnly
   const clearFilters = () => {
@@ -681,6 +685,16 @@ function App() {
   const currentSuggestion = triageSuggestion(form.title, form.description, form.severity)
   const groupText = `${form.title} ${form.description}`
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId)
+  const bulkSetState = (status: Status) => {
+    const ids = new Set(selectedTicketIds)
+    setTickets((current) => current.map((ticket) => ids.has(ticket.id) ? { ...ticket, status } : ticket))
+    showToast(`Set ${ids.size} ${ids.size === 1 ? 'ticket' : 'tickets'} to ${status}`)
+  }
+  const bulkAssign = (assignee: string) => {
+    const ids = new Set(selectedTicketIds)
+    setTickets((current) => current.map((ticket) => ids.has(ticket.id) ? { ...ticket, assignee: assignee === 'Unassigned' ? '' : assignee } : ticket))
+    showToast(`Assigned ${ids.size} ${ids.size === 1 ? 'ticket' : 'tickets'} to ${assignee}`)
+  }
   const toggleTicketStar = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
   const saveTicketTags = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, tags: parseTicketTags(value) } : ticket))
   const saveTicketNotes = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, notes: value } : ticket))
@@ -904,6 +918,7 @@ function App() {
       </div>
     </header>
     <QuickPageNav page={(page === 'explore' || page === 'new') ? 'home' : page} onChange={goToPage} />
+    <div className="toast" role="status" aria-live="polite">{toast}</div>
     <DebugPanel />
     {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} searchTicket={openRelatedTicket} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} openExplore={openExplore} /> : page === 'explore' ? <ExplorePage queues={exploreQueuesFor(tickets, clock)} tickets={tickets} queue={exploreQueue} ticketId={exploreTicketId}
       onSelectQueue={(queue) => { setExploreQueue(queue); setExploreTicketId(undefined) }} onSelectTicket={setExploreTicketId}
@@ -929,6 +944,7 @@ function App() {
       <label><span>Group</span><select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} aria-label="Filter by assignment group"><option>All groups</option>{groupOptions.map((group) => <option key={group}>{group}</option>)}</select></label>
       <label><span>Assignee</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} aria-label="Filter by assignee"><option>All assignees</option>{assigneeOptions.map((assignee) => <option key={assignee}>{assignee}</option>)}<option>Unassigned</option></select></label>
       <label><span>Tag</span><select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filter tickets by tag"><option>All tags</option>{ticketTags.map((tag) => <option key={tag}>{tag}</option>)}</select></label></div></div>}</div>{filtersActive && <button className="clear-filters-button" onClick={clearFilters}><X size={13} />Clear filters</button>}</div></div>
+      {selectedTicketIds.length > 0 && <section className="bulk-bar" role="region" aria-label="Bulk actions"><b>{selectedTicketIds.length} selected</b><select aria-label="Set state for selected tickets" value="" onChange={(event) => event.target.value && bulkSetState(event.target.value as Status)}><option value="">Set state…</option>{statuses.filter((status) => status !== 'Resolved').map((status) => <option key={status}>{status}</option>)}</select><select aria-label="Assign selected tickets" value="" onChange={(event) => event.target.value && bulkAssign(event.target.value)}><option value="">Assign to…</option><option>Unassigned</option>{assigneeOptions.map((name) => <option key={name}>{name}</option>)}</select><button type="button" onClick={() => exportCurrentTickets('csv')}><Download size={13} /> Export selected</button><button type="button" onClick={() => setSelectedTicketIds([])}><X size={13} /> Clear</button></section>}
       {cardSize === 'list' ? <ListView tickets={visible} now={clock} openTicket={setSelectedTicketId} openDescriptionPopup={setDescriptionPopupTicketId} toggleStar={toggleTicketStar} selectedIds={selectedTicketIds} onSelectionChange={setSelectedTicketIds} /> : cardSize === 'small' || cardSize === 'regular' ? <section className="kanban" id="board" aria-label="Kanban task lanes">
         {laneLabels.map((laneLabel, index) => {
           const lane = visible.filter((ticket) => boardBy === 'State' ? ticket.status === laneLabel : boardBy === 'Task type' ? ticket.recordType === laneLabel : (ticket.assignmentGroup || 'No group') === laneLabel)
@@ -1695,13 +1711,13 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id))
 
   return <section className="list-view" id="board" aria-label="List of task records">
-    <div className="list-view-heading"><div><b>All task records</b><span>Click a checkbox, then Shift-click another to select a range</span></div><div className="list-view-summary">{selectedIds.length > 0 && <span>{selectedIds.length} selected</span>}{selectedIds.length > 0 && <button onClick={() => onSelectionChange([])}><X size={12} />Clear selection</button>}{filtersActive && <button onClick={clearListFilters}><X size={12} />Clear column filters</button>}</div></div>
+    <div className="list-view-heading"><div><b>All task records</b><span>Click a checkbox, then Shift-click another to select a range</span></div><div className="list-view-summary">{filtersActive && <button onClick={clearListFilters}><X size={12} />Clear column filters</button>}</div></div>
     <div className="list-scroll"><table className="task-table"><thead><tr><th className="selection-column"><input type="checkbox" checked={allVisibleSelected} aria-label="Select all visible tickets" onChange={(event) => onSelectionChange(event.target.checked ? [...new Set([...selectedIds, ...visibleIds])] : selectedIds.filter((id) => !visibleIds.includes(id)))} /></th><th><HeaderFilter label="Number" value={filters.number} onChange={(value) => setFilter('number', value)} placeholder="Ticket number…" /></th><th><HeaderFilter label="Short description" value={filters.description} onChange={(value) => setFilter('description', value)} placeholder="Description contains…" /></th><th><HeaderFilter label="Department" value={filters.department} onChange={(value) => setFilter('department', value)} options={departments} /></th><th><HeaderFilter label="Assignment group" value={filters.assignmentGroup} onChange={(value) => setFilter('assignmentGroup', value)} options={assignmentGroupOptions} /></th><th><HeaderFilter label="Assigned to" value={filters.assignee} onChange={(value) => setFilter('assignee', value)} options={assigneeOptions} /></th><th><HeaderFilter label="Priority" value={filters.priority} onChange={(value) => setFilter('priority', value)} options={['P1', 'P2', 'P3', 'P4']} /></th><th><HeaderFilter label="State" value={filters.state} onChange={(value) => setFilter('state', value)} options={statuses} /></th><th><HeaderFilter label="Created" value={filters.created} onChange={(value) => setFilter('created', value)} placeholder="Date contains…" /></th><th><HeaderFilter label="Resolution SLA" value={filters.sla} onChange={(value) => setFilter('sla', value)} placeholder="SLA contains…" /></th></tr></thead><tbody>{filteredTickets.length ? filteredTickets.map((ticket) => {
       const sla = slaTime(ticket, now)
       const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ticket.createdAt)) : 'Not recorded'
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
-        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button><button className="list-search-btn" onClick={() => openTicket(ticket.id)} title={`Search for ${ticket.title}`} aria-label={`Search for ${ticket.id}`} style={{ marginLeft: '6px', padding: '4px', background: 'none', border: 'none', color: '#596f79', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', fontSize: '14px' }}><Search size={14} /></button></div></td>
+        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button></div></td>
         <td><button className="list-title list-title-link" onClick={() => openDescriptionPopup(ticket.id)} title={`Show details for ${ticket.title}`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>

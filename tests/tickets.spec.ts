@@ -140,3 +140,29 @@ test.describe('Record counts', () => {
     await expect(count(page)).toHaveCount(1)
   })
 })
+
+test.describe('Ticket row actions and bulk bar', () => {
+  test('each row has one open-record button, no duplicate magnifier', async ({ page }) => {
+    await openApp(page)
+    await goTo(page, 'Tickets')
+    await expect(page.locator('.list-search-btn')).toHaveCount(0)
+  })
+
+  test('selecting rows shows a bulk bar that can set state with a toast', async ({ page }) => {
+    await openApp(page)
+    await goTo(page, 'Tickets')
+    await page.getByLabel(/^Select OPS-/).first().click()
+    const bar = page.getByRole('region', { name: 'Bulk actions' })
+    await expect(bar).toContainText('1 selected')
+    await bar.getByLabel('Set state for selected tickets').selectOption('Waiting on User')
+    await expect(page.getByRole('status')).toContainText('Set 1 ticket to Waiting on User')
+  })
+
+  test('export shows a confirmation toast', async ({ page }) => {
+    await openApp(page)
+    await goTo(page, 'Tickets')
+    await page.getByLabel(/^Select OPS-/).first().click()
+    await page.getByRole('button', { name: /Export CSV/ }).first().click()
+    await expect(page.getByRole('status')).toContainText(/Exported 1 ticket/)
+  })
+})
