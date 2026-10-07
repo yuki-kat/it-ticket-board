@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 import { Download, RotateCcw, Upload } from 'lucide-react'
 import Overlay from './Overlay'
-import { applyBackup, countRecords, createBackup, downloadBackup, lastBackupTime, previousData, putBackPrevious, readBackupFile, type BackupCounts, type BackupFile } from './backup'
-import { isSyncing, stopSync } from './cloudSync'
-import './backup.css'
+import { applyBackup, countRecords, createBackup, downloadBackup, lastBackupTime, previousData, putBackPrevious, readBackupFile, type BackupCounts, type BackupFile } from '../lib/backup'
+import { isSyncing, stopSync } from '../lib/cloudSync'
+import '../styles/backup.css'
 
 const summary = (counts: BackupCounts) => `${counts.tickets} tickets · ${counts.deletedTickets} deleted · ${counts.assets} assets · ${counts.stock} stock items`
 const when = (iso: string) => (iso ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)) : 'Never')

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useAuth } from './contexts/AuthContext'
-import './signin-page.css'
+import { useAuth } from '../contexts/AuthContext'
+import '../styles/signin-page.css'
 
 export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
   const { login, signup } = useAuth()

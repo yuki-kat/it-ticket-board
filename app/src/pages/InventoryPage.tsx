@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Box, Check, ChevronDown, Clock3, Link2, Package, Pencil, Plus, RotateCcw, Search, ShieldAlert, Star, Trash2, Wrench, X } from 'lucide-react'
-import Overlay from './Overlay'
-import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
-import { exportCsv, type CsvValue } from './lib/exportCsv'
-import { exportXlsx, exportXlsxWorkbook } from './lib/exportXlsx'
+import Overlay from '../components/Overlay'
+import SavedViews, { loadSavedViews, type SavedView } from '../components/SavedViews'
+import { exportCsv, type CsvValue } from '../lib/exportCsv'
+import { exportXlsx, exportXlsxWorkbook } from '../lib/exportXlsx'
 
 export type AssetStatus = 'Available' | 'Assigned' | 'In Repair' | 'Retired' | 'Lost'
 export type DeviceHealth = 'Healthy' | 'At Risk' | 'Critical'

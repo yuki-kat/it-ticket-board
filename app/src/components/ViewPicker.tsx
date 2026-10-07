@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import { usePopoutBehaviour } from './HomePopouts'
-import './view-picker.css'
+import '../styles/view-picker.css'
 
 /** Every way to look at the tickets. Used by the View selector and by the "All Views" picker. */
 export const VIEW_GROUPS: { selectLabel: string; pickerLabel: string; views: [value: string, label: string][] }[] = [

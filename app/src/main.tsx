@@ -1,22 +1,22 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // Modern design system - establishes color tokens and typography
-import './design-system.css'
-import './layout-redesign.css'
-import './tickets-redesign.css'
-import './inventory-redesign.css'
-import './home-redesign.css'
-import './explore-redesign.css'
-import './forms-redesign.css'
+import './styles/design-system.css'
+import './styles/layout-redesign.css'
+import './styles/tickets-redesign.css'
+import './styles/inventory-redesign.css'
+import './styles/home-redesign.css'
+import './styles/explore-redesign.css'
+import './styles/forms-redesign.css'
 // Legacy styles (will be gradually replaced)
-import './index.css'
-import './board-refresh.css'
-import './inventory.css'
-import './saved-views.css'
-import AppWrapper from './AppWrapper.tsx'
+import './styles/index.css'
+import './styles/board-refresh.css'
+import './styles/inventory.css'
+import './styles/saved-views.css'
+import AppWrapper from './pages/AppWrapper.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 // After App, so its fixes come after every component's own stylesheet.
-import './gui-fixes.css'
+import './styles/gui-fixes.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

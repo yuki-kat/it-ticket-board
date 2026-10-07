@@ -1,5 +1,5 @@
-import { useSyncStatus } from './cloudSync'
-import './sync.css'
+import { useSyncStatus } from '../lib/cloudSync'
+import '../styles/sync.css'
 
 /** Top bar: where the board is saved. While syncing, it shows the sync state and opens Settings when clicked. */
 export default function SyncBadge({ onOpen }: { onOpen: () => void }) {

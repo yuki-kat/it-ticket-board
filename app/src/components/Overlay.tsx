@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { debugLog } from './debug'
-import './overlay.css'
+import { debugLog } from '../lib/debug'
+import '../styles/overlay.css'
 
 // Every open dialog is listed here so that Escape closes the one on top.
 const openOverlays: { close: () => void }[] = []

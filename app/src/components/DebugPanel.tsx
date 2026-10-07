@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { clearDebugLog, debugLog, isDebugEnabled, setDebugEnabled, useDebugState } from './debug'
-import './debug-panel.css'
+import { clearDebugLog, debugLog, isDebugEnabled, setDebugEnabled, useDebugState } from '../lib/debug'
+import '../styles/debug-panel.css'
 
 /** Short description of an element for the log, like button.home-kpi "Open tickets". */
 function describe(element: Element): string {

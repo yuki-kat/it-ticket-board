@@ -3,11 +3,11 @@ import type { Session } from '@supabase/supabase-js'
 import {
   cancelInvite, canSignInHere, cloud, currentSession, currentWorkspace, inviteMember, listMembers, removeMember,
   sendSignInLink, setMemberRole, signOut, type Invite, type Member, type Role, type Workspace,
-} from './cloud'
-import { startSync, stopSync, syncNow, useSyncStatus, workspaceCounts, type StartMode } from './cloudSync'
-import type { TableName } from './syncLogic'
-import './backup.css'
-import './sync.css'
+} from '../lib/cloud'
+import { startSync, stopSync, syncNow, useSyncStatus, workspaceCounts, type StartMode } from '../lib/cloudSync'
+import type { TableName } from '../lib/syncLogic'
+import '../styles/backup.css'
+import '../styles/sync.css'
 
 const timeOf = (iso: string) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
 const count = (n: number, thing: string) => `${n} ${thing}${n === 1 ? '' : 's'}`

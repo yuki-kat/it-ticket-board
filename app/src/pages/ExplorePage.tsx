@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import type { ExploreKey } from './route'
-import './explore-page.css'
+import type { ExploreKey } from '../lib/route'
+import '../styles/explore-page.css'
 
 /** The parts of a ticket the Explore page lists. */
 export type ExploreTicket = { id: string; title: string; status: string; severity: string; assignee: string; createdAt: string }

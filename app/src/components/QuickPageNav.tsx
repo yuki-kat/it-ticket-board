@@ -1,4 +1,4 @@
-import './quick-page-nav.css'
+import '../styles/quick-page-nav.css'
 
 export type PageId = 'home' | 'board' | 'search' | 'inventory'
 const PAGES: { id: PageId; label: string }[] = [{ id: 'home', label: 'Home' }, { id: 'board', label: 'Tickets' }, { id: 'search', label: 'Search' }, { id: 'inventory', label: 'Inventory' }]
