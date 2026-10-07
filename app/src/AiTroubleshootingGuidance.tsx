@@ -35,7 +35,7 @@ export function AiTroubleshootingGuidance({ ticket, onClose, onAddToNotes }: {
     <div className="ai-guidance-header"><h5>AI Guidance</h5><button onClick={onClose} aria-label="Close AI guidance">×</button></div>
     <div className="ai-guidance-content">
       <p><strong>{ticket.title}</strong></p>
-      {state.kind === 'loading' && <p className="ai-suggest-status">Getting ticket-specific next steps…</p>}
+      {state.kind === 'loading' && <p className="ai-suggest-status"><span className="spinner" aria-hidden="true" />Getting ticket-specific next steps…</p>}
       {state.kind === 'error' && <>
         <p className="ai-suggest-status is-error" role="alert">{state.message}</p>
         <button className="ai-suggest-button" onClick={() => setAttempt((current) => current + 1)}><RotateCcw size={13} />Try again</button>

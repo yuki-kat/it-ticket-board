@@ -541,3 +541,8 @@
 .board-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
 .board-toolbar { align-items: center; flex-wrap: wrap; }
 .board-toolbar > .board-filters { order: -1; flex: 1 1 auto; }
+
+.spinner { display: inline-block; flex: none; width: 1em; height: 1em; vertical-align: -0.15em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-turn .7s linear infinite; }
+.ai-suggest-status .spinner, .text-muted .spinner { margin-right: 8px; }
+@keyframes spinner-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
