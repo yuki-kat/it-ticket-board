@@ -12,6 +12,7 @@ import emailRoutes from './api/email.js';
 import chatRoutes from './api/chat.js';
 import geminiRoutes from './api/gemini.js';
 import checkGeminiRoutes from './api/check-gemini.js';
+import suggestFixRoutes from './api/suggest-fix.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +34,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api', checkGeminiRoutes);
 app.use('/api', geminiRoutes);
+app.use('/api', suggestFixRoutes);
 app.use('/api', ticketRoutes);
 app.use('/api', queueRoutes);
 app.use('/api', slaRoutes);
