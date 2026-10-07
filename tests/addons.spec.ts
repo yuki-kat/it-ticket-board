@@ -85,15 +85,34 @@ test.describe('Settings and dialogs', () => {
   })
 })
 
-test.describe('Ticket view selector', () => {
+test.describe('All Views', () => {
   test.beforeEach(async ({ page }) => { await openApp(page); await goTo(page, 'Tickets') })
 
-  test('the View select lists every layout and switches to it', async ({ page }) => {
-    const select = page.getByRole('combobox', { name: 'Choose ticket view' })
-    expect(await select.locator('option').allInnerTexts()).toEqual(['List', 'Kanban detailed', 'Kanban compact', 'Split', 'My work'])
-    await expect(select).toHaveValue('list')
-    await select.selectOption('small')
-    await expect(select).toHaveValue('small')
+  test('the picker lists every view in groups and marks the current one', async ({ page }) => {
+    await page.getByRole('button', { name: 'Open all ticket views' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Choose a view' })
+    await expect(dialog).toBeVisible()
+    expect(await dialog.locator('.views-group h3').allTextContents()).toEqual(['Records', 'Kanban', 'Personal'])
+    expect(await dialog.locator('.views-option').count()).toBe(5)
+    await expect(dialog.locator('.views-option.current')).toHaveCount(1)
+    await expect(dialog.locator('.views-option.current')).toHaveText('List View')
+  })
+
+  test('choosing a view switches to it and closes the picker', async ({ page }) => {
+    await page.getByRole('button', { name: 'Open all ticket views' }).click()
+    await page.getByRole('button', { name: 'Kanban Compact', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Choose a view' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Open all ticket views' }).click()
+    await expect(page.locator('.views-option.current')).toHaveText('Kanban Compact')
+  })
+
+  test('closes with × and with a click outside', async ({ page }) => {
+    for (const close of [() => page.getByRole('button', { name: 'Close views' }).click(), () => page.locator('.views-modal').click({ position: { x: 4, y: 4 } })]) {
+      await page.getByRole('button', { name: 'Open all ticket views' }).click()
+      await expect(page.getByRole('dialog', { name: 'Choose a view' })).toBeVisible()
+      await close()
+      await expect(page.getByRole('dialog', { name: 'Choose a view' })).toHaveCount(0)
+    }
   })
 
   test('the View selector offers the same views', async ({ page }) => {

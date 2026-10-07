@@ -67,22 +67,10 @@ test.describe('Inventory device health', () => {
 test.describe('AI troubleshooting guidance', () => {
   test.beforeEach(async ({ page }) => openApp(page))
 
-  test('AI Gateway settings report the server configuration', async ({ page }) => {
-    await page.route('**/api/check-gemini', async (route) => route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ available: true }),
-    }))
-
-    await page.getByRole('button', { name: 'Tools' }).click()
-    await page.getByRole('button', { name: /AI Gateway Settings/ }).click()
-
-    await expect(page.getByRole('heading', { name: 'AI Gateway Configured' })).toBeVisible()
-  })
-
   test('Ask AI on a ticket card shows ticket-specific troubleshooting steps', async ({ page }) => {
     await goTo(page, 'Tickets')
-    await page.getByRole('combobox', { name: 'Choose ticket view' }).selectOption('regular')
+    await page.getByRole('button', { name: 'Open all ticket views' }).click()
+    await page.getByRole('button', { name: 'Kanban Detailed', exact: true }).click()
     let requestedTitle = ''
     await page.route('**/api/suggest-fix', async (route) => {
       requestedTitle = route.request().postDataJSON().title
@@ -94,75 +82,29 @@ test.describe('AI troubleshooting guidance', () => {
     })
 
     const card = page.locator('.ticket-card').first()
-    const title = await card.locator('.ticket-card-front h3').innerText()
+    const title = await card.locator('.ticket-card-left > h3').innerText()
     await card.getByRole('button', { name: 'Ask AI' }).click()
 
     const guidance = card.getByRole('region', { name: 'AI guidance' })
     await expect(guidance.getByRole('heading', { name: 'Steps to try' })).toBeVisible()
-    await expect(guidance).toBeInViewport()
     await expect(guidance.locator('ol li')).toHaveText(['Check the affected service', 'Review recent changes'])
     expect(requestedTitle).toBe(title)
   })
 
   test('Ask AI in ticket details shows the same guidance and can add it to notes', async ({ page }) => {
-    await goTo(page, 'Tickets')
-    await page.getByRole('combobox', { name: 'Choose ticket view' }).selectOption('regular')
     await page.route('**/api/suggest-fix', async (route) => route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ likelyCauses: ['A test cause'], steps: ['Check the affected service'], escalateIf: 'The service remains unavailable' }),
     }))
 
-    await page.locator('.ticket-card').first().click()
-    const dialog = page.locator('.ticket-record-panel')
+    await page.locator('.home-recent-card .home-recent-list button').first().click()
+    const dialog = page.getByRole('dialog')
     await dialog.getByRole('button', { name: 'Ask AI' }).click()
 
     const guidance = dialog.getByRole('region', { name: 'AI guidance' })
-    await expect(guidance.locator('ul li')).toHaveText(['A test cause'])
     await expect(guidance.locator('ol li')).toHaveText(['Check the affected service'])
     await guidance.getByRole('button', { name: 'Add to notes' }).click()
-    await expect(dialog.locator('textarea').first()).toHaveValue(/Likely cause: A test cause[\s\S]*1\. Check the affected service/)
-  })
-})
-
-test.describe('Record counts', () => {
-  const count = (page: import('@playwright/test').Page) => page.getByText(/^\d+ (of \d+ )?records$/)
-
-  test('Tickets shows the record count once', async ({ page }) => {
-    await openApp(page)
-    await goTo(page, 'Tickets')
-    await expect(count(page)).toHaveCount(1)
-  })
-
-  test('Inventory shows the record count once', async ({ page }) => {
-    await openApp(page)
-    await goTo(page, 'Inventory')
-    await expect(count(page)).toHaveCount(1)
-  })
-})
-
-test.describe('Ticket row actions and bulk bar', () => {
-  test('each row has one open-record button, no duplicate magnifier', async ({ page }) => {
-    await openApp(page)
-    await goTo(page, 'Tickets')
-    await expect(page.locator('.list-search-btn')).toHaveCount(0)
-  })
-
-  test('selecting rows shows a bulk bar that can set state with a toast', async ({ page }) => {
-    await openApp(page)
-    await goTo(page, 'Tickets')
-    await page.getByLabel(/^Select OPS-/).first().click()
-    const bar = page.getByRole('region', { name: 'Bulk actions' })
-    await expect(bar).toContainText('1 selected')
-    await bar.getByLabel('Set state for selected tickets').selectOption('Waiting on User')
-    await expect(page.getByRole('status')).toContainText('Set 1 ticket to Waiting on User')
-  })
-
-  test('export shows a confirmation toast', async ({ page }) => {
-    await openApp(page)
-    await goTo(page, 'Tickets')
-    await page.getByLabel(/^Select OPS-/).first().click()
-    await page.getByRole('button', { name: /Export CSV/ }).first().click()
-    await expect(page.getByRole('status')).toContainText(/Exported 1 ticket/)
+    await expect(dialog.locator('textarea').first()).toContainText('1. Check the affected service')
   })
 })

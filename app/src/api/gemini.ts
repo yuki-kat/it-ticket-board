@@ -1,6 +1,6 @@
 /**
- * AI Gateway client.
- * Proxies requests through the backend so the API key stays server-side.
+ * Gemini API Client
+ * Proxies requests through backend endpoint for secure server-side API key handling
  */
 
 import { API_BASE } from './base';
@@ -20,14 +20,16 @@ export interface GeminiConfig {
   configured: boolean;
 }
 
-export async function getGeminiConfig(): Promise<GeminiConfig> {
-  const response = await fetch(`${API_BASE}/check-gemini`, { cache: 'no-store' });
-  if (!response.ok) throw new Error('Could not check AI Gateway configuration.');
-  const data: unknown = await response.json();
-  if (typeof data !== 'object' || data === null || !('available' in data) || typeof data.available !== 'boolean') {
-    throw new Error('AI Gateway returned an invalid configuration status.');
+export function setGeminiConfig(config: GeminiConfig) {
+  // No longer needed - API key is server-side only
+  if (config.configured) {
+    localStorage.setItem('gemini_configured', 'true');
   }
-  return { configured: data.available };
+}
+
+export function getGeminiConfig(): GeminiConfig {
+  const configured = localStorage.getItem('gemini_configured') === 'true';
+  return { configured };
 }
 
 interface GeminiMessage {
@@ -59,22 +61,20 @@ async function callGeminiAPI(request: GeminiRequest): Promise<string> {
   });
 
   if (!response.ok) {
-    const payload: unknown = await response.json().catch(() => null);
-    const message = typeof payload === 'object' && payload !== null && 'error' in payload && typeof payload.error === 'string'
-      ? payload.error
-      : response.statusText || 'AI Gateway request failed.';
-    throw new Error(message);
+    const error = await response.json().catch(() => ({}));
+    throw new Error(`Server Error: ${error.error || response.statusText}`);
   }
 
-  const payload: unknown = await response.json();
-  if (typeof payload !== 'object' || payload === null || !('text' in payload) || typeof payload.text !== 'string' || !payload.text) {
-    throw new Error('No response from AI Gateway');
+  const data = await response.json() as { text: string };
+  if (!data.text) {
+    throw new Error('No response from Gemini API');
   }
-  return payload.text;
+  return data.text;
 }
 
 /**
- * Call AI Gateway with a custom prompt.
+ * Call Gemini API with a custom prompt
+ * Sanitizes user input by treating the prompt as data, not instructions
  */
 export async function callGeminiWithPrompt(prompt: string): Promise<string> {
   return callGeminiAPI({

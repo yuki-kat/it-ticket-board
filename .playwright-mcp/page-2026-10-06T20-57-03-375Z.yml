@@ -1,0 +1,1308 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "Go to home" [ref=e6] [cursor=pointer]:
+        - generic [ref=e10]: OPS KANBAN
+      - navigation "Main navigation" [ref=e11]:
+        - button "Home" [ref=e12] [cursor=pointer]
+        - button "Tickets" [ref=e13] [cursor=pointer]
+        - button "Search" [ref=e14] [cursor=pointer]
+        - button "Inventory" [ref=e15] [cursor=pointer]
+    - generic [ref=e16]:
+      - generic [ref=e17]: Local mock data
+      - button "Switch to dark mode" [ref=e19] [cursor=pointer]
+      - button "Tools" [ref=e23] [cursor=pointer]
+      - button "New task" [ref=e28] [cursor=pointer]
+  - navigation "Quick page navigation":
+    - 'button "Previous page: Home" [ref=e31] [cursor=pointer]'
+    - 'button "Next page: Search" [ref=e34] [cursor=pointer]'
+  - main [ref=e37]:
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: OPERATIONS · LIVE BOARD
+        - heading "Ops Kanban" [level=1] [ref=e41]
+        - paragraph [ref=e42]: A focused view of ownership, escalation, and resolution work across the service desk.
+      - generic [ref=e43]: Wed, Oct 7
+    - generic [ref=e47]:
+      - generic [ref=e49]: "Sync: live"
+      - generic [ref=e50]: "Email intake: mock · 0 new"
+      - generic [ref=e51]: 66 cards on the board, 64 open. SLA clocks count calendar time.
+      - button "How this maps" [ref=e52] [cursor=pointer]
+    - region "Task summary" [ref=e55]:
+      - 'button "Filter tickets: Open (64)" [ref=e56] [cursor=pointer]':
+        - generic [ref=e60]:
+          - generic [ref=e61]: Open
+          - generic [ref=e62]: "64"
+      - 'button "Filter tickets: P1 / P2 open (44)" [ref=e63] [cursor=pointer]':
+        - generic [ref=e67]:
+          - generic [ref=e68]: P1 / P2 open
+          - generic [ref=e69]: "44"
+      - 'button "Filter tickets: Past SLA (5)" [ref=e70] [cursor=pointer]':
+        - generic [ref=e75]:
+          - generic [ref=e76]: Past SLA
+          - generic [ref=e77]: "5"
+      - 'button "Filter tickets: Escalated (7)" [ref=e78] [cursor=pointer]':
+        - generic [ref=e82]:
+          - generic [ref=e83]: Escalated
+          - generic [ref=e84]: "7"
+      - button "Show more" [ref=e85] [cursor=pointer]
+    - generic [ref=e86]:
+      - generic [ref=e87]:
+        - tablist "Open ticket tabs" [ref=e88]:
+          - tab "List" [selected] [ref=e90] [cursor=pointer]
+          - button "New ticket tab" [ref=e91] [cursor=pointer]:
+            - generic [ref=e93]: New tab
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: Saved views
+            - combobox "Ticket views saved views" [ref=e97]:
+              - option "Current setup" [selected]
+          - button "Save tabs as view" [ref=e98] [cursor=pointer]
+        - button "Export CSV" [ref=e102] [cursor=pointer]
+      - generic [ref=e106]:
+        - text: Task board
+        - generic [ref=e108]: 66 records
+      - generic [ref=e109]:
+        - textbox "Search tickets, people, tags" [ref=e114]
+        - button "Open all ticket views" [ref=e115] [cursor=pointer]: All Views
+        - button "Filters" [ref=e117] [cursor=pointer]
+        - button "Starred" [ref=e120] [cursor=pointer]
+    - region "List of task records" [ref=e123]:
+      - generic [ref=e124]:
+        - generic [ref=e125]:
+          - generic [ref=e126]: All task records
+          - generic [ref=e127]: Click a checkbox, then Shift-click another to select a range
+        - generic [ref=e128]: 66 records
+      - table [ref=e131]:
+        - rowgroup [ref=e132]:
+          - row [ref=e133]:
+            - columnheader [ref=e134]:
+              - checkbox "Select all visible tickets" [ref=e135] [cursor=pointer]
+            - columnheader [ref=e136]:
+              - button "Number ▾" [ref=e138] [cursor=pointer]:
+                - generic [ref=e139]: Number
+                - generic [ref=e140]: ▾
+            - columnheader [ref=e141]:
+              - button "Short description ▾" [ref=e143] [cursor=pointer]:
+                - generic [ref=e144]: Short description
+                - generic [ref=e145]: ▾
+            - columnheader [ref=e146]:
+              - button "Department ▾" [ref=e148] [cursor=pointer]:
+                - generic [ref=e149]: Department
+                - generic [ref=e150]: ▾
+            - columnheader [ref=e151]:
+              - button "Assignment group ▾" [ref=e153] [cursor=pointer]:
+                - generic [ref=e154]: Assignment group
+                - generic [ref=e155]: ▾
+            - columnheader [ref=e156]:
+              - button "Assigned to ▾" [ref=e158] [cursor=pointer]:
+                - generic [ref=e159]: Assigned to
+                - generic [ref=e160]: ▾
+            - columnheader [ref=e161]:
+              - button "Priority ▾" [ref=e163] [cursor=pointer]:
+                - generic [ref=e164]: Priority
+                - generic [ref=e165]: ▾
+            - columnheader [ref=e166]:
+              - button "State ▾" [ref=e168] [cursor=pointer]:
+                - generic [ref=e169]: State
+                - generic [ref=e170]: ▾
+            - columnheader [ref=e171]:
+              - button "Created ▾" [ref=e173] [cursor=pointer]:
+                - generic [ref=e174]: Created
+                - generic [ref=e175]: ▾
+            - columnheader [ref=e176]:
+              - button "Resolution SLA ▾" [ref=e178] [cursor=pointer]:
+                - generic [ref=e179]: Resolution SLA
+                - generic [ref=e180]: ▾
+        - rowgroup [ref=e181]:
+          - row [ref=e182]:
+            - cell [ref=e183]:
+              - checkbox "Select OPS-101" [ref=e184] [cursor=pointer]
+            - cell [ref=e185]:
+              - generic [ref=e186]:
+                - button "Star OPS-101" [ref=e187] [cursor=pointer]
+                - button "OPS-101" [ref=e190] [cursor=pointer]
+                - button "Search for OPS-101" [ref=e191] [cursor=pointer]
+            - cell "Production database replication lag Incident" [ref=e195]:
+              - button "Production database replication lag" [ref=e196] [cursor=pointer]
+              - generic [ref=e197]: Incident
+            - cell "Data & Analytics" [ref=e198]
+            - cell "Database Operations" [ref=e199]
+            - cell "Jordan Lee" [ref=e200]
+            - cell "P1" [ref=e201]
+            - cell "Escalated" [ref=e203]
+            - cell "Oct 7, 2026" [ref=e205]
+            - cell "3h 28m left" [ref=e206]
+          - row [ref=e207]:
+            - cell [ref=e208]:
+              - checkbox "Select OPS-102" [ref=e209] [cursor=pointer]
+            - cell [ref=e210]:
+              - generic [ref=e211]:
+                - button "Star OPS-102" [ref=e212] [cursor=pointer]
+                - button "OPS-102" [ref=e215] [cursor=pointer]
+                - button "Search for OPS-102" [ref=e216] [cursor=pointer]
+            - cell "VPN sign-in failing for remote staff Incident" [ref=e220]:
+              - button "VPN sign-in failing for remote staff" [ref=e221] [cursor=pointer]
+              - generic [ref=e222]: Incident
+            - cell "Field Services" [ref=e223]
+            - cell "End User Computing" [ref=e224]
+            - cell "Avery Chen" [ref=e225]
+            - cell "P2" [ref=e226]
+            - cell "In Progress" [ref=e228]
+            - cell "Oct 7, 2026" [ref=e230]
+            - cell "22h 36m left" [ref=e231]
+          - row [ref=e232]:
+            - cell [ref=e233]:
+              - checkbox "Select OPS-103" [ref=e234] [cursor=pointer]
+            - cell [ref=e235]:
+              - generic [ref=e236]:
+                - button "Star OPS-103" [ref=e237] [cursor=pointer]
+                - button "OPS-103" [ref=e240] [cursor=pointer]
+                - button "Search for OPS-103" [ref=e241] [cursor=pointer]
+            - cell "Suspicious attachment reported Incident" [ref=e245]:
+              - button "Suspicious attachment reported" [ref=e246] [cursor=pointer]
+              - generic [ref=e247]: Incident
+            - cell "Finance" [ref=e248]
+            - cell "Security Operations" [ref=e249]
+            - cell "Sam Rivera" [ref=e250]
+            - cell "P1" [ref=e251]
+            - cell "New" [ref=e253]
+            - cell "Oct 7, 2026" [ref=e255]
+            - cell "2h 53m left" [ref=e256]
+          - row [ref=e257]:
+            - cell [ref=e258]:
+              - checkbox "Select OPS-104" [ref=e259] [cursor=pointer]
+            - cell [ref=e260]:
+              - generic [ref=e261]:
+                - button "Star OPS-104" [ref=e262] [cursor=pointer]
+                - button "OPS-104" [ref=e265] [cursor=pointer]
+                - button "Search for OPS-104" [ref=e266] [cursor=pointer]
+            - cell "Recurring time-out in month-end reports Problem" [ref=e270]:
+              - button "Recurring time-out in month-end reports" [ref=e271] [cursor=pointer]
+              - generic [ref=e272]: Problem
+            - cell "Finance" [ref=e273]
+            - cell "Problem Management" [ref=e274]
+            - cell "Noah Williams" [ref=e275]
+            - cell "P2" [ref=e276]
+            - cell "In Progress" [ref=e278]
+            - cell "Oct 7, 2026" [ref=e280]
+            - cell "20h 38m left" [ref=e281]
+          - row [ref=e282]:
+            - cell [ref=e283]:
+              - checkbox "Select OPS-105" [ref=e284] [cursor=pointer]
+            - cell [ref=e285]:
+              - generic [ref=e286]:
+                - button "Star OPS-105" [ref=e287] [cursor=pointer]
+                - button "OPS-105" [ref=e290] [cursor=pointer]
+                - button "Search for OPS-105" [ref=e291] [cursor=pointer]
+            - cell "Shared drive access denied Incident" [ref=e295]:
+              - button "Shared drive access denied" [ref=e296] [cursor=pointer]
+              - generic [ref=e297]: Incident
+            - cell "Field Services" [ref=e298]
+            - cell "End User Computing" [ref=e299]
+            - cell "Mina Patel" [ref=e300]
+            - cell "P3" [ref=e301]
+            - cell "New" [ref=e303]
+            - cell "Oct 6, 2026" [ref=e305]
+            - cell "2d 15h left" [ref=e306]
+          - row [ref=e307]:
+            - cell [ref=e308]:
+              - checkbox "Select OPS-106" [ref=e309] [cursor=pointer]
+            - cell [ref=e310]:
+              - generic [ref=e311]:
+                - button "Star OPS-106" [ref=e312] [cursor=pointer]
+                - button "OPS-106" [ref=e315] [cursor=pointer]
+                - button "Search for OPS-106" [ref=e316] [cursor=pointer]
+            - cell "Deploy payroll connector update Change Request" [ref=e320]:
+              - button "Deploy payroll connector update" [ref=e321] [cursor=pointer]
+              - generic [ref=e322]: Change Request
+            - cell "Finance" [ref=e323]
+            - cell "Change Advisory Board" [ref=e324]
+            - cell "Eli Turner" [ref=e325]
+            - cell "P2" [ref=e326]
+            - cell "Waiting on User" [ref=e328]
+            - cell "Oct 6, 2026" [ref=e330]
+            - cell "12h 39m left" [ref=e331]
+          - row [ref=e332]:
+            - cell [ref=e333]:
+              - checkbox "Select OPS-107" [ref=e334] [cursor=pointer]
+            - cell [ref=e335]:
+              - generic [ref=e336]:
+                - button "Star OPS-107" [ref=e337] [cursor=pointer]
+                - button "OPS-107" [ref=e340] [cursor=pointer]
+                - button "Search for OPS-107" [ref=e341] [cursor=pointer]
+            - cell "Laptop camera not detected Incident" [ref=e345]:
+              - button "Laptop camera not detected" [ref=e346] [cursor=pointer]
+              - generic [ref=e347]: Incident
+            - cell "Field Services" [ref=e348]
+            - cell "End User Computing" [ref=e349]
+            - cell "Priya Nair" [ref=e350]
+            - cell "P4" [ref=e351]
+            - cell "New" [ref=e353]
+            - cell "Oct 6, 2026" [ref=e355]
+            - cell "4d 4h left" [ref=e356]
+          - row [ref=e357]:
+            - cell [ref=e358]:
+              - checkbox "Select OPS-108" [ref=e359] [cursor=pointer]
+            - cell [ref=e360]:
+              - generic [ref=e361]:
+                - button "Star OPS-108" [ref=e362] [cursor=pointer]
+                - button "OPS-108" [ref=e365] [cursor=pointer]
+                - button "Search for OPS-108" [ref=e366] [cursor=pointer]
+            - cell "Replace access point in west wing Work Order" [ref=e370]:
+              - button "Replace access point in west wing" [ref=e371] [cursor=pointer]
+              - generic [ref=e372]: Work Order
+            - cell "Facilities" [ref=e373]
+            - cell "Field Services" [ref=e374]
+            - cell "Riley Brooks" [ref=e375]
+            - cell "P3" [ref=e376]
+            - cell "In Progress" [ref=e378]
+            - cell "Oct 6, 2026" [ref=e380]
+            - cell "2d 17h left" [ref=e381]
+          - row [ref=e382]:
+            - cell [ref=e383]:
+              - checkbox "Select OPS-109" [ref=e384] [cursor=pointer]
+            - cell [ref=e385]:
+              - generic [ref=e386]:
+                - button "Star OPS-109" [ref=e387] [cursor=pointer]
+                - button "OPS-109" [ref=e390] [cursor=pointer]
+                - button "Search for OPS-109" [ref=e391] [cursor=pointer]
+            - cell "Intermittent order sync delays Problem" [ref=e395]:
+              - button "Intermittent order sync delays" [ref=e396] [cursor=pointer]
+              - generic [ref=e397]: Problem
+            - cell "Commerce" [ref=e398]
+            - cell "Problem Management" [ref=e399]
+            - cell "Jordan Lee" [ref=e400]
+            - cell "P2" [ref=e401]
+            - cell "Escalated" [ref=e403]
+            - cell "Oct 7, 2026" [ref=e405]
+            - cell "21h 38m left" [ref=e406]
+          - row [ref=e407]:
+            - cell [ref=e408]:
+              - checkbox "Select OPS-110" [ref=e409] [cursor=pointer]
+            - cell [ref=e410]:
+              - generic [ref=e411]:
+                - button "Star OPS-110" [ref=e412] [cursor=pointer]
+                - button "OPS-110" [ref=e415] [cursor=pointer]
+                - button "Search for OPS-110" [ref=e416] [cursor=pointer]
+            - cell "New starter cannot access email Incident" [ref=e420]:
+              - button "New starter cannot access email" [ref=e421] [cursor=pointer]
+              - generic [ref=e422]: Incident
+            - cell "People & HR" [ref=e423]
+            - cell "End User Computing" [ref=e424]
+            - cell "Avery Chen" [ref=e425]
+            - cell "P3" [ref=e426]
+            - cell "Waiting on User" [ref=e428]
+            - cell "Oct 7, 2026" [ref=e430]
+            - cell "2d 19h left" [ref=e431]
+          - row [ref=e432]:
+            - cell [ref=e433]:
+              - checkbox "Select OPS-111" [ref=e434] [cursor=pointer]
+            - cell [ref=e435]:
+              - generic [ref=e436]:
+                - button "Star OPS-111" [ref=e437] [cursor=pointer]
+                - button "OPS-111" [ref=e440] [cursor=pointer]
+                - button "Search for OPS-111" [ref=e441] [cursor=pointer]
+            - cell "Rotate API credentials Change Request" [ref=e445]:
+              - button "Rotate API credentials" [ref=e446] [cursor=pointer]
+              - generic [ref=e447]: Change Request
+            - cell "Platform Engineering" [ref=e448]
+            - cell "Change Advisory Board" [ref=e449]
+            - cell "Morgan Diaz" [ref=e450]
+            - cell "P1" [ref=e451]
+            - cell "In Progress" [ref=e453]
+            - cell "Oct 7, 2026" [ref=e455]
+            - cell "0h 12m left" [ref=e456]
+          - row [ref=e457]:
+            - cell [ref=e458]:
+              - checkbox "Select OPS-112" [ref=e459] [cursor=pointer]
+            - cell [ref=e460]:
+              - generic [ref=e461]:
+                - button "Star OPS-112" [ref=e462] [cursor=pointer]
+                - button "OPS-112" [ref=e465] [cursor=pointer]
+                - button "Search for OPS-112" [ref=e466] [cursor=pointer]
+            - cell "Printer queue stuck on level 4 Incident" [ref=e470]:
+              - button "Printer queue stuck on level 4" [ref=e471] [cursor=pointer]
+              - generic [ref=e472]: Incident
+            - cell "Field Services" [ref=e473]
+            - cell "Service Desk" [ref=e474]
+            - cell "Taylor Quinn" [ref=e475]
+            - cell "P4" [ref=e476]
+            - cell "Resolved" [ref=e478]
+            - cell "Oct 7, 2026" [ref=e480]
+            - cell "Resolved" [ref=e481]
+          - row [ref=e482]:
+            - cell [ref=e483]:
+              - checkbox "Select OPS-113" [ref=e484] [cursor=pointer]
+            - cell [ref=e485]:
+              - generic [ref=e486]:
+                - button "Star OPS-113" [ref=e487] [cursor=pointer]
+                - button "OPS-113" [ref=e490] [cursor=pointer]
+                - button "Search for OPS-113" [ref=e491] [cursor=pointer]
+            - cell "Repeated account lockouts Problem" [ref=e495]:
+              - button "Repeated account lockouts" [ref=e496] [cursor=pointer]
+              - generic [ref=e497]: Problem
+            - cell "Customer Care" [ref=e498]
+            - cell "Problem Management" [ref=e499]
+            - cell "Sam Rivera" [ref=e500]
+            - cell "P2" [ref=e501]
+            - cell "New" [ref=e503]
+            - cell "Oct 7, 2026" [ref=e505]
+            - cell "18h 39m left" [ref=e506]
+          - row [ref=e507]:
+            - cell [ref=e508]:
+              - checkbox "Select OPS-114" [ref=e509] [cursor=pointer]
+            - cell [ref=e510]:
+              - generic [ref=e511]:
+                - button "Star OPS-114" [ref=e512] [cursor=pointer]
+                - button "OPS-114" [ref=e515] [cursor=pointer]
+                - button "Search for OPS-114" [ref=e516] [cursor=pointer]
+            - cell "Inspect cooling alert in server room Work Order" [ref=e520]:
+              - button "Inspect cooling alert in server room" [ref=e521] [cursor=pointer]
+              - generic [ref=e522]: Work Order
+            - cell "Facilities" [ref=e523]
+            - cell "Field Services" [ref=e524]
+            - cell "Riley Brooks" [ref=e525]
+            - cell "P1" [ref=e526]
+            - cell "In Progress" [ref=e528]
+            - cell "Oct 7, 2026" [ref=e530]
+            - cell "2h 10m left" [ref=e531]
+          - row [ref=e532]:
+            - cell [ref=e533]:
+              - checkbox "Select OPS-115" [ref=e534] [cursor=pointer]
+            - cell [ref=e535]:
+              - generic [ref=e536]:
+                - button "Star OPS-115" [ref=e537] [cursor=pointer]
+                - button "OPS-115" [ref=e540] [cursor=pointer]
+                - button "Search for OPS-115" [ref=e541] [cursor=pointer]
+            - cell "Calendar sharing permission missing Incident" [ref=e545]:
+              - button "Calendar sharing permission missing" [ref=e546] [cursor=pointer]
+              - generic [ref=e547]: Incident
+            - cell "Field Services" [ref=e548]
+            - cell "End User Computing" [ref=e549]
+            - cell "Mina Patel" [ref=e550]
+            - cell "P3" [ref=e551]
+            - cell "Resolved" [ref=e553]
+            - cell "Oct 7, 2026" [ref=e555]
+            - cell "Resolved" [ref=e556]
+          - row [ref=e557]:
+            - cell [ref=e558]:
+              - checkbox "Select OPS-116" [ref=e559] [cursor=pointer]
+            - cell [ref=e560]:
+              - generic [ref=e561]:
+                - button "Star OPS-116" [ref=e562] [cursor=pointer]
+                - button "OPS-116" [ref=e565] [cursor=pointer]
+                - button "Search for OPS-116" [ref=e566] [cursor=pointer]
+            - cell "Upgrade monitoring agent fleet Change Request" [ref=e570]:
+              - button "Upgrade monitoring agent fleet" [ref=e571] [cursor=pointer]
+              - generic [ref=e572]: Change Request
+            - cell "Platform Engineering" [ref=e573]
+            - cell "Change Advisory Board" [ref=e574]
+            - cell "Noah Williams" [ref=e575]
+            - cell "P2" [ref=e576]
+            - cell "Waiting on User" [ref=e578]
+            - cell "Oct 6, 2026" [ref=e580]
+            - cell "8h 14m left" [ref=e581]
+          - row [ref=e582]:
+            - cell [ref=e583]:
+              - checkbox "Select OPS-117" [ref=e584] [cursor=pointer]
+            - cell [ref=e585]:
+              - generic [ref=e586]:
+                - button "Star OPS-117" [ref=e587] [cursor=pointer]
+                - button "OPS-117" [ref=e590] [cursor=pointer]
+                - button "Search for OPS-117" [ref=e591] [cursor=pointer]
+            - cell "Backup job failed on vault-02 Incident" [ref=e595]:
+              - button "Backup job failed on vault-02" [ref=e596] [cursor=pointer]
+              - generic [ref=e597]: Incident
+            - cell "Field Services" [ref=e598]
+            - cell "Database Operations" [ref=e599]
+            - cell "Jordan Lee" [ref=e600]
+            - cell "P1" [ref=e601]
+            - cell "In Progress" [ref=e603]
+            - cell "Oct 7, 2026" [ref=e605]
+            - cell "2h 29m left" [ref=e606]
+          - row [ref=e607]:
+            - cell [ref=e608]:
+              - checkbox "Select OPS-118" [ref=e609] [cursor=pointer]
+            - cell [ref=e610]:
+              - generic [ref=e611]:
+                - button "Star OPS-118" [ref=e612] [cursor=pointer]
+                - button "OPS-118" [ref=e615] [cursor=pointer]
+                - button "Search for OPS-118" [ref=e616] [cursor=pointer]
+            - cell "Slack notification delays Incident" [ref=e620]:
+              - button "Slack notification delays" [ref=e621] [cursor=pointer]
+              - generic [ref=e622]: Incident
+            - cell "Platform Engineering" [ref=e623]
+            - cell "Infrastructure" [ref=e624]
+            - cell "Avery Chen" [ref=e625]
+            - cell "P3" [ref=e626]
+            - cell "New" [ref=e628]
+            - cell "Oct 7, 2026" [ref=e630]
+            - cell "2d 20h left" [ref=e631]
+          - row [ref=e632]:
+            - cell [ref=e633]:
+              - checkbox "Select OPS-119" [ref=e634] [cursor=pointer]
+            - cell [ref=e635]:
+              - generic [ref=e636]:
+                - button "Star OPS-119" [ref=e637] [cursor=pointer]
+                - button "OPS-119" [ref=e640] [cursor=pointer]
+                - button "Search for OPS-119" [ref=e641] [cursor=pointer]
+            - cell "Install additional network cables Work Order" [ref=e645]:
+              - button "Install additional network cables" [ref=e646] [cursor=pointer]
+              - generic [ref=e647]: Work Order
+            - cell "Facilities" [ref=e648]
+            - cell "Field Services" [ref=e649]
+            - cell "Riley Brooks" [ref=e650]
+            - cell "P3" [ref=e651]
+            - cell "In Progress" [ref=e653]
+            - cell "Oct 7, 2026" [ref=e655]
+            - cell "2d 19h left" [ref=e656]
+          - row [ref=e657]:
+            - cell [ref=e658]:
+              - checkbox "Select OPS-120" [ref=e659] [cursor=pointer]
+            - cell [ref=e660]:
+              - generic [ref=e661]:
+                - button "Star OPS-120" [ref=e662] [cursor=pointer]
+                - button "OPS-120" [ref=e665] [cursor=pointer]
+                - button "Search for OPS-120" [ref=e666] [cursor=pointer]
+            - cell "Excel pivot table timeout Incident" [ref=e670]:
+              - button "Excel pivot table timeout" [ref=e671] [cursor=pointer]
+              - generic [ref=e672]: Incident
+            - cell "Finance" [ref=e673]
+            - cell "Database Operations" [ref=e674]
+            - cell "Morgan Diaz" [ref=e675]
+            - cell "P2" [ref=e676]
+            - cell "New" [ref=e678]
+            - cell "Oct 7, 2026" [ref=e680]
+            - cell "21h 14m left" [ref=e681]
+          - row [ref=e682]:
+            - cell [ref=e683]:
+              - checkbox "Select OPS-121" [ref=e684] [cursor=pointer]
+            - cell [ref=e685]:
+              - generic [ref=e686]:
+                - button "Star OPS-121" [ref=e687] [cursor=pointer]
+                - button "OPS-121" [ref=e690] [cursor=pointer]
+                - button "Search for OPS-121" [ref=e691] [cursor=pointer]
+            - cell "Chrome updates breaking extensions Problem" [ref=e695]:
+              - button "Chrome updates breaking extensions" [ref=e696] [cursor=pointer]
+              - generic [ref=e697]: Problem
+            - cell "Field Services" [ref=e698]
+            - cell "End User Computing" [ref=e699]
+            - cell "Priya Nair" [ref=e700]
+            - cell "P3" [ref=e701]
+            - cell "New" [ref=e703]
+            - cell "Oct 6, 2026" [ref=e705]
+            - cell "2d 15h left" [ref=e706]
+          - row [ref=e707]:
+            - cell [ref=e708]:
+              - checkbox "Select OPS-122" [ref=e709] [cursor=pointer]
+            - cell [ref=e710]:
+              - generic [ref=e711]:
+                - button "Star OPS-122" [ref=e712] [cursor=pointer]
+                - button "OPS-122" [ref=e715] [cursor=pointer]
+                - button "Search for OPS-122" [ref=e716] [cursor=pointer]
+            - cell "Deploy new SSO provider config Change Request" [ref=e720]:
+              - button "Deploy new SSO provider config" [ref=e721] [cursor=pointer]
+              - generic [ref=e722]: Change Request
+            - cell "People & HR" [ref=e723]
+            - cell "Change Advisory Board" [ref=e724]
+            - cell "Eli Turner" [ref=e725]
+            - cell "P2" [ref=e726]
+            - cell "In Progress" [ref=e728]
+            - cell "Oct 6, 2026" [ref=e730]
+            - cell "17h 34m left" [ref=e731]
+          - row [ref=e732]:
+            - cell [ref=e733]:
+              - checkbox "Select OPS-123" [ref=e734] [cursor=pointer]
+            - cell [ref=e735]:
+              - generic [ref=e736]:
+                - button "Star OPS-123" [ref=e737] [cursor=pointer]
+                - button "OPS-123" [ref=e740] [cursor=pointer]
+                - button "Search for OPS-123" [ref=e741] [cursor=pointer]
+            - cell "Intermittent DNS failures Incident" [ref=e745]:
+              - button "Intermittent DNS failures" [ref=e746] [cursor=pointer]
+              - generic [ref=e747]: Incident
+            - cell "Platform Engineering" [ref=e748]
+            - cell "Infrastructure" [ref=e749]
+            - cell "Noah Williams" [ref=e750]
+            - cell "P1" [ref=e751]
+            - cell "Escalated" [ref=e753]
+            - cell "Oct 7, 2026" [ref=e755]
+            - cell "2h 14m left" [ref=e756]
+          - row [ref=e757]:
+            - cell [ref=e758]:
+              - checkbox "Select OPS-124" [ref=e759] [cursor=pointer]
+            - cell [ref=e760]:
+              - generic [ref=e761]:
+                - button "Star OPS-124" [ref=e762] [cursor=pointer]
+                - button "OPS-124" [ref=e765] [cursor=pointer]
+                - button "Search for OPS-124" [ref=e766] [cursor=pointer]
+            - cell "Mobile app crashing on login Incident" [ref=e770]:
+              - button "Mobile app crashing on login" [ref=e771] [cursor=pointer]
+              - generic [ref=e772]: Incident
+            - cell "Commerce" [ref=e773]
+            - cell "Problem Management" [ref=e774]
+            - cell "Sam Rivera" [ref=e775]
+            - cell "P1" [ref=e776]
+            - cell "New" [ref=e778]
+            - cell "Oct 7, 2026" [ref=e780]
+            - cell "2h 59m left" [ref=e781]
+          - row [ref=e782]:
+            - cell [ref=e783]:
+              - checkbox "Select OPS-125" [ref=e784] [cursor=pointer]
+            - cell [ref=e785]:
+              - generic [ref=e786]:
+                - button "Star OPS-125" [ref=e787] [cursor=pointer]
+                - button "OPS-125" [ref=e790] [cursor=pointer]
+                - button "Search for OPS-125" [ref=e791] [cursor=pointer]
+            - cell "Audit network access logs Work Order" [ref=e795]:
+              - button "Audit network access logs" [ref=e796] [cursor=pointer]
+              - generic [ref=e797]: Work Order
+            - cell "Security" [ref=e798]
+            - cell "Field Services" [ref=e799]
+            - cell "Taylor Quinn" [ref=e800]
+            - cell "P2" [ref=e801]
+            - cell "In Progress" [ref=e803]
+            - cell "Oct 5, 2026" [ref=e805]
+            - cell "6h 45m over" [ref=e806]
+          - row [ref=e807]:
+            - cell [ref=e808]:
+              - checkbox "Select OPS-126" [ref=e809] [cursor=pointer]
+            - cell [ref=e810]:
+              - generic [ref=e811]:
+                - button "Star OPS-126" [ref=e812] [cursor=pointer]
+                - button "OPS-126" [ref=e815] [cursor=pointer]
+                - button "Search for OPS-126" [ref=e816] [cursor=pointer]
+            - cell "Inventory sync missing items Incident" [ref=e820]:
+              - button "Inventory sync missing items" [ref=e821] [cursor=pointer]
+              - generic [ref=e822]: Incident
+            - cell "Commerce" [ref=e823]
+            - cell "Problem Management" [ref=e824]
+            - cell "Jordan Lee" [ref=e825]
+            - cell "P2" [ref=e826]
+            - cell "Waiting on User" [ref=e828]
+            - cell "Oct 7, 2026" [ref=e830]
+            - cell "21h 44m left" [ref=e831]
+          - row [ref=e832]:
+            - cell [ref=e833]:
+              - checkbox "Select OPS-127" [ref=e834] [cursor=pointer]
+            - cell [ref=e835]:
+              - generic [ref=e836]:
+                - button "Star OPS-127" [ref=e837] [cursor=pointer]
+                - button "OPS-127" [ref=e840] [cursor=pointer]
+                - button "Search for OPS-127" [ref=e841] [cursor=pointer]
+            - cell "Patch Windows Server 2019 fleet Change Request" [ref=e845]:
+              - button "Patch Windows Server 2019 fleet" [ref=e846] [cursor=pointer]
+              - generic [ref=e847]: Change Request
+            - cell "Platform Engineering" [ref=e848]
+            - cell "Change Advisory Board" [ref=e849]
+            - cell "Morgan Diaz" [ref=e850]
+            - cell "P3" [ref=e851]
+            - cell "Waiting on User" [ref=e853]
+            - cell "Oct 6, 2026" [ref=e855]
+            - cell "2d 3h left" [ref=e856]
+          - row [ref=e857]:
+            - cell [ref=e858]:
+              - checkbox "Select OPS-128" [ref=e859] [cursor=pointer]
+            - cell [ref=e860]:
+              - generic [ref=e861]:
+                - button "Star OPS-128" [ref=e862] [cursor=pointer]
+                - button "OPS-128" [ref=e865] [cursor=pointer]
+                - button "Search for OPS-128" [ref=e866] [cursor=pointer]
+            - cell "Payroll batch processing slow Incident" [ref=e870]:
+              - button "Payroll batch processing slow" [ref=e871] [cursor=pointer]
+              - generic [ref=e872]: Incident
+            - cell "Finance" [ref=e873]
+            - cell "Database Operations" [ref=e874]
+            - cell "Avery Chen" [ref=e875]
+            - cell "P1" [ref=e876]
+            - cell "In Progress" [ref=e878]
+            - cell "Oct 7, 2026" [ref=e880]
+            - cell "1h 59m left" [ref=e881]
+          - row [ref=e882]:
+            - cell [ref=e883]:
+              - checkbox "Select OPS-129" [ref=e884] [cursor=pointer]
+            - cell [ref=e885]:
+              - generic [ref=e886]:
+                - button "Star OPS-129" [ref=e887] [cursor=pointer]
+                - button "OPS-129" [ref=e890] [cursor=pointer]
+                - button "Search for OPS-129" [ref=e891] [cursor=pointer]
+            - cell "Document upload failures intermittent Problem" [ref=e895]:
+              - button "Document upload failures intermittent" [ref=e896] [cursor=pointer]
+              - generic [ref=e897]: Problem
+            - cell "Platform Engineering" [ref=e898]
+            - cell "Infrastructure" [ref=e899]
+            - cell "Priya Nair" [ref=e900]
+            - cell "P2" [ref=e901]
+            - cell "New" [ref=e903]
+            - cell "Oct 7, 2026" [ref=e905]
+            - cell "19h 44m left" [ref=e906]
+          - row [ref=e907]:
+            - cell [ref=e908]:
+              - checkbox "Select OPS-130" [ref=e909] [cursor=pointer]
+            - cell [ref=e910]:
+              - generic [ref=e911]:
+                - button "Star OPS-130" [ref=e912] [cursor=pointer]
+                - button "OPS-130" [ref=e915] [cursor=pointer]
+                - button "Search for OPS-130" [ref=e916] [cursor=pointer]
+            - cell "Email forwarding rule not working Incident" [ref=e920]:
+              - button "Email forwarding rule not working" [ref=e921] [cursor=pointer]
+              - generic [ref=e922]: Incident
+            - cell "Customer Care" [ref=e923]
+            - cell "Service Desk" [ref=e924]
+            - cell "Riley Brooks" [ref=e925]
+            - cell "P3" [ref=e926]
+            - cell "New" [ref=e928]
+            - cell "Oct 6, 2026" [ref=e930]
+            - cell "2d 17h left" [ref=e931]
+          - row [ref=e932]:
+            - cell [ref=e933]:
+              - checkbox "Select OPS-131" [ref=e934] [cursor=pointer]
+            - cell [ref=e935]:
+              - generic [ref=e936]:
+                - button "Star OPS-131" [ref=e937] [cursor=pointer]
+                - button "OPS-131" [ref=e940] [cursor=pointer]
+                - button "Search for OPS-131" [ref=e941] [cursor=pointer]
+            - cell "Replace faulty UPS unit Work Order" [ref=e945]:
+              - button "Replace faulty UPS unit" [ref=e946] [cursor=pointer]
+              - generic [ref=e947]: Work Order
+            - cell "Field Services" [ref=e948]
+            - cell "Field Services" [ref=e949]
+            - cell "Taylor Quinn" [ref=e950]
+            - cell "P1" [ref=e951]
+            - cell "In Progress" [ref=e953]
+            - cell "Oct 7, 2026" [ref=e955]
+            - cell "1h 14m left" [ref=e956]
+          - row [ref=e957]:
+            - cell [ref=e958]:
+              - checkbox "Select OPS-132" [ref=e959] [cursor=pointer]
+            - cell [ref=e960]:
+              - generic [ref=e961]:
+                - button "Star OPS-132" [ref=e962] [cursor=pointer]
+                - button "OPS-132" [ref=e965] [cursor=pointer]
+                - button "Search for OPS-132" [ref=e966] [cursor=pointer]
+            - cell "Conference room booking conflict Incident" [ref=e970]:
+              - button "Conference room booking conflict" [ref=e971] [cursor=pointer]
+              - generic [ref=e972]: Incident
+            - cell "Facilities" [ref=e973]
+            - cell "Service Desk" [ref=e974]
+            - cell "Mina Patel" [ref=e975]
+            - cell "P4" [ref=e976]
+            - cell "New" [ref=e978]
+            - cell "Oct 6, 2026" [ref=e980]
+            - cell "4d 13h left" [ref=e981]
+          - row [ref=e982]:
+            - cell [ref=e983]:
+              - checkbox "Select OPS-133" [ref=e984] [cursor=pointer]
+            - cell [ref=e985]:
+              - generic [ref=e986]:
+                - button "Star OPS-133" [ref=e987] [cursor=pointer]
+                - button "OPS-133" [ref=e990] [cursor=pointer]
+                - button "Search for OPS-133" [ref=e991] [cursor=pointer]
+            - cell "Enable encrypted storage buckets Change Request" [ref=e995]:
+              - button "Enable encrypted storage buckets" [ref=e996] [cursor=pointer]
+              - generic [ref=e997]: Change Request
+            - cell "Security" [ref=e998]
+            - cell "Change Advisory Board" [ref=e999]
+            - cell "Sam Rivera" [ref=e1000]
+            - cell "P2" [ref=e1001]
+            - cell "In Progress" [ref=e1003]
+            - cell "Oct 6, 2026" [ref=e1005]
+            - cell "15h 14m left" [ref=e1006]
+          - row [ref=e1007]:
+            - cell [ref=e1008]:
+              - checkbox "Select OPS-134" [ref=e1009] [cursor=pointer]
+            - cell [ref=e1010]:
+              - generic [ref=e1011]:
+                - button "Star OPS-134" [ref=e1012] [cursor=pointer]
+                - button "OPS-134" [ref=e1015] [cursor=pointer]
+                - button "Search for OPS-134" [ref=e1016] [cursor=pointer]
+            - cell "API rate limiting too strict Problem" [ref=e1020]:
+              - button "API rate limiting too strict" [ref=e1021] [cursor=pointer]
+              - generic [ref=e1022]: Problem
+            - cell "Commerce" [ref=e1023]
+            - cell "Infrastructure" [ref=e1024]
+            - cell "Noah Williams" [ref=e1025]
+            - cell "P2" [ref=e1026]
+            - cell "Escalated" [ref=e1028]
+            - cell "Oct 7, 2026" [ref=e1030]
+            - cell "20h 49m left" [ref=e1031]
+          - row [ref=e1032]:
+            - cell [ref=e1033]:
+              - checkbox "Select OPS-135" [ref=e1034] [cursor=pointer]
+            - cell [ref=e1035]:
+              - generic [ref=e1036]:
+                - button "Star OPS-135" [ref=e1037] [cursor=pointer]
+                - button "OPS-135" [ref=e1040] [cursor=pointer]
+                - button "Search for OPS-135" [ref=e1041] [cursor=pointer]
+            - cell "Expired SSL certificate on subdomain Incident" [ref=e1045]:
+              - button "Expired SSL certificate on subdomain" [ref=e1046] [cursor=pointer]
+              - generic [ref=e1047]: Incident
+            - cell "Platform Engineering" [ref=e1048]
+            - cell "Infrastructure" [ref=e1049]
+            - cell "Morgan Diaz" [ref=e1050]
+            - cell "P1" [ref=e1051]
+            - cell "New" [ref=e1053]
+            - cell "Oct 7, 2026" [ref=e1055]
+            - cell "3h 9m left" [ref=e1056]
+          - row [ref=e1057]:
+            - cell [ref=e1058]:
+              - checkbox "Select OPS-136" [ref=e1059] [cursor=pointer]
+            - cell [ref=e1060]:
+              - generic [ref=e1061]:
+                - button "Star OPS-136" [ref=e1062] [cursor=pointer]
+                - button "OPS-136" [ref=e1065] [cursor=pointer]
+                - button "Search for OPS-136" [ref=e1066] [cursor=pointer]
+            - cell "Install software license keys Work Order" [ref=e1070]:
+              - button "Install software license keys" [ref=e1071] [cursor=pointer]
+              - generic [ref=e1072]: Work Order
+            - cell "Field Services" [ref=e1073]
+            - cell "Field Services" [ref=e1074]
+            - cell "Riley Brooks" [ref=e1075]
+            - cell "P3" [ref=e1076]
+            - cell "In Progress" [ref=e1078]
+            - cell "Oct 6, 2026" [ref=e1080]
+            - cell "2d 16h left" [ref=e1081]
+          - row [ref=e1082]:
+            - cell [ref=e1083]:
+              - checkbox "Select OPS-137" [ref=e1084] [cursor=pointer]
+            - cell [ref=e1085]:
+              - generic [ref=e1086]:
+                - button "Star OPS-137" [ref=e1087] [cursor=pointer]
+                - button "OPS-137" [ref=e1090] [cursor=pointer]
+                - button "Search for OPS-137" [ref=e1091] [cursor=pointer]
+            - cell "Database replication broken Incident" [ref=e1095]:
+              - button "Database replication broken" [ref=e1096] [cursor=pointer]
+              - generic [ref=e1097]: Incident
+            - cell "Data & Analytics" [ref=e1098]
+            - cell "Database Operations" [ref=e1099]
+            - cell "Jordan Lee" [ref=e1100]
+            - cell "P1" [ref=e1101]
+            - cell "Escalated" [ref=e1103]
+            - cell "Oct 7, 2026" [ref=e1105]
+            - cell "2h 44m left" [ref=e1106]
+          - row [ref=e1107]:
+            - cell [ref=e1108]:
+              - checkbox "Select OPS-138" [ref=e1109] [cursor=pointer]
+            - cell [ref=e1110]:
+              - generic [ref=e1111]:
+                - button "Star OPS-138" [ref=e1112] [cursor=pointer]
+                - button "OPS-138" [ref=e1115] [cursor=pointer]
+                - button "Search for OPS-138" [ref=e1116] [cursor=pointer]
+            - cell "VPN latency increased 10x Incident" [ref=e1120]:
+              - button "VPN latency increased 10x" [ref=e1121] [cursor=pointer]
+              - generic [ref=e1122]: Incident
+            - cell "Platform Engineering" [ref=e1123]
+            - cell "Infrastructure" [ref=e1124]
+            - cell "Avery Chen" [ref=e1125]
+            - cell "P2" [ref=e1126]
+            - cell "In Progress" [ref=e1128]
+            - cell "Oct 7, 2026" [ref=e1130]
+            - cell "21h 59m left" [ref=e1131]
+          - row [ref=e1132]:
+            - cell [ref=e1133]:
+              - checkbox "Select OPS-139" [ref=e1134] [cursor=pointer]
+            - cell [ref=e1135]:
+              - generic [ref=e1136]:
+                - button "Star OPS-139" [ref=e1137] [cursor=pointer]
+                - button "OPS-139" [ref=e1140] [cursor=pointer]
+                - button "Search for OPS-139" [ref=e1141] [cursor=pointer]
+            - cell "Implement log aggregation tool Change Request" [ref=e1145]:
+              - button "Implement log aggregation tool" [ref=e1146] [cursor=pointer]
+              - generic [ref=e1147]: Change Request
+            - cell "Platform Engineering" [ref=e1148]
+            - cell "Change Advisory Board" [ref=e1149]
+            - cell "Eli Turner" [ref=e1150]
+            - cell "P3" [ref=e1151]
+            - cell "Waiting on User" [ref=e1153]
+            - cell "Oct 5, 2026" [ref=e1155]
+            - cell "23h 14m left" [ref=e1156]
+          - row [ref=e1157]:
+            - cell [ref=e1158]:
+              - checkbox "Select OPS-140" [ref=e1159] [cursor=pointer]
+            - cell [ref=e1160]:
+              - generic [ref=e1161]:
+                - button "Star OPS-140" [ref=e1162] [cursor=pointer]
+                - button "OPS-140" [ref=e1165] [cursor=pointer]
+                - button "Search for OPS-140" [ref=e1166] [cursor=pointer]
+            - cell "User cannot access shared OneDrive Incident" [ref=e1170]:
+              - button "User cannot access shared OneDrive" [ref=e1171] [cursor=pointer]
+              - generic [ref=e1172]: Incident
+            - cell "Field Services" [ref=e1173]
+            - cell "End User Computing" [ref=e1174]
+            - cell "Priya Nair" [ref=e1175]
+            - cell "P3" [ref=e1176]
+            - cell "New" [ref=e1178]
+            - cell "Oct 7, 2026" [ref=e1180]
+            - cell "2d 19h left" [ref=e1181]
+          - row [ref=e1182]:
+            - cell [ref=e1183]:
+              - checkbox "Select OPS-141" [ref=e1184] [cursor=pointer]
+            - cell [ref=e1185]:
+              - generic [ref=e1186]:
+                - button "Star OPS-141" [ref=e1187] [cursor=pointer]
+                - button "OPS-141" [ref=e1190] [cursor=pointer]
+                - button "Search for OPS-141" [ref=e1191] [cursor=pointer]
+            - cell "Memory leak in background service Problem" [ref=e1195]:
+              - button "Memory leak in background service" [ref=e1196] [cursor=pointer]
+              - generic [ref=e1197]: Problem
+            - cell "Platform Engineering" [ref=e1198]
+            - cell "Problem Management" [ref=e1199]
+            - cell "Sam Rivera" [ref=e1200]
+            - cell "P2" [ref=e1201]
+            - cell "In Progress" [ref=e1203]
+            - cell "Oct 7, 2026" [ref=e1205]
+            - cell "18h 14m left" [ref=e1206]
+          - row [ref=e1207]:
+            - cell [ref=e1208]:
+              - checkbox "Select OPS-142" [ref=e1209] [cursor=pointer]
+            - cell [ref=e1210]:
+              - generic [ref=e1211]:
+                - button "Star OPS-142" [ref=e1212] [cursor=pointer]
+                - button "OPS-142" [ref=e1215] [cursor=pointer]
+                - button "Search for OPS-142" [ref=e1216] [cursor=pointer]
+            - cell "Git push rejections Incident" [ref=e1220]:
+              - button "Git push rejections" [ref=e1221] [cursor=pointer]
+              - generic [ref=e1222]: Incident
+            - cell "Platform Engineering" [ref=e1223]
+            - cell "Infrastructure" [ref=e1224]
+            - cell "Noah Williams" [ref=e1225]
+            - cell "P1" [ref=e1226]
+            - cell "New" [ref=e1228]
+            - cell "Oct 7, 2026" [ref=e1230]
+            - cell "2h 54m left" [ref=e1231]
+          - row [ref=e1232]:
+            - cell [ref=e1233]:
+              - checkbox "Select OPS-143" [ref=e1234] [cursor=pointer]
+            - cell [ref=e1235]:
+              - generic [ref=e1236]:
+                - button "Star OPS-143" [ref=e1237] [cursor=pointer]
+                - button "OPS-143" [ref=e1240] [cursor=pointer]
+                - button "Search for OPS-143" [ref=e1241] [cursor=pointer]
+            - cell "Reconfigure HVAC schedule Work Order" [ref=e1245]:
+              - button "Reconfigure HVAC schedule" [ref=e1246] [cursor=pointer]
+              - generic [ref=e1247]: Work Order
+            - cell "Facilities" [ref=e1248]
+            - cell "Field Services" [ref=e1249]
+            - cell "Riley Brooks" [ref=e1250]
+            - cell "P3" [ref=e1251]
+            - cell "New" [ref=e1253]
+            - cell "Oct 6, 2026" [ref=e1255]
+            - cell "1d 23h left" [ref=e1256]
+          - row [ref=e1257]:
+            - cell [ref=e1258]:
+              - checkbox "Select OPS-144" [ref=e1259] [cursor=pointer]
+            - cell [ref=e1260]:
+              - generic [ref=e1261]:
+                - button "Star OPS-144" [ref=e1262] [cursor=pointer]
+                - button "OPS-144" [ref=e1265] [cursor=pointer]
+                - button "Search for OPS-144" [ref=e1266] [cursor=pointer]
+            - cell "Kanban board data loss Incident" [ref=e1270]:
+              - button "Kanban board data loss" [ref=e1271] [cursor=pointer]
+              - generic [ref=e1272]: Incident
+            - cell "Platform Engineering" [ref=e1273]
+            - cell "Problem Management" [ref=e1274]
+            - cell "Morgan Diaz" [ref=e1275]
+            - cell "P1" [ref=e1276]
+            - cell "Escalated" [ref=e1278]
+            - cell "Oct 7, 2026" [ref=e1280]
+            - cell "3h 4m left" [ref=e1281]
+          - row [ref=e1282]:
+            - cell [ref=e1283]:
+              - checkbox "Select OPS-145" [ref=e1284] [cursor=pointer]
+            - cell [ref=e1285]:
+              - generic [ref=e1286]:
+                - button "Star OPS-145" [ref=e1287] [cursor=pointer]
+                - button "OPS-145" [ref=e1290] [cursor=pointer]
+                - button "Search for OPS-145" [ref=e1291] [cursor=pointer]
+            - cell "Deprecate legacy REST API Change Request" [ref=e1295]:
+              - button "Deprecate legacy REST API" [ref=e1296] [cursor=pointer]
+              - generic [ref=e1297]: Change Request
+            - cell "Platform Engineering" [ref=e1298]
+            - cell "Change Advisory Board" [ref=e1299]
+            - cell "Eli Turner" [ref=e1300]
+            - cell "P2" [ref=e1301]
+            - cell "Waiting on User" [ref=e1303]
+            - cell "Oct 2, 2026" [ref=e1305]
+            - cell "4d 0h over" [ref=e1306]
+          - row [ref=e1307]:
+            - cell [ref=e1308]:
+              - checkbox "Select OPS-146" [ref=e1309] [cursor=pointer]
+            - cell [ref=e1310]:
+              - generic [ref=e1311]:
+                - button "Star OPS-146" [ref=e1312] [cursor=pointer]
+                - button "OPS-146" [ref=e1315] [cursor=pointer]
+                - button "Search for OPS-146" [ref=e1316] [cursor=pointer]
+            - cell "Export feature broken in reports Incident" [ref=e1320]:
+              - button "Export feature broken in reports" [ref=e1321] [cursor=pointer]
+              - generic [ref=e1322]: Incident
+            - cell "Commerce" [ref=e1323]
+            - cell "Service Desk" [ref=e1324]
+            - cell "Avery Chen" [ref=e1325]
+            - cell "P2" [ref=e1326]
+            - cell "New" [ref=e1328]
+            - cell "Oct 7, 2026" [ref=e1330]
+            - cell "21h 14m left" [ref=e1331]
+          - row [ref=e1332]:
+            - cell [ref=e1333]:
+              - checkbox "Select OPS-147" [ref=e1334] [cursor=pointer]
+            - cell [ref=e1335]:
+              - generic [ref=e1336]:
+                - button "Star OPS-147" [ref=e1337] [cursor=pointer]
+                - button "OPS-147" [ref=e1340] [cursor=pointer]
+                - button "Search for OPS-147" [ref=e1341] [cursor=pointer]
+            - cell "Kubernetes pod evictions Problem" [ref=e1345]:
+              - button "Kubernetes pod evictions" [ref=e1346] [cursor=pointer]
+              - generic [ref=e1347]: Problem
+            - cell "Platform Engineering" [ref=e1348]
+            - cell "Infrastructure" [ref=e1349]
+            - cell "Priya Nair" [ref=e1350]
+            - cell "P2" [ref=e1351]
+            - cell "In Progress" [ref=e1353]
+            - cell "Oct 7, 2026" [ref=e1355]
+            - cell "20h 14m left" [ref=e1356]
+          - row [ref=e1357]:
+            - cell [ref=e1358]:
+              - checkbox "Select OPS-148" [ref=e1359] [cursor=pointer]
+            - cell [ref=e1360]:
+              - generic [ref=e1361]:
+                - button "Star OPS-148" [ref=e1362] [cursor=pointer]
+                - button "OPS-148" [ref=e1365] [cursor=pointer]
+                - button "Search for OPS-148" [ref=e1366] [cursor=pointer]
+            - cell "Two-factor authentication down Incident" [ref=e1370]:
+              - button "Two-factor authentication down" [ref=e1371] [cursor=pointer]
+              - generic [ref=e1372]: Incident
+            - cell "Security" [ref=e1373]
+            - cell "Security Operations" [ref=e1374]
+            - cell "Sam Rivera" [ref=e1375]
+            - cell "P1" [ref=e1376]
+            - cell "In Progress" [ref=e1378]
+            - cell "Oct 7, 2026" [ref=e1380]
+            - cell "2h 29m left" [ref=e1381]
+          - row [ref=e1382]:
+            - cell [ref=e1383]:
+              - checkbox "Select OPS-149" [ref=e1384] [cursor=pointer]
+            - cell [ref=e1385]:
+              - generic [ref=e1386]:
+                - button "Star OPS-149" [ref=e1387] [cursor=pointer]
+                - button "OPS-149" [ref=e1390] [cursor=pointer]
+                - button "Search for OPS-149" [ref=e1391] [cursor=pointer]
+            - cell "Upgrade RAID battery backup Work Order" [ref=e1395]:
+              - button "Upgrade RAID battery backup" [ref=e1396] [cursor=pointer]
+              - generic [ref=e1397]: Work Order
+            - cell "Field Services" [ref=e1398]
+            - cell "Field Services" [ref=e1399]
+            - cell "Taylor Quinn" [ref=e1400]
+            - cell "P2" [ref=e1401]
+            - cell "Waiting on User" [ref=e1403]
+            - cell "Oct 6, 2026" [ref=e1405]
+            - cell "9h 14m left" [ref=e1406]
+          - row [ref=e1407]:
+            - cell [ref=e1408]:
+              - checkbox "Select OPS-150" [ref=e1409] [cursor=pointer]
+            - cell [ref=e1410]:
+              - generic [ref=e1411]:
+                - button "Star OPS-150" [ref=e1412] [cursor=pointer]
+                - button "OPS-150" [ref=e1415] [cursor=pointer]
+                - button "Search for OPS-150" [ref=e1416] [cursor=pointer]
+            - cell "Slow dashboard queries Incident" [ref=e1420]:
+              - button "Slow dashboard queries" [ref=e1421] [cursor=pointer]
+              - generic [ref=e1422]: Incident
+            - cell "Field Services" [ref=e1423]
+            - cell "Database Operations" [ref=e1424]
+            - cell "Jordan Lee" [ref=e1425]
+            - cell "P2" [ref=e1426]
+            - cell "In Progress" [ref=e1428]
+            - cell "Oct 7, 2026" [ref=e1430]
+            - cell "19h 14m left" [ref=e1431]
+          - row [ref=e1432]:
+            - cell [ref=e1433]:
+              - checkbox "Select OPS-151" [ref=e1434] [cursor=pointer]
+            - cell [ref=e1435]:
+              - generic [ref=e1436]:
+                - button "Star OPS-151" [ref=e1437] [cursor=pointer]
+                - button "OPS-151" [ref=e1440] [cursor=pointer]
+                - button "Search for OPS-151" [ref=e1441] [cursor=pointer]
+            - cell "Enable CORS headers Change Request" [ref=e1445]:
+              - button "Enable CORS headers" [ref=e1446] [cursor=pointer]
+              - generic [ref=e1447]: Change Request
+            - cell "Platform Engineering" [ref=e1448]
+            - cell "Change Advisory Board" [ref=e1449]
+            - cell "Morgan Diaz" [ref=e1450]
+            - cell "P3" [ref=e1451]
+            - cell "In Progress" [ref=e1453]
+            - cell "Oct 7, 2026" [ref=e1455]
+            - cell "2d 21h left" [ref=e1456]
+          - row [ref=e1457]:
+            - cell [ref=e1458]:
+              - checkbox "Select OPS-152" [ref=e1459] [cursor=pointer]
+            - cell [ref=e1460]:
+              - generic [ref=e1461]:
+                - button "Star OPS-152" [ref=e1462] [cursor=pointer]
+                - button "OPS-152" [ref=e1465] [cursor=pointer]
+                - button "Search for OPS-152" [ref=e1466] [cursor=pointer]
+            - cell "Recurring session timeouts Problem" [ref=e1470]:
+              - button "Recurring session timeouts" [ref=e1471] [cursor=pointer]
+              - generic [ref=e1472]: Problem
+            - cell "Customer Care" [ref=e1473]
+            - cell "Problem Management" [ref=e1474]
+            - cell "Noah Williams" [ref=e1475]
+            - cell "P3" [ref=e1476]
+            - cell "New" [ref=e1478]
+            - cell "Oct 6, 2026" [ref=e1480]
+            - cell "2d 17h left" [ref=e1481]
+          - row [ref=e1482]:
+            - cell [ref=e1483]:
+              - checkbox "Select OPS-153" [ref=e1484] [cursor=pointer]
+            - cell [ref=e1485]:
+              - generic [ref=e1486]:
+                - button "Star OPS-153" [ref=e1487] [cursor=pointer]
+                - button "OPS-153" [ref=e1490] [cursor=pointer]
+                - button "Search for OPS-153" [ref=e1491] [cursor=pointer]
+            - cell "File upload size limit exceeded Incident" [ref=e1495]:
+              - button "File upload size limit exceeded" [ref=e1496] [cursor=pointer]
+              - generic [ref=e1497]: Incident
+            - cell "Finance" [ref=e1498]
+            - cell "Service Desk" [ref=e1499]
+            - cell "Mina Patel" [ref=e1500]
+            - cell "P3" [ref=e1501]
+            - cell "Waiting on User" [ref=e1503]
+            - cell "Oct 7, 2026" [ref=e1505]
+            - cell "2d 20h left" [ref=e1506]
+          - row [ref=e1507]:
+            - cell [ref=e1508]:
+              - checkbox "Select OPS-154" [ref=e1509] [cursor=pointer]
+            - cell [ref=e1510]:
+              - generic [ref=e1511]:
+                - button "Star OPS-154" [ref=e1512] [cursor=pointer]
+                - button "OPS-154" [ref=e1515] [cursor=pointer]
+                - button "Search for OPS-154" [ref=e1516] [cursor=pointer]
+            - cell "Clean up old application logs Work Order" [ref=e1520]:
+              - button "Clean up old application logs" [ref=e1521] [cursor=pointer]
+              - generic [ref=e1522]: Work Order
+            - cell "Field Services" [ref=e1523]
+            - cell "Field Services" [ref=e1524]
+            - cell "Riley Brooks" [ref=e1525]
+            - cell "P4" [ref=e1526]
+            - cell "New" [ref=e1528]
+            - cell "Oct 5, 2026" [ref=e1530]
+            - cell "2d 23h left" [ref=e1531]
+          - row [ref=e1532]:
+            - cell [ref=e1533]:
+              - checkbox "Select OPS-155" [ref=e1534] [cursor=pointer]
+            - cell [ref=e1535]:
+              - generic [ref=e1536]:
+                - button "Star OPS-155" [ref=e1537] [cursor=pointer]
+                - button "OPS-155" [ref=e1540] [cursor=pointer]
+                - button "Search for OPS-155" [ref=e1541] [cursor=pointer]
+            - cell "Chat notification spam Incident" [ref=e1545]:
+              - button "Chat notification spam" [ref=e1546] [cursor=pointer]
+              - generic [ref=e1547]: Incident
+            - cell "Platform Engineering" [ref=e1548]
+            - cell "Infrastructure" [ref=e1549]
+            - cell "Avery Chen" [ref=e1550]
+            - cell "P2" [ref=e1551]
+            - cell "New" [ref=e1553]
+            - cell "Oct 7, 2026" [ref=e1555]
+            - cell "21h 44m left" [ref=e1556]
+          - row [ref=e1557]:
+            - cell [ref=e1558]:
+              - checkbox "Select OPS-156" [ref=e1559] [cursor=pointer]
+            - cell [ref=e1560]:
+              - generic [ref=e1561]:
+                - button "Star OPS-156" [ref=e1562] [cursor=pointer]
+                - button "OPS-156" [ref=e1565] [cursor=pointer]
+                - button "Search for OPS-156" [ref=e1566] [cursor=pointer]
+            - cell "Implement request signing Change Request" [ref=e1570]:
+              - button "Implement request signing" [ref=e1571] [cursor=pointer]
+              - generic [ref=e1572]: Change Request
+            - cell "Security" [ref=e1573]
+            - cell "Change Advisory Board" [ref=e1574]
+            - cell "Sam Rivera" [ref=e1575]
+            - cell "P1" [ref=e1576]
+            - cell "Waiting on User" [ref=e1578]
+            - cell "Oct 6, 2026" [ref=e1580]
+            - cell "4h 45m over" [ref=e1581]
+          - row [ref=e1582]:
+            - cell [ref=e1583]:
+              - checkbox "Select OPS-157" [ref=e1584] [cursor=pointer]
+            - cell [ref=e1585]:
+              - generic [ref=e1586]:
+                - button "Star OPS-157" [ref=e1587] [cursor=pointer]
+                - button "OPS-157" [ref=e1590] [cursor=pointer]
+                - button "Search for OPS-157" [ref=e1591] [cursor=pointer]
+            - cell "Frequent token refresh failures Problem" [ref=e1595]:
+              - button "Frequent token refresh failures" [ref=e1596] [cursor=pointer]
+              - generic [ref=e1597]: Problem
+            - cell "Platform Engineering" [ref=e1598]
+            - cell "Problem Management" [ref=e1599]
+            - cell "Morgan Diaz" [ref=e1600]
+            - cell "P2" [ref=e1601]
+            - cell "In Progress" [ref=e1603]
+            - cell "Oct 7, 2026" [ref=e1605]
+            - cell "19h 44m left" [ref=e1606]
+          - row [ref=e1607]:
+            - cell [ref=e1608]:
+              - checkbox "Select OPS-158" [ref=e1609] [cursor=pointer]
+            - cell [ref=e1610]:
+              - generic [ref=e1611]:
+                - button "Star OPS-158" [ref=e1612] [cursor=pointer]
+                - button "OPS-158" [ref=e1615] [cursor=pointer]
+                - button "Search for OPS-158" [ref=e1616] [cursor=pointer]
+            - cell "Report generation OOM Incident" [ref=e1620]:
+              - button "Report generation OOM" [ref=e1621] [cursor=pointer]
+              - generic [ref=e1622]: Incident
+            - cell "Field Services" [ref=e1623]
+            - cell "Database Operations" [ref=e1624]
+            - cell "Priya Nair" [ref=e1625]
+            - cell "P1" [ref=e1626]
+            - cell "New" [ref=e1628]
+            - cell "Oct 7, 2026" [ref=e1630]
+            - cell "2h 44m left" [ref=e1631]
+          - row [ref=e1632]:
+            - cell [ref=e1633]:
+              - checkbox "Select OPS-159" [ref=e1634] [cursor=pointer]
+            - cell [ref=e1635]:
+              - generic [ref=e1636]:
+                - button "Star OPS-159" [ref=e1637] [cursor=pointer]
+                - button "OPS-159" [ref=e1640] [cursor=pointer]
+                - button "Search for OPS-159" [ref=e1641] [cursor=pointer]
+            - cell "Migrate database to new server Work Order" [ref=e1645]:
+              - button "Migrate database to new server" [ref=e1646] [cursor=pointer]
+              - generic [ref=e1647]: Work Order
+            - cell "Data & Analytics" [ref=e1648]
+            - cell "Field Services" [ref=e1649]
+            - cell "Taylor Quinn" [ref=e1650]
+            - cell "P1" [ref=e1651]
+            - cell "In Progress" [ref=e1653]
+            - cell "Oct 6, 2026" [ref=e1655]
+            - cell "12h 45m over" [ref=e1656]
+          - row [ref=e1657]:
+            - cell [ref=e1658]:
+              - checkbox "Select OPS-160" [ref=e1659] [cursor=pointer]
+            - cell [ref=e1660]:
+              - generic [ref=e1661]:
+                - button "Star OPS-160" [ref=e1662] [cursor=pointer]
+                - button "OPS-160" [ref=e1665] [cursor=pointer]
+                - button "Search for OPS-160" [ref=e1666] [cursor=pointer]
+            - cell "Inconsistent test results Incident" [ref=e1670]:
+              - button "Inconsistent test results" [ref=e1671] [cursor=pointer]
+              - generic [ref=e1672]: Incident
+            - cell "Platform Engineering" [ref=e1673]
+            - cell "Infrastructure" [ref=e1674]
+            - cell "Noah Williams" [ref=e1675]
+            - cell "P2" [ref=e1676]
+            - cell "New" [ref=e1678]
+            - cell "Oct 7, 2026" [ref=e1680]
+            - cell "18h 14m left" [ref=e1681]
+          - row [ref=e1682]:
+            - cell [ref=e1683]:
+              - checkbox "Select OPS-161" [ref=e1684] [cursor=pointer]
+            - cell [ref=e1685]:
+              - generic [ref=e1686]:
+                - button "Star OPS-161" [ref=e1687] [cursor=pointer]
+                - button "OPS-161" [ref=e1690] [cursor=pointer]
+                - button "Search for OPS-161" [ref=e1691] [cursor=pointer]
+            - cell "Update privacy policy Change Request" [ref=e1695]:
+              - button "Update privacy policy" [ref=e1696] [cursor=pointer]
+              - generic [ref=e1697]: Change Request
+            - cell "People & HR" [ref=e1698]
+            - cell "Change Advisory Board" [ref=e1699]
+            - cell "Eli Turner" [ref=e1700]
+            - cell "P3" [ref=e1701]
+            - cell "Waiting on User" [ref=e1703]
+            - cell "Oct 3, 2026" [ref=e1705]
+            - cell "12h 45m over" [ref=e1706]
+          - row [ref=e1707]:
+            - cell [ref=e1708]:
+              - checkbox "Select OPS-162" [ref=e1709] [cursor=pointer]
+            - cell [ref=e1710]:
+              - generic [ref=e1711]:
+                - button "Star OPS-162" [ref=e1712] [cursor=pointer]
+                - button "OPS-162" [ref=e1715] [cursor=pointer]
+                - button "Search for OPS-162" [ref=e1716] [cursor=pointer]
+            - cell "Batch job running overtime Problem" [ref=e1720]:
+              - button "Batch job running overtime" [ref=e1721] [cursor=pointer]
+              - generic [ref=e1722]: Problem
+            - cell "Field Services" [ref=e1723]
+            - cell "Problem Management" [ref=e1724]
+            - cell "Jordan Lee" [ref=e1725]
+            - cell "P2" [ref=e1726]
+            - cell "In Progress" [ref=e1728]
+            - cell "Oct 6, 2026" [ref=e1730]
+            - cell "15h 14m left" [ref=e1731]
+          - row [ref=e1732]:
+            - cell [ref=e1733]:
+              - checkbox "Select OPS-163" [ref=e1734] [cursor=pointer]
+            - cell [ref=e1735]:
+              - generic [ref=e1736]:
+                - button "Star OPS-163" [ref=e1737] [cursor=pointer]
+                - button "OPS-163" [ref=e1740] [cursor=pointer]
+                - button "Search for OPS-163" [ref=e1741] [cursor=pointer]
+            - cell "Search results inconsistent Incident" [ref=e1745]:
+              - button "Search results inconsistent" [ref=e1746] [cursor=pointer]
+              - generic [ref=e1747]: Incident
+            - cell "Commerce" [ref=e1748]
+            - cell "Database Operations" [ref=e1749]
+            - cell "Sam Rivera" [ref=e1750]
+            - cell "P2" [ref=e1751]
+            - cell "New" [ref=e1753]
+            - cell "Oct 7, 2026" [ref=e1755]
+            - cell "20h 44m left" [ref=e1756]
+          - row [ref=e1757]:
+            - cell [ref=e1758]:
+              - checkbox "Select OPS-164" [ref=e1759] [cursor=pointer]
+            - cell [ref=e1760]:
+              - generic [ref=e1761]:
+                - button "Star OPS-164" [ref=e1762] [cursor=pointer]
+                - button "OPS-164" [ref=e1765] [cursor=pointer]
+                - button "Search for OPS-164" [ref=e1766] [cursor=pointer]
+            - cell "Third-party service down Incident" [ref=e1770]:
+              - button "Third-party service down" [ref=e1771] [cursor=pointer]
+              - generic [ref=e1772]: Incident
+            - cell "Platform Engineering" [ref=e1773]
+            - cell "Infrastructure" [ref=e1774]
+            - cell "Avery Chen" [ref=e1775]
+            - cell "P1" [ref=e1776]
+            - cell "Escalated" [ref=e1778]
+            - cell "Oct 7, 2026" [ref=e1780]
+            - cell "2h 24m left" [ref=e1781]
+          - row [ref=e1782]:
+            - cell [ref=e1783]:
+              - checkbox "Select OPS-165" [ref=e1784] [cursor=pointer]
+            - cell [ref=e1785]:
+              - generic [ref=e1786]:
+                - button "Star OPS-165" [ref=e1787] [cursor=pointer]
+                - button "OPS-165" [ref=e1790] [cursor=pointer]
+                - button "Search for OPS-165" [ref=e1791] [cursor=pointer]
+            - cell "Install antivirus updates Work Order" [ref=e1795]:
+              - button "Install antivirus updates" [ref=e1796] [cursor=pointer]
+              - generic [ref=e1797]: Work Order
+            - cell "Security" [ref=e1798]
+            - cell "Field Services" [ref=e1799]
+            - cell "Riley Brooks" [ref=e1800]
+            - cell "P3" [ref=e1801]
+            - cell "In Progress" [ref=e1803]
+            - cell "Oct 7, 2026" [ref=e1805]
+            - cell "2d 20h left" [ref=e1806]
+          - row [ref=e1807]:
+            - cell [ref=e1808]:
+              - checkbox "Select OPS-166" [ref=e1809] [cursor=pointer]
+            - cell [ref=e1810]:
+              - generic [ref=e1811]:
+                - button "Star OPS-166" [ref=e1812] [cursor=pointer]
+                - button "OPS-166" [ref=e1815] [cursor=pointer]
+                - button "Search for OPS-166" [ref=e1816] [cursor=pointer]
+            - cell "Configuration drift detected Incident" [ref=e1820]:
+              - button "Configuration drift detected" [ref=e1821] [cursor=pointer]
+              - generic [ref=e1822]: Incident
+            - cell "Platform Engineering" [ref=e1823]
+            - cell "Infrastructure" [ref=e1824]
+            - cell "Morgan Diaz" [ref=e1825]
+            - cell "P2" [ref=e1826]
+            - cell "New" [ref=e1828]
+            - cell "Oct 6, 2026" [ref=e1830]
+            - cell "16h 14m left" [ref=e1831]
+    - generic [ref=e1832]:
+      - generic [ref=e1833]: Priority and escalation timings follow the attached matrix. Drag cards between lanes, or use the arrow controls on each card.
+      - button "View escalation guidance" [ref=e1834] [cursor=pointer]

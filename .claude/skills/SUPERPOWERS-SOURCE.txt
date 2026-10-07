@@ -1,0 +1,1 @@
+Source: https://github.com/obra/superpowers @ 8ca22db (MIT). Copied: systematic-debugging, verification-before-completion, test-driven-development, requesting-code-review. Remove these four folders to undo.

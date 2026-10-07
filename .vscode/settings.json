@@ -1,0 +1,5 @@
+{
+    "claudeCode.useTerminal": false,
+    "editor.defaultFormatter": "openai.chatgpt",
+    "robotcode.disableExtension": true
+}

@@ -154,7 +154,7 @@ export async function postChatMessage(ticketId: string, content: string) {
   });
 }
 
-// AI Suggestions (powered by Vercel AI Gateway via backend proxy)
+// AI Suggestions (powered by Gemini via backend proxy)
 export async function getAISuggestions(_ticketId: string, ticket?: any) {
   try {
     const { generateTicketSuggestions } = await import('./gemini');
@@ -163,9 +163,9 @@ export async function getAISuggestions(_ticketId: string, ticket?: any) {
       ticket?.description || '',
       ticket?.priority || 'medium'
     );
-    return { success: true, suggestions, source: 'ai-gateway' };
+    return { success: true, suggestions, source: 'gemini' };
   } catch (e) {
-    console.warn('AI Gateway unavailable, using fallback suggestions:', e);
+    console.warn('Gemini unavailable, using fallback suggestions:', e);
   }
 
   // Fallback: generate mock suggestions based on ticket content
