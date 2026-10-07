@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Box, Check, ChevronDown, Clock3, Link2, Package, Pencil, Plus, RotateCcw, Search, ShieldAlert, Star, Trash2, Wrench, X } from 'lucide-react'
 import Overlay from './Overlay'
-import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
 import { exportCsv, type CsvValue } from './lib/exportCsv'
 import { exportXlsx, exportXlsxWorkbook } from './lib/exportXlsx'
 
@@ -51,12 +50,10 @@ type InventoryViewMode = 'list' | 'cards' | 'split' | 'grouped' | 'attention'
 type InventorySplitPaneMode = Exclude<InventoryViewMode, 'split'> | 'details'
 type InventoryPaneSettings = { tab: 'assets' | 'stock'; viewMode: InventoryViewMode; splitLeft: InventorySplitPaneMode; splitRight: InventorySplitPaneMode; query: string; statusFilter: 'All' | AssetStatus | 'Warranty soon'; categoryFilter: string; assignedFilter: string; tagFilter: string; healthFilter: 'All health' | HealthLevel; starredOnly: boolean; lowStockOnly: boolean; inStockOnly: boolean }
 type InventoryWorkspaceTab = { id: string; settings: InventoryPaneSettings }
-type InventoryViewSettings = InventoryPaneSettings & { workspaceTabs?: InventoryWorkspaceTab[]; activeWorkspaceId?: string }
 type InventoryWorkspace = { tabs: InventoryWorkspaceTab[]; activeId: string }
 
 const ASSET_KEY = 'it-ticket-kanban-assets-v1'
 const STOCK_KEY = 'it-ticket-kanban-stock-v1'
-const SAVED_INVENTORY_VIEWS_KEY = 'it-ticket-kanban-inventory-saved-views-v1'
 const INVENTORY_VIEW_MODE_KEY = 'it-ticket-kanban-inventory-view-mode-v1'
 const INVENTORY_WORKSPACE_KEY = 'it-ticket-kanban-inventory-workspace-v1'
 const inventoryViewModes: InventoryViewMode[] = ['list', 'cards', 'split', 'grouped', 'attention']
@@ -75,14 +72,7 @@ function loadInventoryWorkspace(): InventoryWorkspace {
   const id = newWorkspaceId()
   return { tabs: [{ id, settings: defaultPaneSettings() }], activeId: id }
 }
-function normalizeSavedInventoryView(view: SavedView<InventoryViewSettings>): SavedView<InventoryViewSettings> {
-  const pane = normalizeInventoryPane(view.settings)
-  const tabs = Array.isArray(view.settings.workspaceTabs) && view.settings.workspaceTabs.length ? view.settings.workspaceTabs.map((item) => ({ id: item.id, settings: normalizeInventoryPane(item.settings) })) : [{ id: `saved-${view.id}`, settings: pane }]
-  const activeId = tabs.some((item) => item.id === view.settings.activeWorkspaceId) ? view.settings.activeWorkspaceId : tabs[0].id
-  return { ...view, settings: { ...pane, workspaceTabs: tabs, activeWorkspaceId: activeId } }
-}
 const inStockPane: InventoryPaneSettings = { ...defaultPaneSettings('stock'), inStockOnly: true }
-const inStockView: SavedView<InventoryViewSettings> = { id: 'built-in-in-stock', name: 'In Stock', builtIn: true, settings: { ...inStockPane, workspaceTabs: [{ id: 'built-in-in-stock-tab', settings: inStockPane }], activeWorkspaceId: 'built-in-in-stock-tab' } }
 const statuses: AssetStatus[] = ['Available', 'Assigned', 'In Repair', 'Retired', 'Lost']
 const deviceHealthOptions: DeviceHealth[] = ['Healthy', 'At Risk', 'Critical']
 const healthLevels: HealthLevel[] = ['Healthy', 'Monitor', 'At Risk', 'Critical']
@@ -237,7 +227,7 @@ const emptyStock = { sku: '', name: '', category: 'Cable', quantity: '0', minimu
  */
 export default function InventoryPage({ focusId = '', focusRevision = 0, command, onCommandHandled, assets, stock, updateAssets, updateStock, tickets, openTicket, linkTicket, createTicket }: InventoryProps) {
   const [tab, setTab] = useState<'assets' | 'stock'>('assets')
-  const [workspace, setWorkspace] = useState<InventoryWorkspace>(loadInventoryWorkspace)
+  const [workspace] = useState<InventoryWorkspace>(loadInventoryWorkspace)
   const [workspaceReady, setWorkspaceReady] = useState(false)
   const [viewMode, setViewMode] = useState<InventoryViewMode>(() => {
     const saved = localStorage.getItem(INVENTORY_VIEW_MODE_KEY)
@@ -261,8 +251,6 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   const [action1LastSyncedAt, setAction1LastSyncedAt] = useState<Date | null>(null)
   const [action1SyncError, setAction1SyncError] = useState('')
   const [starredOnly, setStarredOnly] = useState(false)
-  const [savedInventoryViews, setSavedInventoryViews] = useState<SavedView<InventoryViewSettings>[]>(() => loadSavedViews<InventoryViewSettings>(SAVED_INVENTORY_VIEWS_KEY).map(normalizeSavedInventoryView))
-  useEffect(() => { localStorage.setItem(SAVED_INVENTORY_VIEWS_KEY, JSON.stringify(savedInventoryViews)) }, [savedInventoryViews])
   const [selectedId, setSelectedId] = useState(focusId)
   useEffect(() => { if (focusId) setSelectedId(focusId) }, [focusId, focusRevision])
   const [selectedSku, setSelectedSku] = useState('')
@@ -348,7 +336,6 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   const splitStock = filteredStock.find((item) => item.sku === splitStockSku) || filteredStock[0]
   const relatedTickets = selected ? tickets.filter((ticket) => ticket.assetId === selected.id || selected.linkedTicketIds.includes(ticket.id)) : []
   const currentPane: InventoryPaneSettings = { tab, viewMode, splitLeft, splitRight, query, statusFilter, categoryFilter, assignedFilter, tagFilter, healthFilter, starredOnly, lowStockOnly, inStockOnly }
-  const currentInventoryView: InventoryViewSettings = { ...currentPane, workspaceTabs: workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), activeWorkspaceId: workspace.activeId }
   const applyPaneView = (settings: InventoryPaneSettings) => {
     setTab(settings.tab === 'stock' ? 'stock' : 'assets')
     setViewMode(inventoryViewModes.includes(settings.viewMode) ? settings.viewMode : 'list')
@@ -373,46 +360,6 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
     if (!workspaceReady) return
     localStorage.setItem(INVENTORY_WORKSPACE_KEY, JSON.stringify({ tabs: workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), activeId: workspace.activeId }))
   }, [workspace, workspaceReady, tab, viewMode, splitLeft, splitRight, query, statusFilter, categoryFilter, assignedFilter, tagFilter, healthFilter, starredOnly, lowStockOnly, inStockOnly])
-  const switchWorkspaceTab = (id: string) => {
-    if (id === workspace.activeId) return
-    const next = workspace.tabs.find((item) => item.id === id)
-    if (!next) return
-    setWorkspace({ tabs: workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), activeId: id })
-    applyPaneView(next.settings)
-  }
-  const addWorkspaceTab = () => {
-    const id = newWorkspaceId()
-    const settings = defaultPaneSettings(tab)
-    setWorkspace({ tabs: [...workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), { id, settings }], activeId: id })
-    applyPaneView(settings)
-  }
-  const closeWorkspaceTab = (id: string) => {
-    if (workspace.tabs.length === 1) return
-    const index = workspace.tabs.findIndex((item) => item.id === id)
-    if (index < 0) return
-    const tabs = workspace.tabs.filter((item) => item.id !== id).map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item)
-    const activeId = id === workspace.activeId ? tabs[Math.min(index, tabs.length - 1)].id : workspace.activeId
-    setWorkspace({ tabs, activeId })
-    if (id === workspace.activeId) applyPaneView(tabs.find((item) => item.id === activeId)!.settings)
-  }
-  const applyInventoryView = (settings: InventoryViewSettings) => {
-    const tabs = Array.isArray(settings.workspaceTabs) ? settings.workspaceTabs.filter((item): item is InventoryWorkspaceTab => !!item && typeof item.id === 'string' && !!item.settings) : []
-    if (tabs.length) {
-      const activeId = tabs.some((item) => item.id === settings.activeWorkspaceId) ? settings.activeWorkspaceId! : tabs[0].id
-      setWorkspace({ tabs, activeId })
-      applyPaneView(tabs.find((item) => item.id === activeId)!.settings)
-    } else {
-      const id = newWorkspaceId()
-      setWorkspace({ tabs: [{ id, settings }], activeId: id })
-      applyPaneView(settings)
-    }
-  }
-  const resetInventoryView = () => {
-    const id = newWorkspaceId()
-    const settings = defaultPaneSettings()
-    setWorkspace({ tabs: [{ id, settings }], activeId: id })
-    applyPaneView(settings)
-  }
   useEffect(() => {
     if (!command || command.revision === handledCommandRevision.current) return
     handledCommandRevision.current = command.revision
@@ -426,7 +373,7 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
     setFormError('')
     if (command.action === 'add-asset') { setTab('assets'); setShowAddAsset(true); setShowAddStock(false) }
     if (command.action === 'add-stock') { setTab('stock'); setShowAddStock(true); setShowAddAsset(false) }
-    if (command.action === 'in-stock') applyPaneView(inStockView.settings)
+    if (command.action === 'in-stock') applyPaneView(inStockPane)
     if (command.action === 'low-stock') { setTab('stock'); setQuery(''); setTagFilter('All tags'); setStarredOnly(false); setLowStockOnly(true); setInStockOnly(false) }
     onCommandHandled?.()
   }, [command?.revision, command?.action])
@@ -564,7 +511,6 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   const stockRow = (item: StockItem) => <button key={item.sku} className="inventory-view-row" onClick={() => openStockRecord(item)}><span className="inventory-view-row-id">{item.sku}</span><span className="inventory-view-row-name">{item.name}</span>{stockStatus(item)}<ArrowRight size={14} /></button>
   const assetGroups = [...new Set(filteredAssets.map((asset) => asset.department || 'No department'))].sort()
   const stockGroups = [...new Set(filteredStock.map((item) => item.category || 'Uncategorized'))].sort()
-  const workspaceTabLabel = (settings: InventoryPaneSettings) => `${settings.tab === 'stock' ? 'Stock' : 'Assets'} · ${settings.viewMode === 'grouped' ? settings.tab === 'stock' ? 'By category' : 'By department' : settings.viewMode === 'attention' ? settings.tab === 'stock' ? 'Stock levels' : 'Needs attention' : settings.viewMode === 'split' ? 'Split' : settings.viewMode === 'cards' ? 'Cards' : 'List'}`
   const splitPaneLabel = (mode: InventorySplitPaneMode) => ({ list: 'List', details: 'Details', cards: 'Cards', grouped: tab === 'stock' ? 'By category' : 'By department', attention: tab === 'stock' ? 'Stock levels' : 'Needs attention' })[mode]
   const chooseSplitAsset = (asset: AssetItem) => { setSplitAssetId(asset.id); if (splitLeft !== 'details' && splitRight !== 'details') openAssetRecord(asset) }
   const chooseSplitStock = (item: StockItem) => { setSplitStockSku(item.sku); if (splitLeft !== 'details' && splitRight !== 'details') openStockRecord(item) }
@@ -584,13 +530,6 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   return <main className="main-content inventory-page">
     <div className="inventory-heading"><div><div className="eyebrow">SERVICE DESK · ASSET MANAGEMENT</div><h1>Inventory</h1><p>Know what is available, where it is, and who has it.</p></div><div className="inventory-heading-actions"><button className="primary-button" onClick={() => { setFormError(''); tab === 'assets' ? setShowAddAsset(true) : setShowAddStock(true) }}><Plus size={16} /> Add {tab === 'assets' ? 'asset' : 'stock item'}</button></div></div>
     <section className="inventory-kpis" aria-label="Inventory summary"><button className={statusFilter === 'All' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('All') }}><Package size={18} /><span>Total assets</span><strong>{assets.length}</strong></button><button className={statusFilter === 'Available' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('Available') }}><Check size={18} /><span>Available</span><strong>{counts.available}</strong></button><button className={statusFilter === 'Assigned' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('Assigned') }}><Box size={18} /><span>Assigned</span><strong>{counts.assigned}</strong></button><button className={statusFilter === 'In Repair' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('In Repair') }}><Wrench size={18} /><span>In repair</span><strong>{counts.repair}</strong></button><button className={statusFilter === 'Warranty soon' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('Warranty soon') }}><Clock3 size={18} /><span>Warranty soon</span><strong>{counts.warranty}</strong></button><button className={tab === 'stock' && lowStockOnly ? 'selected' : ''} onClick={() => { setTab('stock'); setQuery(''); setTagFilter('All tags'); setInStockOnly(false); setLowStockOnly(true) }}><ShieldAlert size={18} /><span>Low stock</span><strong>{counts.low}</strong></button></section>
-    <div className="inventory-browser-tabs">
-      <div className="inventory-browser-tab-scroll" role="tablist" aria-label="Open inventory tabs">
-        {workspace.tabs.map((item) => { const settings = item.id === workspace.activeId ? currentPane : item.settings; return <div className={'inventory-browser-tab' + (item.id === workspace.activeId ? ' active' : '')} key={item.id}><button role="tab" aria-selected={item.id === workspace.activeId} onClick={() => switchWorkspaceTab(item.id)} title={workspaceTabLabel(settings)}>{workspaceTabLabel(settings)}{(settings.query || settings.statusFilter !== 'All' || settings.categoryFilter !== 'All categories' || settings.assignedFilter !== 'All people' || settings.tagFilter !== 'All tags' || settings.healthFilter !== 'All health' || settings.starredOnly || settings.lowStockOnly || settings.inStockOnly) && <span className="inventory-tab-filter-dot" aria-label="Filtered" />}</button>{workspace.tabs.length > 1 && <button className="inventory-browser-tab-close" onClick={() => closeWorkspaceTab(item.id)} aria-label={`Close ${workspaceTabLabel(settings)} tab`} title="Close tab"><X size={12} /></button>}</div> })}
-        <button className="inventory-browser-add" onClick={addWorkspaceTab} aria-label="New inventory tab" title="New inventory tab"><Plus size={16} /><span>New tab</span></button>
-      </div>
-      <SavedViews label="Inventory views" views={[inStockView, ...savedInventoryViews]} current={currentInventoryView} onApply={applyInventoryView} onReset={resetInventoryView} onSave={(view) => setSavedInventoryViews((items) => [...items, view])} onDelete={(id) => setSavedInventoryViews((items) => items.filter((view) => view.id !== id))} saveButtonLabel="Save tabs as view" saveDescription="Save all open inventory tabs, including each tab’s layout, search, and filters. Reopen the full set from Saved views." />
-    </div>
     <div className="inventory-toolbar"><div className="inventory-tabs" role="tablist" aria-label="Inventory type"><button role="tab" aria-selected={tab === 'assets'} className={tab === 'assets' ? 'active' : ''} onClick={() => { setTab('assets'); setTagFilter('All tags'); setLowStockOnly(false); setInStockOnly(false) }}>Assets <span>{assets.length}</span></button><button role="tab" aria-selected={tab === 'stock'} className={tab === 'stock' ? 'active' : ''} onClick={() => { setTab('stock'); setLowStockOnly(false); setInStockOnly(false); setTagFilter('All tags') }}>Stock <span>{stock.length}</span></button></div><div className="inventory-controls"><label className="inventory-search"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tab === 'assets' ? 'Search ID, serial, person, tag…' : 'Search stock…'} aria-label="Search inventory" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={13} /></button>}</label><div className="inventory-filters-dropdown" ref={filterDropdownRef}><button className="inventory-filters-button" onClick={() => setShowFilterDropdown(!showFilterDropdown)} aria-expanded={showFilterDropdown}><ChevronDown size={14} /> Filters</button>{showFilterDropdown && <div className="inventory-filters-menu"><div className="inventory-filters-menu-section">{tab === 'assets' && <>
       <label><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} aria-label="Filter asset status"><option>All</option>{statuses.map((value) => <option key={value}>{value}</option>)}<option>Warranty soon</option></select></label>
       <label><span>Category</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter asset category"><option>All categories</option>{assetCategories.map((value) => <option key={value}>{value}</option>)}</select></label>
@@ -600,12 +539,7 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
       {tab === 'stock' && <label><span>Stock level</span><select value={inStockOnly ? 'In Stock' : lowStockOnly ? 'Low stock' : 'All stock'} onChange={(event) => { setInStockOnly(event.target.value === 'In Stock'); setLowStockOnly(event.target.value === 'Low stock') }} aria-label="Filter stock availability"><option>All stock</option><option>In Stock</option><option>Low stock</option></select></label>}
       <label><span>Tags</span><select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filter inventory tag"><option>All tags</option>{(tab === 'assets' ? assetTags : stockTags).map((value) => <option key={value}>{value}</option>)}</select></label></div></div>}</div>{tab === 'assets' && <div className="inventory-action1-sync"><button type="button" className="inventory-action1-sync-button" disabled={action1Syncing} onClick={syncHealthFromAction1} title="Demo only — pulls simulated health data, not a live Action1 connection"><span className={'inventory-action1-spinner' + (action1Syncing ? ' spinning' : '')} />{action1Syncing ? 'Syncing…' : 'Sync from Action1'}</button>{action1SyncError ? <span className="inventory-action1-sync-status error">{action1SyncError}</span> : action1LastSyncedAt ? <span className="inventory-action1-sync-status">Synced {action1LastSyncedAt.toLocaleTimeString()} (demo data)</span> : <span className="inventory-action1-sync-status muted">Not synced (demo)</span>}</div>}<button className={'inventory-star-filter' + (starredOnly ? ' active' : '')} aria-pressed={starredOnly} onClick={() => setStarredOnly((value) => !value)}><Star size={14} fill={starredOnly ? 'currentColor' : 'none'} /> Starred</button></div></div>
     <div className="inventory-view-toolbar" aria-label="Inventory display views">
-      <div className="inventory-view-buttons" role="group" aria-label="Inventory view">
-        <button aria-pressed={viewMode === 'list'} className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
-        <button aria-pressed={viewMode === 'cards'} className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>Cards</button>
-        <button aria-pressed={viewMode === 'split'} className={viewMode === 'split' ? 'active' : ''} onClick={() => setViewMode('split')}>Split view</button>
-      </div>
-      <label className="inventory-more-views"><span>More views</span><select aria-label="More inventory views" value={viewMode === 'grouped' || viewMode === 'attention' ? viewMode : ''} onChange={(event) => setViewMode(event.target.value as InventoryViewMode)}><option value="">Choose a view…</option><option value="grouped">{tab === 'assets' ? 'By department' : 'By category'}</option><option value="attention">{tab === 'assets' ? 'Needs attention' : 'Stock levels'}</option></select></label>
+      <label className="inventory-more-views"><span>View</span><select aria-label="Choose inventory view" value={viewMode} onChange={(event) => setViewMode(event.target.value as InventoryViewMode)}><option value="list">List</option><option value="cards">Cards</option><option value="split">Split</option><option value="grouped">{tab === 'assets' ? 'By department' : 'By category'}</option><option value="attention">{tab === 'assets' ? 'Needs attention' : 'Stock levels'}</option></select></label>
       <span className="inventory-view-count">{tab === 'assets' ? filteredAssets.length : filteredStock.length} records</span>
     </div>
     {viewMode === 'list' && (tab === 'assets' ? <section className="inventory-list" aria-label="Asset list"><div className="inventory-list-caption"><b>Assets</b><span>{filteredAssets.length} of {assets.length} records</span><div className="device-health-legend" aria-label="Device health levels">{healthLevels.map((level) => <span key={level} className={healthClass(level)} title={healthDescriptions[level]}><i />{level}</span>)}</div></div><div className="inventory-table-scroll"><table className="inventory-table"><thead><tr><th>Asset ID</th><th>Item / model</th><th>Serial number</th><th>Status</th><th>Assigned to</th><th className="inventory-col-even">Device health</th><th className="inventory-col-even">Department</th><th className="inventory-col-even">Location</th><th>Warranty ends</th><th>Linked tickets</th></tr><tr className="table-filters-row"><th><input type="text" value={tableFilters.id} onChange={(e) => setTableFilter('id', e.target.value)} placeholder="Asset ID…" aria-label="Filter by Asset ID" /></th><th><input type="text" value={tableFilters.name} onChange={(e) => setTableFilter('name', e.target.value)} placeholder="Item contains…" aria-label="Filter by item name" /></th><th><input type="text" value={tableFilters.serial} onChange={(e) => setTableFilter('serial', e.target.value)} placeholder="Serial…" aria-label="Filter by serial number" /></th><th><select value={tableFilters.status} onChange={(e) => setTableFilter('status', e.target.value)} aria-label="Filter by status"><option value="">All statuses</option>{statuses.map((s) => <option key={s}>{s}</option>)}</select></th><th><input type="text" value={tableFilters.assignedTo} onChange={(e) => setTableFilter('assignedTo', e.target.value)} placeholder="Assigned to…" aria-label="Filter by assignee" /></th><th colSpan={3}></th><th></th><th></th></tr></thead><tbody>{filteredAssets.map((asset) => { const links = tickets.filter((ticket) => ticket.assetId === asset.id || asset.linkedTicketIds.includes(ticket.id)); return <tr key={asset.id}><td><div className="inventory-id-group"><button className={'inventory-star' + (asset.starred ? ' is-starred' : '')} onClick={() => toggleAssetStar(asset.id)} aria-label={`${asset.starred ? 'Remove star from' : 'Star'} ${asset.id}`} aria-pressed={asset.starred}><Star size={15} fill={asset.starred ? 'currentColor' : 'none'} /></button><button className="inventory-id" onClick={() => { setSelectedId(asset.id); setTicketToLink('') }}>{asset.id}</button></div></td><td><b>{asset.name}</b><small>{asset.manufacturer} {asset.model} · {asset.category}</small>{!!asset.tags?.length && <span className="inventory-row-tags">{asset.tags.slice(0, 2).join(' · ')}{asset.tags.length > 2 ? ` +${asset.tags.length - 2}` : ''}</span>}</td><td>{asset.serial}</td><td><span className="status-indicator"><span className={'status-dot ' + asset.status.toLowerCase().replace(/\s+/g, '-')} /><span className={'inventory-status ' + asset.status.toLowerCase().replace(/\s+/g, '-')}>{asset.status}</span></span></td><td>{asset.assignedTo || <span className="inventory-muted">Not assigned</span>}</td><td className="inventory-col-even">{healthBadge(asset)}</td><td className="inventory-col-even">{asset.department || '—'}</td><td className="inventory-col-even">{asset.location || '—'}</td><td>{warrantyBar(asset.warrantyEnd)}</td><td>{links.length ? links.length + ' ticket' + (links.length === 1 ? '' : 's') : '—'}</td></tr> })}</tbody></table>{!filteredAssets.length && <div className="inventory-empty">No assets match these filters.</div>}</div></section> : <section className="inventory-list" aria-label="Stock list"><div className="inventory-list-caption"><b>Stock</b><span>{filteredStock.length} of {stock.length} records</span></div><div className="inventory-table-scroll"><table className="inventory-table stock-table"><thead><tr><th>Stock ID</th><th>Item</th><th>Category</th><th>On hand</th><th>Minimum</th><th>Location</th><th>Last updated</th></tr></thead><tbody>{filteredStock.map((item) => <tr key={item.sku}><td><div className="inventory-id-group"><button className={'inventory-star' + (item.starred ? ' is-starred' : '')} onClick={() => toggleStockStar(item.sku)} aria-label={`${item.starred ? 'Remove star from' : 'Star'} ${item.sku}`} aria-pressed={item.starred}><Star size={15} fill={item.starred ? 'currentColor' : 'none'} /></button><button className="inventory-id" onClick={() => { setSelectedSku(item.sku); setStockTagsText((item.tags || []).join(', ')); setStockChange({ amount: '', reason: '' }); setFormError('') }}>{item.sku}</button></div></td><td><b>{item.name}</b>{!!item.tags?.length && <span className="inventory-row-tags">{item.tags.slice(0, 2).join(' · ')}{item.tags.length > 2 ? ` +${item.tags.length - 2}` : ''}</span>}</td><td>{item.category}</td><td>{stockLevelBar(item.quantity, item.minimum)}</td><td>{item.minimum}</td><td>{item.location || '—'}</td><td>{stampLabel(item.updatedAt)}</td></tr>)}</tbody></table>{!filteredStock.length && <div className="inventory-empty">No stock items match this search.</div>}</div></section>)}
