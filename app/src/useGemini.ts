@@ -69,7 +69,7 @@ function useGeminiCall() {
       if (errorMessage.includes('429') || errorMessage.includes('Rate limit')) {
         error = new GeminiRateLimitError();
       } else if (errorMessage.includes('503') || errorMessage.includes('busy')) {
-        error = new GeminiRateLimitError('Gemini is temporarily busy. Please try again in a moment.');
+        error = new GeminiRateLimitError('AI Gateway is temporarily busy. Please try again in a moment.');
       } else if (errorMessage.includes('safety') || errorMessage.includes('blocked')) {
         error = new GeminiSafetyFilterError();
       } else if (errorMessage.includes('Network') || errorMessage.includes('fetch')) {
@@ -223,11 +223,11 @@ Be decisive.`;
   return { ...gemini, suggest };
 }
 
-// Check if Gemini API is available (requires server-side GEMINI_API_KEY configuration)
+// Check if AI Gateway is available (requires server-side AI_GATEWAY_API_KEY configuration)
 export function useGeminiAvailable() {
   const [state, setState] = useState<'loading' | 'available' | 'unavailable'>(() => {
     try {
-      const cached = localStorage.getItem('gemini-available');
+      const cached = localStorage.getItem('ai-gateway-available');
       return cached ? (JSON.parse(cached) ? 'available' : 'unavailable') : 'loading';
     } catch {
       return 'loading';
@@ -244,7 +244,7 @@ export function useGeminiAvailable() {
           if (response.ok) {
             const data = await response.json() as { available: boolean };
             setState(data.available ? 'available' : 'unavailable');
-            localStorage.setItem('gemini-available', JSON.stringify(data.available));
+            localStorage.setItem('ai-gateway-available', JSON.stringify(data.available));
           } else {
             setState('unavailable');
           }

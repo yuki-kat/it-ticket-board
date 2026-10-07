@@ -952,7 +952,7 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
             <span className="header-tools-heading">ACCOUNT</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>Gemini AI Settings<small>Configure API key</small></span></button>
+            <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>AI Gateway Settings<small>Check AI configuration</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); logout() }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
           </div>}
         </div>

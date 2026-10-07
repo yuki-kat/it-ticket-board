@@ -7,11 +7,18 @@ interface GeminiSettingsProps {
 }
 
 export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
-  const [isConfigured, setIsConfigured] = useState(false)
+  const [status, setStatus] = useState<'loading' | 'available' | 'unavailable' | 'error'>('loading')
 
   useEffect(() => {
-    const config = getGeminiConfig()
-    setIsConfigured(config.configured)
+    let active = true
+    void getGeminiConfig()
+      .then((config) => {
+        if (active) setStatus(config.configured ? 'available' : 'unavailable')
+      })
+      .catch(() => {
+        if (active) setStatus('error')
+      })
+    return () => { active = false }
   }, [])
 
   return (
@@ -19,9 +26,9 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
       <div className="modal-content" style={{ maxWidth: '450px' }}>
         <div className="modal-header">
           <div>
-            <h2 className="modal-title">Gemini AI Settings</h2>
+            <h2 className="modal-title">AI Gateway Settings</h2>
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0, marginTop: 'var(--spacing-xs)' }}>
-              Google Gemini API status and configuration
+              Vercel AI Gateway status and configuration
             </p>
           </div>
           <button
@@ -38,22 +45,43 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
             {/* Status Section */}
             <div style={{
               padding: 'var(--spacing-md)',
-              background: isConfigured ? 'rgba(74, 155, 111, 0.1)' : 'rgba(201, 76, 70, 0.1)',
+              background: status === 'available' ? 'rgba(74, 155, 111, 0.1)' : status === 'loading' ? 'var(--color-bg-subtle)' : 'rgba(201, 76, 70, 0.1)',
               borderRadius: 'var(--radius-md)',
-              border: `1px solid ${isConfigured ? 'rgba(74, 155, 111, 0.3)' : 'rgba(201, 76, 70, 0.3)'}`,
+              border: `1px solid ${status === 'available' ? 'rgba(74, 155, 111, 0.3)' : status === 'loading' ? 'var(--color-border)' : 'rgba(201, 76, 70, 0.3)'}`,
               display: 'flex',
               alignItems: 'flex-start',
               gap: 'var(--spacing-md)'
             }}>
-              {isConfigured ? (
+              {status === 'loading' ? (
+                <div>
+                  <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+                    Checking AI Gateway…
+                  </h3>
+                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
+                    Checking server-side configuration.
+                  </p>
+                </div>
+              ) : status === 'available' ? (
                 <>
                   <CheckCircle size={20} style={{ color: 'var(--color-accent-green)', flexShrink: 0, marginTop: '2px' }} />
                   <div>
                     <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-accent-green)' }}>
-                      Gemini API Configured
+                      AI Gateway Configured
                     </h3>
                     <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
-                      Your server has been configured with a Gemini API key. AI features are active and ready to use.
+                      The server has an AI Gateway credential configured. Try an AI feature to confirm it can reach the selected model.
+                    </p>
+                  </div>
+                </>
+              ) : status === 'unavailable' ? (
+                <>
+                  <AlertCircle size={20} style={{ color: 'var(--color-accent-red)', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-accent-red)' }}>
+                      AI Gateway Not Configured
+                    </h3>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
+                      Set the AI_GATEWAY_API_KEY environment variable on your server to enable AI features.
                     </p>
                   </div>
                 </>
@@ -62,10 +90,10 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
                   <AlertCircle size={20} style={{ color: 'var(--color-accent-red)', flexShrink: 0, marginTop: '2px' }} />
                   <div>
                     <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-accent-red)' }}>
-                      Gemini API Not Configured
+                      AI Gateway Status Unavailable
                     </h3>
                     <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
-                      Set the GEMINI_API_KEY environment variable on your server to enable AI features.
+                      Could not check the server configuration. Confirm the server is reachable and try again.
                     </p>
                   </div>
                 </>
@@ -75,7 +103,7 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
             {/* Info Section */}
             <div>
               <h3 style={{ margin: 0, marginBottom: 'var(--spacing-sm)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
-                How to configure Gemini API
+                How to configure AI Gateway
               </h3>
               <ol style={{
                 margin: 0,
@@ -84,9 +112,8 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
                 color: 'var(--color-text-secondary)',
                 lineHeight: '1.6'
               }}>
-                <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>Google AI Studio</a></li>
-                <li>Click "Create API Key"</li>
-                <li>Set the <code>GEMINI_API_KEY</code> environment variable on your server</li>
+                <li>Set up Vercel AI Gateway for your Vercel account</li>
+                <li>Provide the <code>AI_GATEWAY_API_KEY</code> environment variable to the server (or use the Gateway credential from macOS Keychain locally)</li>
                 <li>Restart the server for changes to take effect</li>
               </ol>
             </div>
@@ -121,7 +148,7 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
               color: 'var(--color-text-secondary)',
               lineHeight: '1.6'
             }}>
-              <strong>Security:</strong> Your API key is stored securely on the server and never exposed to the client. All Gemini requests are proxied through the backend.
+              <strong>Security:</strong> Your Gateway key stays on the server and is never exposed to the browser. AI requests are proxied through the backend.
             </div>
           </div>
         </div>

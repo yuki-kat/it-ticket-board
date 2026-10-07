@@ -1,9 +1,6 @@
-// Vercel function: asks Gemini for likely causes and troubleshooting steps for one ticket.
-// The key stays on the server (GEMINI_API_KEY in Vercel's project settings, or app/.env for `vercel dev`);
-// the page only ever sees the answer.
-import { ApiError, GoogleGenAI, Type } from '@google/genai'
+import { createGateway, generateText } from 'ai'
 
-const MODEL = 'gemini-2.0-flash'
+const MODEL = 'moonshotai/kimi-k3'
 const MAX_FIELD = 2000
 
 type SuggestFixRequest = { title?: unknown; description?: unknown; recordType?: unknown; severity?: unknown; assignmentGroup?: unknown; tags?: unknown }
@@ -13,40 +10,54 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
 
 const systemInstruction = `You are a senior IT service desk engineer. Given one ticket, suggest how the assigned technician could resolve it.
 Be practical and specific to the ticket; do not invent facts about the environment. Keep each item to one sentence.
-Give 2-4 likely causes, 3-6 ordered troubleshooting steps, and when to escalate.`
+Give 2-4 likely causes, 3-6 ordered troubleshooting steps, and when to escalate.
+Return only a JSON object with string-array fields "likelyCauses" and "steps", and a string field "escalateIf". Do not include Markdown fences or other text.`
 
-const responseSchema = {
-  type: Type.OBJECT,
-  properties: {
-    likelyCauses: { type: Type.ARRAY, items: { type: Type.STRING } },
-    steps: { type: Type.ARRAY, items: { type: Type.STRING } },
-    escalateIf: { type: Type.STRING },
-  },
-  required: ['likelyCauses', 'steps', 'escalateIf'],
+const isSameOrigin = (request: Request) => {
+  const origin = request.headers.get('origin')
+  if (!origin) return true
+  try {
+    return new URL(origin).hostname === (request.headers.get('host') || '').split(':')[0]
+  } catch {
+    return false
+  }
+}
+
+const gatewayStatus = (error: unknown) =>
+  typeof error === 'object' && error !== null && 'statusCode' in error && typeof error.statusCode === 'number'
+    ? error.statusCode
+    : undefined
+
+const asStringArray = (value: unknown) =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : null
+
+const parseSuggestion = (result: string) => {
+  try {
+    const jsonStart = result.indexOf('{')
+    const jsonEnd = result.lastIndexOf('}')
+    if (jsonStart < 0 || jsonEnd < jsonStart) return null
+    const suggestion: unknown = JSON.parse(result.slice(jsonStart, jsonEnd + 1))
+    if (typeof suggestion !== 'object' || suggestion === null || Array.isArray(suggestion)) return null
+    const value = suggestion as Record<string, unknown>
+    const likelyCauses = asStringArray(value.likelyCauses)
+    const steps = asStringArray(value.steps)
+    if (!likelyCauses || !steps?.length || typeof value.escalateIf !== 'string') return null
+    return { likelyCauses, steps, escalateIf: value.escalateIf }
+  } catch {
+    return null
+  }
 }
 
 export async function POST(request: Request) {
-  // Only the board itself may use this endpoint, so other sites can't spend the Gemini quota.
-  const origin = request.headers.get('origin')
-  if (origin) {
-    try {
-      const host = request.headers.get('host') || ''
-      const originUrl = new URL(origin)
-      const hostWithoutPort = host.split(':')[0]
-      const originHostWithoutPort = originUrl.hostname
-      if (originHostWithoutPort !== hostWithoutPort) {
-        return json({ error: 'Not allowed.' }, 403)
-      }
-    } catch {
-      return json({ error: 'Not allowed.' }, 403)
-    }
+  if (!isSameOrigin(request)) return json({ error: 'Not allowed.' }, 403)
+  if (!process.env.AI_GATEWAY_API_KEY?.trim()) {
+    return json({ error: 'AI suggestions are not configured (AI_GATEWAY_API_KEY is missing).' }, 500)
   }
 
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return json({ error: 'AI suggestions are not set up on this site (GEMINI_API_KEY is missing).' }, 500)
-
-  let body: SuggestFixRequest
-  try { body = (await request.json()) as SuggestFixRequest } catch { return json({ error: 'Invalid request.' }, 400) }
+  let payload: unknown
+  try { payload = await request.json() } catch { return json({ error: 'Invalid request.' }, 400) }
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return json({ error: 'Invalid request.' }, 400)
+  const body = payload as SuggestFixRequest
   const title = text(body.title)
   if (!title) return json({ error: 'The ticket needs a short description.' }, 400)
   const tags = Array.isArray(body.tags) ? body.tags.filter((tag) => typeof tag === 'string').slice(0, 20).join(', ') : ''
@@ -61,30 +72,25 @@ export async function POST(request: Request) {
   ].join('\n')
 
   try {
-    const ai = new GoogleGenAI({ apiKey })
-    const ask = () => ai.models.generateContent({
-      model: MODEL,
-      contents: ticket,
-      config: { systemInstruction, responseMimeType: 'application/json', responseSchema, maxOutputTokens: 1024 },
-    })
-    // Gemini often answers "high demand" (503) for a moment; one quiet retry saves the user a click.
-    const response = await ask().catch(async (error: unknown) => {
-      if (error instanceof ApiError && (error.status === 503 || error.status === 429)) {
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-        return ask()
-      }
-      throw error
-    })
-    const suggestion = JSON.parse(response.text || '{}')
-    if (!Array.isArray(suggestion.steps) || !suggestion.steps.length) throw new Error('Empty answer')
-    return json({ likelyCauses: suggestion.likelyCauses || [], steps: suggestion.steps, escalateIf: suggestion.escalateIf || '' })
-  } catch (error: unknown) {
-    if (error instanceof ApiError) {
-      if (error.status === 503 || error.status === 429) {
-        return json({ error: 'Gemini is busy right now. Try again in a minute.' }, 503)
-      }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const { text: result } = await generateText({
+        model: createGateway()(MODEL),
+        system: systemInstruction,
+        prompt: ticket,
+        temperature: 0.2,
+        maxOutputTokens: 1024,
+      })
+      const suggestion = parseSuggestion(result)
+      if (suggestion) return json(suggestion)
     }
-    console.error('suggest-fix failed', error)
-    return json({ error: 'Could not get a suggestion from Gemini.' }, 502)
+    console.error('suggest-fix returned an invalid response')
+    return json({ error: 'AI Gateway returned an invalid suggestion. Please try again.' }, 502)
+  } catch (error: unknown) {
+    const status = gatewayStatus(error)
+    if (status === 429 || status === 503) {
+      return json({ error: 'AI Gateway is busy right now. Try again in a minute.' }, 503)
+    }
+    console.error('suggest-fix failed', status ?? 'unknown error')
+    return json({ error: 'Could not get a suggestion from AI Gateway.' }, 502)
   }
 }

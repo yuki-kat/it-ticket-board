@@ -1,4 +1,4 @@
-// Check if Gemini API is configured on the server
+// Check if Vercel AI Gateway is configured on the server.
 export async function OPTIONS(request: Request) {
   const origin = request.headers.get('origin')
   const host = request.headers.get('host') || ''
@@ -57,8 +57,8 @@ export async function GET(request: Request) {
   }
   // If no origin header (same-origin GET requests), allow through
 
-  const apiKey = process.env.GEMINI_API_KEY
-  const available = !!apiKey
+  const apiKey = process.env.AI_GATEWAY_API_KEY
+  const available = Boolean(apiKey?.trim())
 
   const headers: Record<string, string> = {
     'Cache-Control': 'no-store',

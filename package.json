@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "ai": "^7.0.129"
+  }
+}

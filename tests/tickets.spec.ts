@@ -67,6 +67,19 @@ test.describe('Inventory device health', () => {
 test.describe('AI troubleshooting guidance', () => {
   test.beforeEach(async ({ page }) => openApp(page))
 
+  test('AI Gateway settings report the server configuration', async ({ page }) => {
+    await page.route('**/api/check-gemini', async (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: true }),
+    }))
+
+    await page.getByRole('button', { name: 'Tools' }).click()
+    await page.getByRole('button', { name: /AI Gateway Settings/ }).click()
+
+    await expect(page.getByRole('heading', { name: 'AI Gateway Configured' })).toBeVisible()
+  })
+
   test('Ask AI on a ticket card shows ticket-specific troubleshooting steps', async ({ page }) => {
     await goTo(page, 'Tickets')
     await page.getByRole('button', { name: 'Open all ticket views' }).click()
