@@ -75,7 +75,7 @@ The app is hosted on Vercel, connected to this repo (Vercel project **app**, roo
 
 - **Login protection:** Vercel's deployment protection is on, so only people signed in to the Vercel account can open the site. Keep it on until the app is ready for customers.
 - **Security headers:** `app/vercel.json` turns off framing and MIME sniffing, sets a strict referrer policy, and blocks camera, microphone and location.
-- **AI features:** Ticket analysis and suggestions use Vercel AI Gateway with `moonshotai/kimi-k3`. Set `AI_GATEWAY_API_KEY` in the Vercel project’s server environment; for local development, make the key available to the server process (the Vercel CLI setup can read it from macOS Keychain). The key is never sent to the browser. The backend requires Node.js 22 or later.
+- **AI features:** Ticket analysis and suggestions use Vercel AI Gateway with `anthropic/claude-haiku-4.5`. Set `AI_GATEWAY_API_KEY` in the Vercel project’s server environment; for local development, make the key available to the server process (the Vercel CLI setup can read it from macOS Keychain). The key is never sent to the browser. The backend requires Node.js 22 or later.
 - **Sign-in** (Settings → Account) only works on the hosted site, not on a double-clicked `index.html`, because the sign-in email has to link back to a web address.
 
 **One-time setup for sign-in:**

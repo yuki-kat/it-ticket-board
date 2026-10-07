@@ -3,7 +3,7 @@ import { createGateway, generateText } from "ai";
 const gateway = createGateway();
 
 const { text } = await generateText({
-  model: gateway("moonshotai/kimi-k3"),
+  model: gateway("anthropic/claude-haiku-4.5"),
   prompt: "Invent a new holiday and describe its traditions.",
 });
 

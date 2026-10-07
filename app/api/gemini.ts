@@ -66,13 +66,13 @@ export async function POST(request: Request) {
   try {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const result = await generateText({
-        model: createGateway()('moonshotai/kimi-k3'),
+        model: createGateway()('anthropic/claude-haiku-4.5'),
         ...(system ? { system } : {}),
         messages,
         temperature,
         maxOutputTokens,
       })
-      if (result.text) return json({ text: result.text, model: 'moonshotai/kimi-k3' })
+      if (result.text) return json({ text: result.text, model: 'anthropic/claude-haiku-4.5' })
     }
     return json({ error: 'AI Gateway returned no text. Please try again.' }, 502)
   } catch (error: unknown) {

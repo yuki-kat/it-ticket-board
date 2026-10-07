@@ -56,13 +56,13 @@ router.post('/gemini', async (req: Request, res: Response) => {
   try {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const result = await generateText({
-        model: createGateway()('moonshotai/kimi-k3'),
+        model: createGateway()('anthropic/claude-haiku-4.5'),
         ...(system ? { system } : {}),
         messages,
         temperature,
         maxOutputTokens,
       });
-      if (result.text) return res.json({ text: result.text, model: 'moonshotai/kimi-k3' });
+      if (result.text) return res.json({ text: result.text, model: 'anthropic/claude-haiku-4.5' });
     }
     return res.status(502).json({ error: 'AI Gateway returned no text. Please try again.' });
   } catch (error: unknown) {

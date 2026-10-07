@@ -1,6 +1,6 @@
 import { createGateway, generateText } from 'ai'
 
-const MODEL = 'moonshotai/kimi-k3'
+const MODEL = 'anthropic/claude-haiku-4.5'
 const MAX_FIELD = 2000
 
 type SuggestFixRequest = { title?: unknown; description?: unknown; recordType?: unknown; severity?: unknown; assignmentGroup?: unknown; tags?: unknown }
