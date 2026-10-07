@@ -21,7 +21,7 @@ services:
       - key: JWT_EXPIRY
         value: 24h
       - key: CORS_ORIGIN
-        value: https://it-ticket-board.onrender.com
+        value: https://it-ticket-board-frontend.onrender.com
       - key: GEMINI_API_KEY
         sync: false
 
@@ -32,8 +32,8 @@ services:
     buildCommand: cd app && npm ci && npm run build
     staticPublishPath: app/dist
     envVars:
-      - key: VITE_GEMINI_API_KEY
-        sync: false
+      - key: VITE_API_URL
+        value: https://it-ticket-board-backend.onrender.com
 
 databases:
   - name: postgres
