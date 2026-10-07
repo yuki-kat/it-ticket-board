@@ -8,8 +8,37 @@
     <meta name="description" content="A lightweight IT service desk Kanban board with escalation matrix reference." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>IT Ticket Board</title>
+    <style>
+      #boot{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#f5f6f4;color:#17323d;font:600 14px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:opacity .25s ease}
+      #boot[data-theme=dark]{background:#10181c;color:#dbe7ec}
+      #boot.is-done{opacity:0;pointer-events:none}
+      #boot .boot-name{font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+      #boot .boot-track{width:min(320px,70vw);height:6px;border-radius:99px;overflow:hidden;background:rgba(23,50,61,.14)}
+      #boot[data-theme=dark] .boot-track{background:rgba(219,231,236,.18)}
+      #boot .boot-fill{height:100%;width:100%;border-radius:inherit;background:#1a7f7e;transform-origin:left;transform:scaleX(.04);animation:boot-creep 4s cubic-bezier(.1,.6,.2,1) forwards}
+      #boot.is-finishing .boot-fill{animation:none;transform:scaleX(1);transition:transform .2s ease-out}
+      #boot .boot-label{font-weight:500;font-size:12px;opacity:.75}
+      @keyframes boot-creep{to{transform:scaleX(.85)}}
+      @media (prefers-reduced-motion:reduce){#boot,#boot .boot-fill{transition:none}}
+    </style>
   </head>
   <body>
+    <div id="boot" role="progressbar" aria-label="Loading IT Ticket Board" aria-busy="true"><div class="boot-name">Ops Kanban</div><div class="boot-track"><div class="boot-fill"></div></div><div class="boot-label">Loading…</div></div>
+    <script>
+      (function () {
+        var el = document.getElementById('boot'), label = el.querySelector('.boot-label'), finished = false
+        try { if (localStorage.getItem('it-ticket-kanban-theme') === 'dark') el.setAttribute('data-theme', 'dark') } catch (e) {}
+        function done() {
+          if (finished) return
+          finished = true
+          label.textContent = 'Ready'
+          el.classList.add('is-finishing')
+          setTimeout(function () { el.classList.add('is-done'); setTimeout(function () { el.remove() }, 300) }, 220)
+        }
+        window.__boot = { stage: function (text) { if (!finished) label.textContent = text }, done: done }
+        setTimeout(done, 20000)
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
