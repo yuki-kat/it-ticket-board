@@ -82,8 +82,7 @@ test.describe('AI troubleshooting guidance', () => {
 
   test('Ask AI on a ticket card shows ticket-specific troubleshooting steps', async ({ page }) => {
     await goTo(page, 'Tickets')
-    await page.getByRole('button', { name: 'Open all ticket views' }).click()
-    await page.getByRole('button', { name: 'Kanban Detailed', exact: true }).click()
+    await page.getByRole('combobox', { name: 'Choose ticket view' }).selectOption('regular')
     let requestedTitle = ''
     await page.route('**/api/suggest-fix', async (route) => {
       requestedTitle = route.request().postDataJSON().title
@@ -107,8 +106,7 @@ test.describe('AI troubleshooting guidance', () => {
 
   test('Ask AI in ticket details shows the same guidance and can add it to notes', async ({ page }) => {
     await goTo(page, 'Tickets')
-    await page.getByRole('button', { name: 'Open all ticket views' }).click()
-    await page.getByRole('button', { name: 'Kanban Detailed', exact: true }).click()
+    await page.getByRole('combobox', { name: 'Choose ticket view' }).selectOption('regular')
     await page.route('**/api/suggest-fix', async (route) => route.fulfill({
       status: 200,
       contentType: 'application/json',

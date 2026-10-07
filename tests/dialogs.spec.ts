@@ -33,16 +33,6 @@ test.describe('Dialogs (source)', () => {
     await page.keyboard.press('Escape')
     await expect(page.locator('.home-kpi-grid')).toBeVisible()
   })
-
-  test('the All Views picker also closes with Escape and returns focus to its button', async ({ page }) => {
-    await goTo(page, 'Tickets')
-    const button = page.getByRole('button', { name: 'Open all ticket views' })
-    await button.click()
-    await expect(page.getByRole('dialog', { name: 'Choose a view' })).toBeFocused()
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect(button).toBeFocused()
-  })
 })
 
 test.describe('Debug log (source)', () => {
