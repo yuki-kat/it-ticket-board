@@ -2,5 +2,8 @@
   "type": "module",
   "dependencies": {
     "ai": "^7.0.129"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

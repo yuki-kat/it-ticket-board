@@ -2,9 +2,5 @@
   "version": 2,
   "buildCommand": "cd app && npm run build:page",
   "outputDirectory": ".",
-  "functions": {
-    "app/api/**/*.ts": {
-      "runtime": "nodejs22.x"
-    }
-  }
+  "installCommand": "npm install && npm install --prefix app"
 }
