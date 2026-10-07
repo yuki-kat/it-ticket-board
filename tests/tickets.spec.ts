@@ -124,3 +124,19 @@ test.describe('AI troubleshooting guidance', () => {
     await expect(dialog.locator('textarea').first()).toHaveValue(/Likely cause: A test cause[\s\S]*1\. Check the affected service/)
   })
 })
+
+test.describe('Record counts', () => {
+  const count = (page: import('@playwright/test').Page) => page.getByText(/^\d+ (of \d+ )?records$/)
+
+  test('Tickets shows the record count once', async ({ page }) => {
+    await openApp(page)
+    await goTo(page, 'Tickets')
+    await expect(count(page)).toHaveCount(1)
+  })
+
+  test('Inventory shows the record count once', async ({ page }) => {
+    await openApp(page)
+    await goTo(page, 'Inventory')
+    await expect(count(page)).toHaveCount(1)
+  })
+})
