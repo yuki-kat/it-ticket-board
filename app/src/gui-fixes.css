@@ -529,3 +529,15 @@
 :root[data-theme="dark"] .ticket-ai-guidance { border-color: #2c4453; background: #15222b; color: #d5e1e6; }
 :root[data-theme="dark"] .ticket-ai-guidance .ai-guidance-content .ai-suggest-result h4 { color: #a0b8c2; }
 :root[data-theme="dark"] .ticket-ai-guidance .ai-guidance-content .ai-suggest-result ul, :root[data-theme="dark"] .ticket-ai-guidance .ai-guidance-content .ai-suggest-result ol { color: #d5e1e6; }
+
+/* Tickets page: queue chips replace the KPI strip */
+.queue-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; }
+.queue-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 12px; border: 1px solid var(--line, #d9ded9); border-radius: 999px; background: var(--surface, #fff); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.queue-chip b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.queue-chip:hover { border-color: #8aa; }
+.queue-chip.selected { background: #17313b; border-color: #17313b; color: #fff; }
+.queue-chip:focus-visible { outline: 2px solid #17313b; outline-offset: 2px; }
+.page-heading .link-button { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline; font: inherit; cursor: pointer; }
+.board-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
+.board-toolbar { align-items: center; flex-wrap: wrap; }
+.board-toolbar > .board-filters { order: -1; flex: 1 1 auto; }

@@ -560,7 +560,6 @@ function App() {
   const [showPolishModal, setShowPolishModal] = useState(false)
   const [polishedDescription, setPolishedDescription] = useState('')
   const { loading: polishLoading, error: polishError, result: polishResult, polish } = useDescriptionAssist()
-  const [showMoreMetrics, setShowMoreMetrics] = useState(false)
   const [clock, setClock] = useState(Date.now())
   const [dragOverLane, setDragOverLane] = useState('')
   const [selectedTicketId, setSelectedTicketId] = useState('')
@@ -681,28 +680,6 @@ function App() {
     if (!ticketWorkspaceReady) return
     localStorage.setItem(TICKET_WORKSPACE_KEY, JSON.stringify({ tabs: ticketWorkspace.tabs.map((item) => item.id === ticketWorkspace.activeId ? { ...item, settings: currentTicketPane } : item), activeId: ticketWorkspace.activeId }))
   }, [ticketWorkspace, ticketWorkspaceReady, cardSize, boardBy, query, typeFilter, groupFilter, assigneeFilter, metricFilter, tagFilter, starredOnly, splitLeft, splitRight])
-  const switchTicketTab = (id: string) => {
-    if (id === ticketWorkspace.activeId) return
-    const next = ticketWorkspace.tabs.find((item) => item.id === id)
-    if (!next) return
-    setTicketWorkspace({ tabs: ticketWorkspace.tabs.map((item) => item.id === ticketWorkspace.activeId ? { ...item, settings: currentTicketPane } : item), activeId: id })
-    applyTicketPane(next.settings)
-  }
-  const addTicketTab = () => {
-    const id = newTicketWorkspaceId()
-    const settings = defaultTicketPane()
-    setTicketWorkspace({ tabs: [...ticketWorkspace.tabs.map((item) => item.id === ticketWorkspace.activeId ? { ...item, settings: currentTicketPane } : item), { id, settings }], activeId: id })
-    applyTicketPane(settings)
-  }
-  const closeTicketTab = (id: string) => {
-    if (ticketWorkspace.tabs.length === 1) return
-    const index = ticketWorkspace.tabs.findIndex((item) => item.id === id)
-    if (index < 0) return
-    const tabs = ticketWorkspace.tabs.filter((item) => item.id !== id).map((item) => item.id === ticketWorkspace.activeId ? { ...item, settings: currentTicketPane } : item)
-    const activeId = id === ticketWorkspace.activeId ? tabs[Math.min(index, tabs.length - 1)].id : ticketWorkspace.activeId
-    setTicketWorkspace({ tabs, activeId })
-    if (id === ticketWorkspace.activeId) applyTicketPane(tabs.find((item) => item.id === activeId)!.settings)
-  }
   const applyTicketView = (settings: TicketViewSettings) => {
     const tabs = Array.isArray(settings.workspaceTabs) ? settings.workspaceTabs.filter((item): item is TicketWorkspaceTab => !!item && typeof item.id === 'string' && !!item.settings) : []
     if (tabs.length) {
@@ -721,7 +698,6 @@ function App() {
     setTicketWorkspace({ tabs: [{ id, settings }], activeId: id })
     applyTicketPane(settings)
   }
-  const ticketTabLabel = (settings: TicketPaneSettings) => ({ small: 'Kanban Compact', regular: 'Kanban Detailed', list: 'List', split: 'Split', 'my-work': 'My Work' } as Record<CardSize, string>)[settings.cardSize]
   const ticketTags = useMemo(() => [...new Set(tickets.flatMap((ticket) => ticket.tags || []))].sort(), [tickets])
   const groupOptions = useMemo(() => [...new Set(tickets.map((ticket) => ticket.assignmentGroup || 'No group'))].sort(), [tickets])
   const assigneeOptions = useMemo(() => [...new Set(tickets.map((ticket) => ticket.assignee.trim()).filter(Boolean))].sort(), [tickets])
@@ -731,7 +707,6 @@ function App() {
   const escalated = open.filter((ticket) => ticket.status === 'Escalated').length
   const overdue = open.filter((ticket) => slaTime(ticket, clock).breached).length
   const atRisk = open.filter((ticket) => slaAtRisk(ticket, clock)).length
-  const escalationDueCount = open.filter((ticket) => escalationDue(ticket, clock)).length
   const unassigned = open.filter((ticket) => !ticket.assignee.trim()).length
   const waiting = open.filter((ticket) => ticket.status === 'Waiting on User').length
   const dueToday = open.filter((ticket) => dueTodayOrLate(ticket, clock)).length
@@ -966,37 +941,22 @@ function App() {
       onSelectQueue={(queue) => { setExploreQueue(queue); setExploreTicketId(undefined) }} onSelectTicket={setExploreTicketId}
       onOpenQueue={(queue) => showTickets(EXPLORE_FILTERS[queue], true)} onOpenAll={() => showTickets('all', true)} onOpenRecord={setSelectedTicketId} onHome={() => goToPage('home')}
       renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'search' ? <SearchPage tickets={tickets} openTicket={setSelectedTicketId} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : <main className="main-content">
-      <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
-      <div className="prototype-note"><span className="prototype-dot" /><b>Sync: live</b><span>Email intake: mock · 0 new</span><span>{tickets.length} cards on the board, {open.length} open. SLA clocks count calendar time.</span><button onClick={() => setShowModel(true)}>How this maps <ArrowRight size={13} /></button></div>
-      <section className="summary-strip" aria-label="Task summary">
-        <Metric icon={<Ticket size={17} />} label="Open" value={open.length} tone="blue" selected={metricFilter === 'active'} onClick={() => setMetricFilter((current) => current === 'active' ? 'all' : 'active')} />
-        <Metric icon={<AlertTriangle size={17} />} label="P1 / P2 open" value={highPriority} tone="red" selected={metricFilter === 'high-priority'} onClick={() => setMetricFilter((current) => current === 'high-priority' ? 'all' : 'high-priority')} />
-        <Metric icon={<Clock3 size={17} />} label="Past SLA" value={overdue} tone="red" selected={metricFilter === 'overdue'} onClick={() => setMetricFilter((current) => current === 'overdue' ? 'all' : 'overdue')} />
-        <Metric icon={<ArrowUp size={17} />} label="Escalated" value={escalated} tone="amber" selected={metricFilter === 'escalated'} onClick={() => setMetricFilter((current) => current === 'escalated' ? 'all' : 'escalated')} />
-        {showMoreMetrics && <>
-          <Metric icon={<Activity size={17} />} label="SLA at risk" value={atRisk} tone="amber" selected={metricFilter === 'at-risk'} onClick={() => setMetricFilter((current) => current === 'at-risk' ? 'all' : 'at-risk')} />
-          <Metric icon={<ShieldAlert size={17} />} label="Escalation due" value={escalationDueCount} tone="amber" selected={metricFilter === 'escalation-due'} onClick={() => setMetricFilter((current) => current === 'escalation-due' ? 'all' : 'escalation-due')} />
-          <Metric icon={<Layers size={17} />} label="Unassigned" value={unassigned} tone="slate" selected={metricFilter === 'unassigned'} onClick={() => setMetricFilter((current) => current === 'unassigned' ? 'all' : 'unassigned')} />
-          <Metric icon={<Workflow size={17} />} label="Waiting on user" value={waiting} tone="blue" selected={metricFilter === 'waiting'} onClick={() => setMetricFilter((current) => current === 'waiting' ? 'all' : 'waiting')} />
-          <Metric icon={<Clock3 size={17} />} label="Due today / late" value={dueToday} tone="slate" selected={metricFilter === 'due-today'} onClick={() => setMetricFilter((current) => current === 'due-today' ? 'all' : 'due-today')} />
-        </>}
-        <button className="metric-show-more" onClick={() => setShowMoreMetrics((v) => !v)} type="button">{showMoreMetrics ? 'Show less' : 'Show more'}</button>
-      </section>
-      <div className="board-toolbar"><div className="ticket-browser-tabs">
-        <div className="ticket-browser-tab-scroll" role="tablist" aria-label="Open ticket tabs">
-          {ticketWorkspace.tabs.map((item) => { const settings = item.id === ticketWorkspace.activeId ? currentTicketPane : item.settings; return <div className={'ticket-browser-tab' + (item.id === ticketWorkspace.activeId ? ' active' : '')} key={item.id}><button role="tab" aria-selected={item.id === ticketWorkspace.activeId} onClick={() => switchTicketTab(item.id)} title={ticketTabLabel(settings)}>{ticketTabLabel(settings)}{(settings.query || settings.typeFilter !== 'All task types' || settings.groupFilter !== 'All groups' || settings.assigneeFilter !== 'All assignees' || settings.metricFilter !== 'all' || settings.tagFilter !== 'All tags' || settings.starredOnly) && <span className="ticket-tab-filter-dot" aria-label="Filtered" />}</button>{ticketWorkspace.tabs.length > 1 && <button className="ticket-browser-tab-close" onClick={() => closeTicketTab(item.id)} aria-label={`Close ${ticketTabLabel(settings)} tab`} title="Close tab"><X size={12} /></button>}</div> })}
-          <button className="ticket-browser-add" onClick={addTicketTab} aria-label="New ticket tab" title="New ticket tab"><Plus size={16} /><span>New tab</span></button>
-        </div>
-        <SavedViews label="Ticket views" views={savedTicketViews} current={currentTicketView} onApply={applyTicketView} onReset={resetTicketView} onSave={(view) => setSavedTicketViews((items) => [...items, view])} onDelete={(id) => setSavedTicketViews((items) => items.filter((view) => view.id !== id))} saveButtonLabel="Save tabs as view" saveDescription="Save all open ticket tabs, including each tab’s layout, search, filters, and split view choices. Reopen the full set from Saved views." />
+      <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk. <button type="button" className="link-button" onClick={() => setShowModel(true)}>How this maps</button></p></div></div>
+      <nav className="queue-chips" aria-label="Task summary">
+        {([['all', 'All', tickets.length], ['active', 'Open', open.length], ['high-priority', 'P1 / P2', highPriority], ['overdue', 'Past SLA', overdue], ['escalated', 'Escalated', escalated], ['at-risk', 'SLA at risk', atRisk], ['unassigned', 'Unassigned', unassigned], ['waiting', 'Waiting on user', waiting], ['due-today', 'Due today', dueToday]] as const).map(([key, label, count]) => (
+          <button key={key} type="button" className={`queue-chip${metricFilter === key ? ' selected' : ''}`} aria-pressed={metricFilter === key} aria-label={`Filter tickets: ${label} (${count})`} onClick={() => setMetricFilter(key === 'all' ? 'all' : (current) => current === key ? 'all' : key)}>{label}<b>{count}</b></button>
+        ))}
+      </nav>
+      <div className="board-toolbar">
+        <SavedViews label="Ticket views" views={savedTicketViews} current={currentTicketView} onApply={applyTicketView} onReset={resetTicketView} onSave={(view) => setSavedTicketViews((items) => [...items, view])} onDelete={(id) => setSavedTicketViews((items) => items.filter((view) => view.id !== id))} saveButtonLabel="Save view" saveDescription="Save the current layout, search and filters so you can reopen them from Saved views." />
         <button type="button" className="export-csv-button" onClick={() => exportCurrentTickets('csv')} title={selectedTicketIds.length ? `Export ${selectedTicketIds.length} selected ${selectedTicketIds.length === 1 ? 'ticket' : 'tickets'} as CSV` : `Export ${visible.length} tickets matching the current filters as CSV`}><Download size={14} /> Export CSV</button>
-              </div>
       {cardSize === 'split' && <div className="ticket-split-options" aria-label="Split view layout">
         <strong>Split layout</strong>
         <label>Left view<select value={splitLeft} onChange={(event) => setSplitLeft(event.target.value as SplitPaneMode)} aria-label="Choose left split view"><SplitPaneOptions /></select></label>
         <label>Right view<select value={splitRight} onChange={(event) => setSplitRight(event.target.value as SplitPaneMode)} aria-label="Choose right split view"><SplitPaneOptions /></select></label>
         <button type="button" onClick={() => { setSplitLeft(splitRight); setSplitRight(splitLeft) }}><RotateCcw size={13} /> Swap sides</button>
       </div>}
-      <div className="board-label"><span className="live-dot" />Task board <span className="ticket-total">{visible.length === tickets.length ? `${tickets.length} records` : `${visible.length} of ${tickets.length} records`}</span></div><div className="board-filters"><label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tickets, people, tags" aria-label="Search tickets, people, tags" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}</label><button type="button" className="all-views-button" aria-label="Open all ticket views" onClick={() => setShowViewPicker(true)}>All Views</button>{(cardSize === 'small' || cardSize === 'regular') && <label className="filter-field"><span>Board by</span><select value={boardBy} onChange={(event) => setBoardBy(event.target.value as BoardBy)} aria-label="Group board by"><option>State</option><option>Task type</option><option>Assignment group</option></select></label>}<div className="board-filters-dropdown" ref={boardFiltersDropdownRef}><button className="board-filters-button" onClick={() => setShowBoardFiltersDropdown(!showBoardFiltersDropdown)} aria-expanded={showBoardFiltersDropdown}><ChevronDown size={14} /> Filters</button>{showBoardFiltersDropdown && <div className="board-filters-menu"><div className="board-filters-menu-section">
+      <div className="board-filters"><span className="ticket-total">{visible.length === tickets.length ? `${tickets.length} records` : `${visible.length} of ${tickets.length} records`}</span><label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tickets, people, tags" aria-label="Search tickets, people, tags" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}</label><button type="button" className="all-views-button" aria-label="Open all ticket views" onClick={() => setShowViewPicker(true)}>Layout</button>{(cardSize === 'small' || cardSize === 'regular') && <label className="filter-field"><span>Board by</span><select value={boardBy} onChange={(event) => setBoardBy(event.target.value as BoardBy)} aria-label="Group board by"><option>State</option><option>Task type</option><option>Assignment group</option></select></label>}<div className="board-filters-dropdown" ref={boardFiltersDropdownRef}><button className="board-filters-button" onClick={() => setShowBoardFiltersDropdown(!showBoardFiltersDropdown)} aria-expanded={showBoardFiltersDropdown}><ChevronDown size={14} /> Filters</button>{showBoardFiltersDropdown && <div className="board-filters-menu"><div className="board-filters-menu-section">
       <label><span>Type</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as RecordType | 'All task types')} aria-label="Filter by task type"><option>All task types</option>{recordTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
       <label><span>Group</span><select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} aria-label="Filter by assignment group"><option>All groups</option>{groupOptions.map((group) => <option key={group}>{group}</option>)}</select></label>
       <label><span>Assignee</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} aria-label="Filter by assignee"><option>All assignees</option>{assigneeOptions.map((assignee) => <option key={assignee}>{assignee}</option>)}<option>Unassigned</option></select></label>
@@ -1142,7 +1102,6 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
   </main>
 }
 
-function Metric({ icon, label, value, tone, selected, onClick }: { icon: React.ReactNode; label: string; value: number; tone: string; selected: boolean; onClick: () => void }) { return <button type="button" className={`metric${selected ? ' selected' : ''}`} aria-label={`Filter tickets: ${label} (${value})`} aria-pressed={selected} title={`Show ${label.toLowerCase()} tickets`} onClick={onClick}><div className={`metric-icon ${tone}`}>{icon}</div><div><div className="metric-label">{label}</div><div className="metric-value">{value}</div></div></button> }
 
 function SettingsPanel({ screenPattern, onScreenPatternChange, view, onViewChange, widgets, onWidgetsChange, onClose }: { screenPattern: ScreenPattern; onScreenPatternChange: (value: ScreenPattern) => void; view: CardSize; onViewChange: (value: CardSize) => void; widgets: HomeWidgets; onWidgetsChange: (value: HomeWidgets) => void; onClose: () => void }) {
   const choices: { key: keyof HomeWidgets; label: string; detail: string; extra?: boolean }[] = [
