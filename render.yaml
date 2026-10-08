@@ -28,7 +28,6 @@ services:
   - type: web
     name: it-ticket-board-frontend
     runtime: static
-    plan: free
     buildCommand: cd app && npm ci && npm run build
     staticPublishPath: app/dist
     headers:
