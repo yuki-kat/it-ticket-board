@@ -27,7 +27,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "build:page": "npm run build && node scripts/inlinePage.mjs"
+    "build:page": "VITE_API_URL= npm run build && node scripts/inlinePage.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
