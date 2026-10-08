@@ -19,3 +19,7 @@ tests/pw.local.config.ts
 .env
 .env.*
 !.env.example
+
+# Dependencies and deployment metadata
+node_modules/
+.vercel/

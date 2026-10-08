@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { API_BASE } from './api/base';
-import { callGeminiWithPrompt } from './api/gemini';
+import { API_BASE } from '../api/base';
+import { callGeminiWithPrompt } from '../api/gemini';
 
 export class GeminiError extends Error {
   code?: string;

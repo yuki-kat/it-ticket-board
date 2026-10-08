@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: |
             tests/package-lock.json
@@ -30,9 +30,17 @@ jobs:
         working-directory: .
         run: |
           if ! git diff --exit-code --stat -- index.html; then
+            echo "First differing chunk:"
+            git diff -U1 -- index.html | head -c 3000
             echo "::error file=index.html::index.html does not match the source in app/. Run 'npm run build:page' in app/ and commit the result."
             exit 1
           fi
+      - name: Upload the rebuilt page for comparison
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rebuilt-index
+          path: index.html
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test

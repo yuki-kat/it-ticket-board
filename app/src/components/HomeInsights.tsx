@@ -2,8 +2,8 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { TicketPopout, usePopoutBehaviour } from './HomePopouts'
-import './home-insights.css'
-import './home-arrange.css'
+import '../styles/home-insights.css'
+import '../styles/home-arrange.css'
 
 /** The parts of a ticket that the insight cards need. */
 export type InsightTicket = { id: string; title: string; status: string; severity: string; assignee: string; createdAt: string }

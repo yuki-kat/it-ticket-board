@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { debugLog } from './debug'
-import './home-popouts.css'
+import { debugLog } from '../lib/debug'
+import '../styles/home-popouts.css'
 
 type PopoutProps = {
   eyebrow: string

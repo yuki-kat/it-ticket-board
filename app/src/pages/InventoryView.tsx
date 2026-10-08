@@ -1,135 +1,45 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Box, Check, ChevronDown, Clock3, Link2, Package, Pencil, Plus, RotateCcw, Search, ShieldAlert, Star, Trash2, Wrench, X } from 'lucide-react'
-import Overlay from './Overlay'
-import SavedViews, { loadSavedViews, type SavedView } from './SavedViews'
-import { exportCsv, type CsvValue } from './lib/exportCsv'
-import { exportXlsx, exportXlsxWorkbook } from './lib/exportXlsx'
+import Overlay from '../components/Overlay'
+import SavedViews from '../components/SavedViews'
+import {
+  type AssetItem, type DeviceHealth, type HealthLevel, type InventoryPaneSettings,
+  type InventorySplitPaneMode, type InventoryViewMode, type StockItem,
+  categories, departments, deviceHealthOptions, healthClass, healthDescriptions, healthLevels,
+  isWarrantySoon, assetHealthLevel, dateLabel, stampLabel, statuses, inStockView,
+} from '../lib/inventory'
+import type { useInventoryContainer } from '../hooks/useInventoryContainer'
 
-export type AssetStatus = 'Available' | 'Assigned' | 'In Repair' | 'Retired' | 'Lost'
-export type DeviceHealth = 'Healthy' | 'At Risk' | 'Critical'
-export type HealthLevel = DeviceHealth | 'Monitor'
-export type AssetEvent = { at: string; action: string; detail: string }
-export type AssetItem = {
-  id: string
-  name: string
-  category: string
-  manufacturer: string
-  model: string
-  serial: string
-  status: AssetStatus
-  assignedTo: string
-  department: string
-  location: string
-  assignedAt: string
-  expectedReturnAt: string
-  issuedBy: string
-  purchaseDate: string
-  warrantyEnd: string
-  condition: 'Good' | 'Fair' | 'Damaged'
-  health: DeviceHealth
-  notes: string
-  tags: string[]
-  starred: boolean
-  linkedTicketIds: string[]
-  history: AssetEvent[]
-}
-export type StockItem = {
-  sku: string
-  name: string
-  category: string
-  quantity: number
-  minimum: number
-  location: string
-  tags: string[]
-  starred: boolean
-  updatedAt: string
-  history: AssetEvent[]
-}
-export type TicketReference = { id: string; title: string; status: string; assetId?: string }
-export type InventoryCommand = { action: 'add-asset' | 'add-stock' | 'in-stock' | 'low-stock' | 'export-csv' | 'export-xlsx'; revision: number }
-type InventoryViewMode = 'list' | 'cards' | 'split' | 'grouped' | 'attention'
-type InventorySplitPaneMode = Exclude<InventoryViewMode, 'split'> | 'details'
-type InventoryPaneSettings = { tab: 'assets' | 'stock'; viewMode: InventoryViewMode; splitLeft: InventorySplitPaneMode; splitRight: InventorySplitPaneMode; query: string; statusFilter: 'All' | AssetStatus | 'Warranty soon'; categoryFilter: string; assignedFilter: string; tagFilter: string; healthFilter: 'All health' | HealthLevel; starredOnly: boolean; lowStockOnly: boolean; inStockOnly: boolean }
-type InventoryWorkspaceTab = { id: string; settings: InventoryPaneSettings }
-type InventoryViewSettings = InventoryPaneSettings & { workspaceTabs?: InventoryWorkspaceTab[]; activeWorkspaceId?: string }
-type InventoryWorkspace = { tabs: InventoryWorkspaceTab[]; activeId: string }
-
-const ASSET_KEY = 'it-ticket-kanban-assets-v1'
-const STOCK_KEY = 'it-ticket-kanban-stock-v1'
-const SAVED_INVENTORY_VIEWS_KEY = 'it-ticket-kanban-inventory-saved-views-v1'
-const INVENTORY_VIEW_MODE_KEY = 'it-ticket-kanban-inventory-view-mode-v1'
-const INVENTORY_WORKSPACE_KEY = 'it-ticket-kanban-inventory-workspace-v1'
-const inventoryViewModes: InventoryViewMode[] = ['list', 'cards', 'split', 'grouped', 'attention']
-const inventorySplitPaneModes: InventorySplitPaneMode[] = ['list', 'details', 'cards', 'grouped', 'attention']
-const newWorkspaceId = () => `inventory-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-const defaultPaneSettings = (tab: 'assets' | 'stock' = 'assets'): InventoryPaneSettings => ({ tab, viewMode: 'list', splitLeft: 'list', splitRight: 'details', query: '', statusFilter: 'All', categoryFilter: 'All categories', assignedFilter: 'All people', tagFilter: 'All tags', healthFilter: 'All health', starredOnly: false, lowStockOnly: false, inStockOnly: false })
-function normalizeInventoryPane(value: Partial<InventoryPaneSettings>): InventoryPaneSettings {
-  return { ...defaultPaneSettings(), ...value, tab: value.tab === 'stock' ? 'stock' : 'assets', healthFilter: healthLevels.includes(value.healthFilter as HealthLevel) ? value.healthFilter as HealthLevel : 'All health', viewMode: inventoryViewModes.includes(value.viewMode as InventoryViewMode) ? value.viewMode as InventoryViewMode : 'list', splitLeft: inventorySplitPaneModes.includes(value.splitLeft as InventorySplitPaneMode) ? value.splitLeft as InventorySplitPaneMode : 'list', splitRight: inventorySplitPaneModes.includes(value.splitRight as InventorySplitPaneMode) ? value.splitRight as InventorySplitPaneMode : 'details', inStockOnly: Boolean(value.inStockOnly) }
-}
-function loadInventoryWorkspace(): InventoryWorkspace {
-  try {
-    const saved = JSON.parse(localStorage.getItem(INVENTORY_WORKSPACE_KEY) || 'null')
-    const tabs: InventoryWorkspaceTab[] = Array.isArray(saved?.tabs) ? saved.tabs.filter((item: unknown): item is InventoryWorkspaceTab => !!item && typeof item === 'object' && typeof (item as InventoryWorkspaceTab).id === 'string' && !!(item as InventoryWorkspaceTab).settings && typeof (item as InventoryWorkspaceTab).settings === 'object').map((item: InventoryWorkspaceTab) => ({ id: item.id, settings: normalizeInventoryPane(item.settings) })) : []
-    if (tabs.length) return { tabs, activeId: tabs.some((item) => item.id === saved.activeId) ? saved.activeId : tabs[0].id }
-  } catch { /* Fall back to one tab. */ }
-  const id = newWorkspaceId()
-  return { tabs: [{ id, settings: defaultPaneSettings() }], activeId: id }
-}
-function normalizeSavedInventoryView(view: SavedView<InventoryViewSettings>): SavedView<InventoryViewSettings> {
-  const pane = normalizeInventoryPane(view.settings)
-  const tabs = Array.isArray(view.settings.workspaceTabs) && view.settings.workspaceTabs.length ? view.settings.workspaceTabs.map((item) => ({ id: item.id, settings: normalizeInventoryPane(item.settings) })) : [{ id: `saved-${view.id}`, settings: pane }]
-  const activeId = tabs.some((item) => item.id === view.settings.activeWorkspaceId) ? view.settings.activeWorkspaceId : tabs[0].id
-  return { ...view, settings: { ...pane, workspaceTabs: tabs, activeWorkspaceId: activeId } }
-}
-const inStockPane: InventoryPaneSettings = { ...defaultPaneSettings('stock'), inStockOnly: true }
-const inStockView: SavedView<InventoryViewSettings> = { id: 'built-in-in-stock', name: 'In Stock', builtIn: true, settings: { ...inStockPane, workspaceTabs: [{ id: 'built-in-in-stock-tab', settings: inStockPane }], activeWorkspaceId: 'built-in-in-stock-tab' } }
-const statuses: AssetStatus[] = ['Available', 'Assigned', 'In Repair', 'Retired', 'Lost']
-const deviceHealthOptions: DeviceHealth[] = ['Healthy', 'At Risk', 'Critical']
-const healthLevels: HealthLevel[] = ['Healthy', 'Monitor', 'At Risk', 'Critical']
-const healthDescriptions: Record<HealthLevel, string> = { Healthy: 'Device is operating normally', Monitor: 'Device is healthy but needs observation', 'At Risk': 'Device needs service attention', Critical: 'Device is offline, lost, or severely impaired' }
-const healthClass = (level: HealthLevel) => level.toLowerCase().replace(/\s+/g, '-')
-// Earlier versions saved "Needs attention" and "Offline"; map them onto the current levels.
-export function normalizeHealth(value: unknown): DeviceHealth {
-  if (value === 'At Risk' || value === 'Needs attention') return 'At Risk'
-  if (value === 'Critical' || value === 'Offline') return 'Critical'
-  return 'Healthy'
-}
-// A device is "warranty soon" when its warranty ends within the next 60 days.
-export const isWarrantySoon = (asset: AssetItem) => asset.status !== 'Retired' && asset.status !== 'Lost' && !!asset.warrantyEnd && asset.warrantyEnd >= new Date().toISOString().slice(0, 10) && new Date(asset.warrantyEnd).getTime() - Date.now() <= 60 * 86_400_000
-export const assetHealthLevel = (asset: AssetItem): HealthLevel => asset.health === 'Healthy' && isWarrantySoon(asset) ? 'Monitor' : asset.health
-
-export const ASSET_EXPORT_HEADERS = ['Asset ID', 'Item', 'Category', 'Status', 'Assigned to', 'Department', 'Location', 'Manufacturer', 'Model', 'Serial number', 'Condition', 'Device health', 'Assigned date', 'Expected return', 'Purchase date', 'Warranty ends', 'Tags', 'Linked tickets', 'Notes']
-export const STOCK_EXPORT_HEADERS = ['Stock ID', 'Item', 'Category', 'On hand', 'Minimum', 'Stock level', 'Location', 'Tags', 'Last updated']
-export const assetExportRows = (assets: AssetItem[], tickets: TicketReference[]): CsvValue[][] => assets.map((asset) => [asset.id, asset.name, asset.category, asset.status, asset.assignedTo, asset.department, asset.location, asset.manufacturer, asset.model, asset.serial, asset.condition, assetHealthLevel(asset), asset.assignedAt, asset.expectedReturnAt, asset.purchaseDate, asset.warrantyEnd, (asset.tags || []).join('; '), [...new Set([...asset.linkedTicketIds, ...tickets.filter((ticket) => ticket.assetId === asset.id).map((ticket) => ticket.id)])].join('; '), asset.notes])
-export const stockExportRows = (stock: StockItem[]): CsvValue[][] => stock.map((item) => [item.sku, item.name, item.category, item.quantity, item.minimum, item.quantity === 0 ? 'Out of stock' : item.quantity <= item.minimum ? 'Low stock' : 'In stock', item.location, (item.tags || []).join('; '), item.updatedAt])
-
-/** Exports every asset and every stock item (not just the filtered ones): two CSV files, or one Excel workbook with an Assets and a Stock sheet. */
-export function exportAllInventory(format: 'csv' | 'xlsx', assets: AssetItem[], stock: StockItem[], tickets: TicketReference[]) {
-  const date = new Date().toISOString().slice(0, 10)
-  const assetRows = assetExportRows(assets, tickets)
-  const stockRows = stockExportRows(stock)
-  if (format === 'xlsx') exportXlsxWorkbook(`inventory-${date}.xlsx`, [{ name: 'Assets', headers: ASSET_EXPORT_HEADERS, rows: assetRows }, { name: 'Stock', headers: STOCK_EXPORT_HEADERS, rows: stockRows }])
-  else {
-    exportCsv(`inventory-assets-${date}.csv`, ASSET_EXPORT_HEADERS, assetRows)
-    exportCsv(`inventory-stock-${date}.csv`, STOCK_EXPORT_HEADERS, stockRows)
-  }
-}
-// Demo only: simulates an Action1 device-health lookup. There is no live Action1 connection.
-function mockAction1HealthCheck(items: AssetItem[]): Promise<{ serial: string; health: DeviceHealth }[]> {
-  return new Promise((resolve) => {
-    window.setTimeout(() => resolve(items.map((asset) => {
-      const roll = Math.random()
-      return { serial: asset.serial, health: roll < 0.72 ? 'Healthy' : roll < 0.9 ? 'At Risk' : 'Critical' }
-    })), 900 + 700 * Math.random())
-  })
-}
-const categories = ['Laptop', 'Desktop', 'Monitor', 'Phone', 'Tablet', 'Network', 'Peripheral', 'Other']
-const departments = ['Field Services', 'Finance', 'People & HR', 'Facilities', 'Platform Engineering', 'Commerce', 'Customer Care', 'Data & Analytics', 'Security']
-const dateOffset = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
-const dateLabel = (value: string) => value ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value + (value.length === 10 ? 'T12:00:00' : ''))) : 'Not recorded'
-const stampLabel = (value: string) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
-const assetCode = (value: string) => value.trim().toUpperCase()
-const parseTags = (value: string) => [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))].slice(0, 12)
+/**
+ * Pure rendering for the Inventory page. Receives the full view-model returned by
+ * `useInventoryContainer` as props and contains no state of its own — this is the
+ * "presentational" half of the container/presentational split; `useInventoryContainer`
+ * is the "container" half.
+ */
+export default function InventoryView(vm: ReturnType<typeof useInventoryContainer>) {
+  const {
+    assets, stock, tickets, openTicket, createTicket,
+    tab, setTab, workspace, switchWorkspaceTab, addWorkspaceTab, closeWorkspaceTab,
+    savedInventoryViews, setSavedInventoryViews, currentInventoryView, applyInventoryView, resetInventoryView,
+    viewMode, setViewMode, splitLeft, setSplitLeft, splitRight, setSplitRight, splitAsset, splitStock,
+    chooseSplitAsset, chooseSplitStock,
+    query, setQuery, statusFilter, setStatusFilter, categoryFilter, setCategoryFilter, assignedFilter, setAssignedFilter,
+    tagFilter, setTagFilter, healthFilter, setHealthFilter, starredOnly, setStarredOnly, lowStockOnly, setLowStockOnly,
+    inStockOnly, setInStockOnly, tableFilters, setTableFilter, showFilterDropdown, setShowFilterDropdown, filterDropdownRef,
+    assetCategories, assignedPeople, assetTags, stockTags, filteredAssets, filteredStock, assetGroups, stockGroups,
+    selected, stockSelected, setSelectedId, setSelectedSku,
+    relatedTickets, openAssetRecord, openStockRecord,
+    action, setAction, actionForm, setActionForm, openAction, applyAction,
+    showEditAsset, setShowEditAsset, editForm, setEditForm, openEdit, saveEdit,
+    showAddAsset, setShowAddAsset, showAddStock, setShowAddStock, assetForm, setAssetForm, stockForm, setStockForm,
+    addAsset, addStock,
+    stockTagsText, setStockTagsText, saveStockTags, stockChange, setStockChange, adjustStock,
+    ticketToLink, setTicketToLink, addTicketLink,
+    toggleAssetStar, toggleStockStar,
+    action1Syncing, action1LastSyncedAt, action1SyncError, syncHealthFromAction1,
+    counts, formError, setFormError, currentPane,
+  } = vm
+  const warrantySoon = isWarrantySoon
+  const healthLevel = assetHealthLevel
 const stockLevelBar = (quantity: number, minimum: number) => {
   const percent = Math.min(100, Math.max(0, (quantity / (minimum || 1)) * 100))
   const isLow = quantity <= minimum
@@ -147,144 +57,6 @@ const warrantyBar = (warrantyEnd: string) => {
   const isWarning = daysLeft <= 60 && daysLeft > 0
   return <div className="warranty-bar"><div className="bar"><div className={`bar-fill${isExpired ? ' expired' : isWarning ? ' warning' : ''}`} style={{ width: `${percent}%` }} /></div><span className={isWarning ? 'warranty-soon' : isExpired ? 'warranty-soon' : ''}>{dateLabel(warrantyEnd)}</span></div>
 }
-
-function sampleAssets(): AssetItem[] {
-  const now = new Date().toISOString()
-  const make = (id: string, name: string, category: string, manufacturer: string, model: string, serial: string, status: AssetStatus, assignedTo: string, department: string, location: string, warrantyDays: number, linkedTicketIds: string[] = []): AssetItem => ({
-    id, name, category, manufacturer, model, serial, status, assignedTo, department, location,
-    assignedAt: assignedTo ? dateOffset(-45) : '', expectedReturnAt: '', issuedBy: assignedTo ? 'Service Desk' : '',
-    purchaseDate: dateOffset(-420), warrantyEnd: dateOffset(warrantyDays), condition: status === 'In Repair' ? 'Damaged' : 'Good', health: status === 'In Repair' ? 'At Risk' : status === 'Lost' ? 'Critical' : 'Healthy', notes: '', tags: category === 'Laptop' ? ['Endpoint'] : category === 'Network' ? ['Infrastructure'] : [], starred: false, linkedTicketIds,
-    history: [{ at: now, action: 'Sample asset added', detail: 'Mock inventory record for this local prototype.' }],
-  })
-  return [
-    make('AST-1001', 'Latitude 7450 laptop', 'Laptop', 'Dell', 'Latitude 7450', 'DL7450-21084', 'Assigned', 'Keiko Mori', 'Field Services', 'Tokyo · 3F', 210),
-    make('AST-1002', 'ThinkPad T14 laptop', 'Laptop', 'Lenovo', 'ThinkPad T14 Gen 5', 'LNT14-58231', 'Assigned', 'Mina Sato', 'Field Services', 'Tokyo · Remote', 44, ['OPS-102']),
-    make('AST-1003', 'MacBook Pro 14', 'Laptop', 'Apple', 'MacBook Pro M3', 'APMBP-77412', 'Available', '', 'Platform Engineering', 'Tokyo · IT storage', 390),
-    make('AST-1004', 'UltraSharp 27 monitor', 'Monitor', 'Dell', 'U2724D', 'DL2724-91837', 'Assigned', 'Jordan Lee', 'Data & Analytics', 'Tokyo · 5F', 95),
-    make('AST-1005', 'iPhone 15', 'Phone', 'Apple', 'iPhone 15', 'API15-30944', 'Assigned', 'Sam Rivera', 'Security', 'Tokyo · 4F', 18),
-    make('AST-1006', 'EliteBook 840 laptop', 'Laptop', 'HP', 'EliteBook 840 G10', 'HP840-63420', 'In Repair', '', 'Field Services', 'Tokyo · Repair shelf', 24, ['OPS-107']),
-    make('AST-1007', 'Surface Laptop 6', 'Laptop', 'Microsoft', 'Surface Laptop 6', 'MSL6-20776', 'Available', '', 'Finance', 'Tokyo · IT storage', 430),
-    make('AST-1008', 'Catalyst access point', 'Network', 'Cisco', 'CW9164', 'CSAP-11490', 'In Repair', '', 'Facilities', 'West wing · Network closet', 60, ['OPS-108']),
-    make('AST-1009', 'OptiPlex Micro desktop', 'Desktop', 'Dell', 'OptiPlex 7020', 'DLOP-45029', 'Available', '', 'Customer Care', 'Tokyo · IT storage', 320),
-    make('AST-1010', 'iPad Air', 'Tablet', 'Apple', 'iPad Air 11', 'APIP-83371', 'Assigned', 'Aiko Tanaka', 'Field Services', 'Osaka · Office', 180),
-    make('AST-1011', 'Legacy file server', 'Network', 'HPE', 'ProLiant DL360', 'HPDL-10298', 'Retired', '', 'Platform Engineering', 'Tokyo · Archive', -120),
-    make('AST-1012', 'Jabra Evolve2 headset', 'Peripheral', 'Jabra', 'Evolve2 65', 'JBE2-66217', 'Available', '', 'Customer Care', 'Tokyo · IT storage', 510),
-  ]
-}
-function sampleStock(): StockItem[] {
-  const now = new Date().toISOString()
-  const make = (sku: string, name: string, category: string, quantity: number, minimum: number, location: string): StockItem => ({ sku, name, category, quantity, minimum, location, tags: [], starred: false, updatedAt: now, history: [{ at: now, action: 'Sample stock added', detail: 'Mock stock record for this local prototype.' }] })
-  return [
-    make('STK-201', 'USB-C charging cable', 'Cable', 8, 10, 'Tokyo · IT storage'),
-    make('STK-202', 'Wireless mouse', 'Peripheral', 24, 8, 'Tokyo · IT storage'),
-    make('STK-203', 'HDMI cable 2m', 'Cable', 6, 6, 'Tokyo · IT storage'),
-    make('STK-204', 'USB-C docking station', 'Dock', 3, 5, 'Tokyo · IT storage'),
-    make('STK-205', 'Ethernet patch cable', 'Cable', 38, 12, 'Osaka · IT storage'),
-  ]
-}
-export function loadAssets(): AssetItem[] {
-  try { const saved = localStorage.getItem(ASSET_KEY); return saved ? (JSON.parse(saved) as AssetItem[]).map((asset) => ({ ...asset, health: normalizeHealth(asset.health), tags: Array.isArray(asset.tags) ? asset.tags : [], starred: Boolean(asset.starred) })) : sampleAssets() } catch { return sampleAssets() }
-}
-export function loadStock(): StockItem[] {
-  try { const saved = localStorage.getItem(STOCK_KEY); return saved ? (JSON.parse(saved) as StockItem[]).map((item) => ({ ...item, tags: Array.isArray(item.tags) ? item.tags : [], starred: Boolean(item.starred) })) : sampleStock() } catch { return sampleStock() }
-}
-export function saveAssets(items: AssetItem[]) { localStorage.setItem(ASSET_KEY, JSON.stringify(items)) }
-export function saveStock(items: StockItem[]) { localStorage.setItem(STOCK_KEY, JSON.stringify(items)) }
-
-type InventoryProps = {
-  focusId?: string
-  focusRevision?: number
-  command?: InventoryCommand | null
-  onCommandHandled?: () => void
-  assets: AssetItem[]
-  stock: StockItem[]
-  updateAssets: (update: (items: AssetItem[]) => AssetItem[]) => void
-  updateStock: (update: (items: StockItem[]) => StockItem[]) => void
-  tickets: TicketReference[]
-  openTicket: (id: string) => void
-  linkTicket: (ticketId: string, assetId: string) => void
-  createTicket: (asset: AssetItem) => void
-}
-const emptyAsset = { id: '', name: '', category: 'Laptop', manufacturer: '', model: '', serial: '', department: 'Field Services', location: '', purchaseDate: '', warrantyEnd: '', condition: 'Good' as AssetItem['condition'], health: 'Healthy' as DeviceHealth, notes: '', tagsText: '' }
-const emptyStock = { sku: '', name: '', category: 'Cable', quantity: '0', minimum: '0', location: '', tagsText: '' }
-
-/**
- * Asset and stock tracking inventory page.
- *
- * Manages two tabs: Assets (devices, hardware) and Stock (supplies, consumables). Includes:
- * - Multiple view modes: list, cards, split-pane, grouped, and attention (devices needing service)
- * - Asset search, filtering by status, category, assignee, health, and warranty expiration
- * - Stock filtering by quantity (in stock, low stock)
- * - Workspace tabs with independent view settings
- * - Asset lifecycle tracking: assigned/in-repair/retired/lost status and event history
- * - Device health monitoring: healthy, at-risk (needs attention), critical (offline/lost)
- * - Warranty tracking: alerts for items expiring within 60 days
- * - Ticket linkage: associate tickets with assets, create tickets for asset issues
- * - CSV and Excel export with filtering support
- *
- * @param focusId - Asset or stock item ID to scroll into view and highlight
- * @param focusRevision - Increment to re-trigger focus behavior when same ID is refocused
- * @param command - Action to perform (add asset/stock, filter, export)
- * @param onCommandHandled - Callback when command execution completes
- * @param assets - Array of all asset items with full lifecycle data
- * @param stock - Array of all stock items with inventory counts
- * @param updateAssets - Callback to update assets array
- * @param updateStock - Callback to update stock array
- * @param tickets - Ticket references for linking to assets
- * @param openTicket - Callback to open a ticket
- * @param linkTicket - Callback to link a ticket to an asset
- * @param createTicket - Callback to create a new ticket for an asset issue
- */
-export default function InventoryPage({ focusId = '', focusRevision = 0, command, onCommandHandled, assets, stock, updateAssets, updateStock, tickets, openTicket, linkTicket, createTicket }: InventoryProps) {
-  const [tab, setTab] = useState<'assets' | 'stock'>('assets')
-  const [workspace, setWorkspace] = useState<InventoryWorkspace>(loadInventoryWorkspace)
-  const [workspaceReady, setWorkspaceReady] = useState(false)
-  const [viewMode, setViewMode] = useState<InventoryViewMode>(() => {
-    const saved = localStorage.getItem(INVENTORY_VIEW_MODE_KEY)
-    return inventoryViewModes.includes(saved as InventoryViewMode) ? saved as InventoryViewMode : 'list'
-  })
-  const [splitLeft, setSplitLeft] = useState<InventorySplitPaneMode>('list')
-  const [splitRight, setSplitRight] = useState<InventorySplitPaneMode>('details')
-  const [splitAssetId, setSplitAssetId] = useState('')
-  const [splitStockSku, setSplitStockSku] = useState('')
-  useEffect(() => { localStorage.setItem(INVENTORY_VIEW_MODE_KEY, viewMode) }, [viewMode])
-  const [lowStockOnly, setLowStockOnly] = useState(false)
-  const [inStockOnly, setInStockOnly] = useState(false)
-  const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'All' | AssetStatus | 'Warranty soon'>('All')
-  const [categoryFilter, setCategoryFilter] = useState('All categories')
-  const [assignedFilter, setAssignedFilter] = useState('All people')
-  const [healthFilter, setHealthFilter] = useState<'All health' | HealthLevel>('All health')
-  const [tableFilters, setTableFilters] = useState({ id: '', name: '', serial: '', status: '', assignedTo: '', location: '' })
-  const setTableFilter = (key: keyof typeof tableFilters, value: string) => setTableFilters((current) => ({ ...current, [key]: value }))
-  const [action1Syncing, setAction1Syncing] = useState(false)
-  const [action1LastSyncedAt, setAction1LastSyncedAt] = useState<Date | null>(null)
-  const [action1SyncError, setAction1SyncError] = useState('')
-  const [starredOnly, setStarredOnly] = useState(false)
-  const [savedInventoryViews, setSavedInventoryViews] = useState<SavedView<InventoryViewSettings>[]>(() => loadSavedViews<InventoryViewSettings>(SAVED_INVENTORY_VIEWS_KEY).map(normalizeSavedInventoryView))
-  useEffect(() => { localStorage.setItem(SAVED_INVENTORY_VIEWS_KEY, JSON.stringify(savedInventoryViews)) }, [savedInventoryViews])
-  const [selectedId, setSelectedId] = useState(focusId)
-  useEffect(() => { if (focusId) setSelectedId(focusId) }, [focusId, focusRevision])
-  const [selectedSku, setSelectedSku] = useState('')
-  const [showAddAsset, setShowAddAsset] = useState(false)
-  const [showAddStock, setShowAddStock] = useState(false)
-  const handledCommandRevision = useRef(0)
-  const [assetForm, setAssetForm] = useState(emptyAsset)
-  const [showEditAsset, setShowEditAsset] = useState(false)
-  const [editForm, setEditForm] = useState(emptyAsset)
-  const [stockForm, setStockForm] = useState(emptyStock)
-  const [formError, setFormError] = useState('')
-  const [action, setAction] = useState<'assign' | 'return' | 'repair' | 'move' | 'retire' | 'lost' | ''>('')
-  const [actionForm, setActionForm] = useState({ person: '', department: 'Field Services', location: '', issuedBy: '', expectedReturn: '', condition: 'Good' as AssetItem['condition'], note: '', returnStatus: 'Available' as 'Available' | 'In Repair' })
-  const [ticketToLink, setTicketToLink] = useState('')
-  const [stockChange, setStockChange] = useState({ amount: '', reason: '' })
-  const [stockTagsText, setStockTagsText] = useState('')
-  const selected = assets.find((asset) => asset.id === selectedId)
-  const stockSelected = stock.find((item) => item.sku === selectedSku)
-  const today = new Date().toISOString().slice(0, 10)
-  const warrantySoon = isWarrantySoon
-  // A healthy device whose warranty ends within 60 days is shown as Monitor.
-  const healthLevel = assetHealthLevel
   const healthBadge = (asset: AssetItem) => {
     const level = healthLevel(asset)
     // Generate waveform path based on health level
@@ -307,243 +79,6 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
       </span>
     )
   }
-  const counts = { available: assets.filter((asset) => asset.status === 'Available').length, assigned: assets.filter((asset) => asset.status === 'Assigned').length, repair: assets.filter((asset) => asset.status === 'In Repair').length, warranty: assets.filter(warrantySoon).length, low: stock.filter((item) => item.quantity <= item.minimum).length }
-  const assetCategories = useMemo(() => [...new Set(assets.map((asset) => asset.category))].sort(), [assets])
-  const assignedPeople = useMemo(() => [...new Set(assets.map((asset) => asset.assignedTo).filter(Boolean))].sort(), [assets])
-  const assetTags = useMemo(() => [...new Set(assets.flatMap((asset) => asset.tags || []))].sort(), [assets])
-  const stockTags = useMemo(() => [...new Set(stock.flatMap((item) => item.tags || []))].sort(), [stock])
-  const [tagFilter, setTagFilter] = useState('All tags')
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-  const filterDropdownRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setShowFilterDropdown(false)
-      }
-    }
-    if (showFilterDropdown) document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showFilterDropdown])
-  const filteredAssets = useMemo(() => assets.filter((asset) => {
-    const text = [asset.id, asset.name, asset.category, asset.manufacturer, asset.model, asset.serial, asset.assignedTo, asset.department, asset.location, ...(asset.tags || []), ...asset.linkedTicketIds].join(' ').toLowerCase()
-    return text.includes(query.toLowerCase()) && (statusFilter === 'All' || statusFilter === 'Warranty soon' ? statusFilter !== 'Warranty soon' || warrantySoon(asset) : asset.status === statusFilter) && (categoryFilter === 'All categories' || asset.category === categoryFilter) && (assignedFilter === 'All people' || (assignedFilter === 'Unassigned' ? !asset.assignedTo : asset.assignedTo === assignedFilter)) && (tagFilter === 'All tags' || (asset.tags || []).includes(tagFilter)) && (healthFilter === 'All health' || healthLevel(asset) === healthFilter) && (!starredOnly || asset.starred) && asset.id.toLowerCase().includes(tableFilters.id.toLowerCase()) && asset.name.toLowerCase().includes(tableFilters.name.toLowerCase()) && asset.serial.toLowerCase().includes(tableFilters.serial.toLowerCase()) && (!tableFilters.status || asset.status === tableFilters.status) && (asset.assignedTo || 'Unassigned').toLowerCase().includes(tableFilters.assignedTo.toLowerCase()) && (asset.location || '').toLowerCase().includes(tableFilters.location.toLowerCase())
-  }), [assets, query, statusFilter, categoryFilter, assignedFilter, tagFilter, healthFilter, starredOnly, tableFilters])
-  const filteredStock = useMemo(() => stock.filter((item) => [item.sku, item.name, item.category, item.location, ...(item.tags || [])].join(' ').toLowerCase().includes(query.toLowerCase()) && (!lowStockOnly || item.quantity <= item.minimum) && (!inStockOnly || item.quantity > 0) && (tagFilter === 'All tags' || (item.tags || []).includes(tagFilter)) && (!starredOnly || item.starred)), [stock, query, lowStockOnly, inStockOnly, tagFilter, starredOnly])
-  const exportCurrentInventory = (format: 'csv' | 'xlsx') => {
-    const date = new Date().toISOString().slice(0, 10)
-    if (tab === 'assets') {
-      const visible = viewMode === 'attention' ? filteredAssets.filter((asset) => asset.status === 'In Repair' || asset.status === 'Lost' || warrantySoon(asset)) : filteredAssets
-      const rows = assetExportRows(visible, tickets)
-      const headers = ASSET_EXPORT_HEADERS
-      if (format === 'xlsx') exportXlsx(`inventory-assets-${date}.xlsx`, 'Assets', headers, rows)
-      else exportCsv(`inventory-assets-${date}.csv`, headers, rows)
-    } else {
-      const rows = stockExportRows(filteredStock)
-      const headers = STOCK_EXPORT_HEADERS
-      if (format === 'xlsx') exportXlsx(`inventory-stock-${date}.xlsx`, 'Stock', headers, rows)
-      else exportCsv(`inventory-stock-${date}.csv`, headers, rows)
-    }
-  }
-  const splitAsset = filteredAssets.find((asset) => asset.id === splitAssetId) || filteredAssets[0]
-  const splitStock = filteredStock.find((item) => item.sku === splitStockSku) || filteredStock[0]
-  const relatedTickets = selected ? tickets.filter((ticket) => ticket.assetId === selected.id || selected.linkedTicketIds.includes(ticket.id)) : []
-  const currentPane: InventoryPaneSettings = { tab, viewMode, splitLeft, splitRight, query, statusFilter, categoryFilter, assignedFilter, tagFilter, healthFilter, starredOnly, lowStockOnly, inStockOnly }
-  const currentInventoryView: InventoryViewSettings = { ...currentPane, workspaceTabs: workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), activeWorkspaceId: workspace.activeId }
-  const applyPaneView = (settings: InventoryPaneSettings) => {
-    setTab(settings.tab === 'stock' ? 'stock' : 'assets')
-    setViewMode(inventoryViewModes.includes(settings.viewMode) ? settings.viewMode : 'list')
-    setSplitLeft(inventorySplitPaneModes.includes(settings.splitLeft) ? settings.splitLeft : 'list')
-    setSplitRight(inventorySplitPaneModes.includes(settings.splitRight) ? settings.splitRight : 'details')
-    setQuery(settings.query || '')
-    setStatusFilter(statuses.includes(settings.statusFilter as AssetStatus) || settings.statusFilter === 'Warranty soon' ? settings.statusFilter : 'All')
-    setCategoryFilter(settings.categoryFilter || 'All categories')
-    setAssignedFilter(settings.assignedFilter || 'All people')
-    setTagFilter(settings.tagFilter || 'All tags')
-    setHealthFilter(healthLevels.includes(settings.healthFilter as HealthLevel) ? settings.healthFilter : 'All health')
-    setStarredOnly(Boolean(settings.starredOnly))
-    setLowStockOnly(Boolean(settings.lowStockOnly))
-    setInStockOnly(Boolean(settings.inStockOnly))
-  }
-  useEffect(() => {
-    const active = workspace.tabs.find((item) => item.id === workspace.activeId)
-    if (active) applyPaneView(active.settings)
-    setWorkspaceReady(true)
-  }, [])
-  useEffect(() => {
-    if (!workspaceReady) return
-    localStorage.setItem(INVENTORY_WORKSPACE_KEY, JSON.stringify({ tabs: workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), activeId: workspace.activeId }))
-  }, [workspace, workspaceReady, tab, viewMode, splitLeft, splitRight, query, statusFilter, categoryFilter, assignedFilter, tagFilter, healthFilter, starredOnly, lowStockOnly, inStockOnly])
-  const switchWorkspaceTab = (id: string) => {
-    if (id === workspace.activeId) return
-    const next = workspace.tabs.find((item) => item.id === id)
-    if (!next) return
-    setWorkspace({ tabs: workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), activeId: id })
-    applyPaneView(next.settings)
-  }
-  const addWorkspaceTab = () => {
-    const id = newWorkspaceId()
-    const settings = defaultPaneSettings(tab)
-    setWorkspace({ tabs: [...workspace.tabs.map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item), { id, settings }], activeId: id })
-    applyPaneView(settings)
-  }
-  const closeWorkspaceTab = (id: string) => {
-    if (workspace.tabs.length === 1) return
-    const index = workspace.tabs.findIndex((item) => item.id === id)
-    if (index < 0) return
-    const tabs = workspace.tabs.filter((item) => item.id !== id).map((item) => item.id === workspace.activeId ? { ...item, settings: currentPane } : item)
-    const activeId = id === workspace.activeId ? tabs[Math.min(index, tabs.length - 1)].id : workspace.activeId
-    setWorkspace({ tabs, activeId })
-    if (id === workspace.activeId) applyPaneView(tabs.find((item) => item.id === activeId)!.settings)
-  }
-  const applyInventoryView = (settings: InventoryViewSettings) => {
-    const tabs = Array.isArray(settings.workspaceTabs) ? settings.workspaceTabs.filter((item): item is InventoryWorkspaceTab => !!item && typeof item.id === 'string' && !!item.settings) : []
-    if (tabs.length) {
-      const activeId = tabs.some((item) => item.id === settings.activeWorkspaceId) ? settings.activeWorkspaceId! : tabs[0].id
-      setWorkspace({ tabs, activeId })
-      applyPaneView(tabs.find((item) => item.id === activeId)!.settings)
-    } else {
-      const id = newWorkspaceId()
-      setWorkspace({ tabs: [{ id, settings }], activeId: id })
-      applyPaneView(settings)
-    }
-  }
-  const resetInventoryView = () => {
-    const id = newWorkspaceId()
-    const settings = defaultPaneSettings()
-    setWorkspace({ tabs: [{ id, settings }], activeId: id })
-    applyPaneView(settings)
-  }
-  useEffect(() => {
-    if (!command || command.revision === handledCommandRevision.current) return
-    handledCommandRevision.current = command.revision
-    if (command.action === 'export-csv' || command.action === 'export-xlsx') {
-      exportCurrentInventory(command.action === 'export-csv' ? 'csv' : 'xlsx')
-      onCommandHandled?.()
-      return
-    }
-    setSelectedId('')
-    setSelectedSku('')
-    setFormError('')
-    if (command.action === 'add-asset') { setTab('assets'); setShowAddAsset(true); setShowAddStock(false) }
-    if (command.action === 'add-stock') { setTab('stock'); setShowAddStock(true); setShowAddAsset(false) }
-    if (command.action === 'in-stock') applyPaneView(inStockView.settings)
-    if (command.action === 'low-stock') { setTab('stock'); setQuery(''); setTagFilter('All tags'); setStarredOnly(false); setLowStockOnly(true); setInStockOnly(false) }
-    onCommandHandled?.()
-  }, [command?.revision, command?.action])
-  const toggleAssetStar = (id: string) => updateAssets((items) => items.map((asset) => asset.id === id ? { ...asset, starred: !asset.starred } : asset))
-  const toggleStockStar = (sku: string) => updateStock((items) => items.map((item) => item.sku === sku ? { ...item, starred: !item.starred } : item))
-  const saveStockTags = () => {
-    if (!stockSelected) return
-    const tags = parseTags(stockTagsText)
-    updateStock((items) => items.map((item) => item.sku === stockSelected.sku ? { ...item, tags, updatedAt: new Date().toISOString(), history: [...(item.history || []), { at: new Date().toISOString(), action: 'Tags updated', detail: tags.length ? tags.join(', ') : 'Tags cleared.' }] } : item))
-  }
-
-  const openAction = (value: typeof action) => {
-    if (!selected) return
-    setAction(value)
-    setFormError('')
-    setActionForm({ person: selected.assignedTo, department: selected.department || 'Field Services', location: selected.location, issuedBy: selected.issuedBy, expectedReturn: selected.expectedReturnAt, condition: selected.condition, note: '', returnStatus: 'Available' })
-  }
-  const openEdit = () => {
-    if (!selected) return
-    setEditForm({ id: selected.id, name: selected.name, category: selected.category, manufacturer: selected.manufacturer, model: selected.model, serial: selected.serial, department: selected.department, location: selected.location, purchaseDate: selected.purchaseDate, warrantyEnd: selected.warrantyEnd, condition: selected.condition, health: selected.health, notes: selected.notes, tagsText: (selected.tags || []).join(', ') })
-    setFormError('')
-    setShowEditAsset(true)
-  }
-  const saveEdit = () => {
-    if (!selected) return
-    if (!editForm.name.trim()) { setFormError('Enter an item name.'); return }
-    if (!editForm.serial.trim()) { setFormError('Enter a serial number.'); return }
-    if (assets.some((asset) => asset.id !== selected.id && asset.serial.toLowerCase() === editForm.serial.trim().toLowerCase())) { setFormError('That serial number is already in use.'); return }
-    const nextFields = { name: editForm.name.trim(), category: editForm.category, manufacturer: editForm.manufacturer.trim(), model: editForm.model.trim(), serial: editForm.serial.trim(), department: editForm.department, location: editForm.location.trim(), purchaseDate: editForm.purchaseDate, warrantyEnd: editForm.warrantyEnd, condition: editForm.condition, health: editForm.health, notes: editForm.notes.trim(), tags: parseTags(editForm.tagsText) }
-    const changed = (Object.keys(nextFields) as (keyof typeof nextFields)[]).filter((key) => JSON.stringify(selected[key]) !== JSON.stringify(nextFields[key]))
-    if (changed.length) updateAssets((items) => items.map((asset) => asset.id === selected.id ? { ...asset, ...nextFields, history: [...(asset.history || []), { at: new Date().toISOString(), action: 'Asset details updated', detail: 'Changed ' + changed.join(', ') + '.' }] } : asset))
-    setShowEditAsset(false)
-    setFormError('')
-  }
-  const applyAction = () => {
-    if (!selected || !action) return
-    if (action === 'assign' && !actionForm.person.trim()) { setFormError('Enter the person receiving this asset.'); return }
-    if (action === 'assign' && !actionForm.issuedBy.trim()) { setFormError('Enter who issued this asset.'); return }
-    if ((action === 'assign' || action === 'return' || action === 'repair' || action === 'move') && !actionForm.location.trim()) { setFormError('Enter the asset location.'); return }
-    if ((action === 'retire' || action === 'lost') && !actionForm.note.trim()) { setFormError('Add a reason to the history.'); return }
-    const at = new Date().toISOString()
-    updateAssets((items) => items.map((asset) => {
-      if (asset.id !== selected.id) return asset
-      let next: AssetItem = { ...asset }
-      let detail = ''
-      if (action === 'assign') { next = { ...next, status: 'Assigned', assignedTo: actionForm.person.trim(), department: actionForm.department, location: actionForm.location.trim(), assignedAt: today, expectedReturnAt: actionForm.expectedReturn, issuedBy: actionForm.issuedBy.trim(), condition: actionForm.condition }; detail = (asset.assignedTo && asset.assignedTo !== next.assignedTo ? 'Reassigned from ' + asset.assignedTo + ' to ' + next.assignedTo : 'Assigned to ' + next.assignedTo) + ' by ' + next.issuedBy + (next.expectedReturnAt ? '; expected return ' + dateLabel(next.expectedReturnAt) : '') }
-      if (action === 'return') { next = { ...next, status: actionForm.returnStatus, assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '', location: actionForm.location.trim(), condition: actionForm.condition }; detail = 'Returned by ' + (asset.assignedTo || 'previous holder') + '; moved to ' + next.location + ' as ' + next.status }
-      if (action === 'repair') { next = { ...next, status: 'In Repair', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '', location: actionForm.location.trim(), condition: 'Damaged' }; detail = 'Sent for repair at ' + next.location }
-      if (action === 'move') { next = { ...next, location: actionForm.location.trim() }; detail = 'Moved from ' + asset.location + ' to ' + next.location }
-      if (action === 'retire') { next = { ...next, status: 'Retired', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '' }; detail = 'Retired: ' + actionForm.note.trim() }
-      if (action === 'lost') { next = { ...next, status: 'Lost', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '' }; detail = 'Marked lost: ' + actionForm.note.trim() }
-      if (actionForm.note.trim() && action !== 'retire' && action !== 'lost') detail += '. Note: ' + actionForm.note.trim()
-      return { ...next, history: [...(asset.history || []), { at, action: action === 'assign' ? 'Assigned' : action === 'return' ? 'Returned' : action === 'repair' ? 'Sent for repair' : action === 'move' ? 'Location changed' : action === 'retire' ? 'Retired' : 'Marked lost', detail }] }
-    }))
-    setAction('')
-    setFormError('')
-  }
-  const addAsset = () => {
-    const id = assetCode(assetForm.id || 'AST-' + String(Date.now()).slice(-5))
-    if (!assetForm.name.trim()) { setFormError('Enter an item name.'); return }
-    if (!assetForm.serial.trim()) { setFormError('Enter a serial number.'); return }
-    if (assets.some((asset) => asset.id.toLowerCase() === id.toLowerCase())) { setFormError('That asset ID is already in use.'); return }
-    if (assets.some((asset) => asset.serial.toLowerCase() === assetForm.serial.trim().toLowerCase())) { setFormError('That serial number is already in use.'); return }
-    const at = new Date().toISOString()
-    const { tagsText, ...fields } = assetForm
-    updateAssets((items) => [{ ...fields, id, name: assetForm.name.trim(), serial: assetForm.serial.trim(), tags: parseTags(tagsText), starred: false, status: 'Available', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '', linkedTicketIds: [], history: [{ at, action: 'Asset added', detail: 'Added to inventory as Available.' }] }, ...items])
-    setAssetForm(emptyAsset); setFormError(''); setShowAddAsset(false); setTab('assets'); setSelectedId(id)
-  }
-  const addStock = () => {
-    const sku = assetCode(stockForm.sku || 'STK-' + String(Date.now()).slice(-5))
-    if (!stockForm.name.trim()) { setFormError('Enter an item name.'); return }
-    if (stock.some((item) => item.sku.toLowerCase() === sku.toLowerCase())) { setFormError('That stock ID is already in use.'); return }
-    const quantity = Number(stockForm.quantity), minimum = Number(stockForm.minimum)
-    if (!Number.isInteger(quantity) || quantity < 0 || !Number.isInteger(minimum) || minimum < 0) { setFormError('Enter whole numbers of zero or more for quantities.'); return }
-    const at = new Date().toISOString()
-    updateStock((items) => [{ sku, name: stockForm.name.trim(), category: stockForm.category.trim(), quantity, minimum, location: stockForm.location.trim(), tags: parseTags(stockForm.tagsText), starred: false, updatedAt: at, history: [{ at, action: 'Stock item added', detail: 'Starting quantity: ' + quantity }] }, ...items])
-    setStockForm(emptyStock); setFormError(''); setShowAddStock(false); setTab('stock'); setSelectedSku(sku)
-  }
-  const adjustStock = () => {
-    if (!stockSelected) return
-    const amount = Number(stockChange.amount)
-    if (!Number.isInteger(amount) || amount === 0) { setFormError('Enter a non-zero whole number. Use a minus sign to issue stock.'); return }
-    if (stockSelected.quantity + amount < 0) { setFormError('The adjustment would make stock negative.'); return }
-    if (!stockChange.reason.trim()) { setFormError('Enter a reason for the adjustment.'); return }
-    const at = new Date().toISOString()
-    updateStock((items) => items.map((item) => item.sku === stockSelected.sku ? { ...item, quantity: item.quantity + amount, updatedAt: at, history: [...(item.history || []), { at, action: amount > 0 ? 'Stock received' : 'Stock issued', detail: Math.abs(amount) + ' units. ' + stockChange.reason.trim() }] } : item))
-    setStockChange({ amount: '', reason: '' }); setFormError('')
-  }
-  const syncHealthFromAction1 = async () => {
-    if (action1Syncing) return
-    setAction1Syncing(true)
-    setAction1SyncError('')
-    try {
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new Error('No network connection')
-      const results = await mockAction1HealthCheck(assets)
-      const at = new Date().toISOString()
-      updateAssets((items) => items.map((asset) => {
-        const result = results.find((item) => item.serial === asset.serial)
-        if (!result || result.health === asset.health) return asset
-        return { ...asset, health: result.health, history: [...(asset.history || []), { at, action: 'Device health synced', detail: `${asset.health} → ${result.health} (Action1 demo data).` }] }
-      }))
-      setAction1LastSyncedAt(new Date())
-    } catch (error) {
-      setAction1SyncError(error instanceof Error && error.message ? error.message : 'Sync failed')
-    } finally {
-      setAction1Syncing(false)
-    }
-  }
-  const addTicketLink = () => {
-    if (!selected || !ticketToLink) return
-    linkTicket(ticketToLink, selected.id)
-    updateAssets((items) => items.map((asset) => asset.id === selected.id ? { ...asset, linkedTicketIds: [...new Set([...asset.linkedTicketIds, ticketToLink])], history: [...(asset.history || []), { at: new Date().toISOString(), action: 'Ticket linked', detail: ticketToLink + ' linked to this asset.' }] } : asset.linkedTicketIds.includes(ticketToLink) ? { ...asset, linkedTicketIds: asset.linkedTicketIds.filter((id) => id !== ticketToLink), history: [...(asset.history || []), { at: new Date().toISOString(), action: 'Ticket unlinked', detail: ticketToLink + ' moved to another asset.' }] } : asset))
-    setTicketToLink('')
-  }
-
-  const openAssetRecord = (asset: AssetItem) => { setSelectedId(asset.id); setTicketToLink('') }
-  const openStockRecord = (item: StockItem) => { setSelectedSku(item.sku); setStockTagsText((item.tags || []).join(', ')); setStockChange({ amount: '', reason: '' }); setFormError('') }
   const assetStatus = (asset: AssetItem) => <span className={'inventory-status ' + asset.status.toLowerCase().replace(/\s+/g, '-')}>{asset.status}</span>
   const stockStatus = (item: StockItem) => <span className={'inventory-status ' + (item.quantity === 0 ? 'lost' : item.quantity <= item.minimum ? 'in-repair' : 'available')}>{item.quantity === 0 ? 'Out of stock' : item.quantity <= item.minimum ? 'Low stock' : 'In stock'}</span>
   const assetCard = (asset: AssetItem) => <article className="inventory-view-card" key={asset.id}>
@@ -562,12 +97,8 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
   </article>
   const assetRow = (asset: AssetItem) => <button key={asset.id} className="inventory-view-row" onClick={() => openAssetRecord(asset)}><span className="inventory-view-row-id">{asset.id}</span><span className="inventory-view-row-name">{asset.name}</span>{assetStatus(asset)}<ArrowRight size={14} /></button>
   const stockRow = (item: StockItem) => <button key={item.sku} className="inventory-view-row" onClick={() => openStockRecord(item)}><span className="inventory-view-row-id">{item.sku}</span><span className="inventory-view-row-name">{item.name}</span>{stockStatus(item)}<ArrowRight size={14} /></button>
-  const assetGroups = [...new Set(filteredAssets.map((asset) => asset.department || 'No department'))].sort()
-  const stockGroups = [...new Set(filteredStock.map((item) => item.category || 'Uncategorized'))].sort()
   const workspaceTabLabel = (settings: InventoryPaneSettings) => `${settings.tab === 'stock' ? 'Stock' : 'Assets'} · ${settings.viewMode === 'grouped' ? settings.tab === 'stock' ? 'By category' : 'By department' : settings.viewMode === 'attention' ? settings.tab === 'stock' ? 'Stock levels' : 'Needs attention' : settings.viewMode === 'split' ? 'Split' : settings.viewMode === 'cards' ? 'Cards' : 'List'}`
   const splitPaneLabel = (mode: InventorySplitPaneMode) => ({ list: 'List', details: 'Details', cards: 'Cards', grouped: tab === 'stock' ? 'By category' : 'By department', attention: tab === 'stock' ? 'Stock levels' : 'Needs attention' })[mode]
-  const chooseSplitAsset = (asset: AssetItem) => { setSplitAssetId(asset.id); if (splitLeft !== 'details' && splitRight !== 'details') openAssetRecord(asset) }
-  const chooseSplitStock = (item: StockItem) => { setSplitStockSku(item.sku); if (splitLeft !== 'details' && splitRight !== 'details') openStockRecord(item) }
   const splitAssetRow = (asset: AssetItem) => <button key={asset.id} className={'inventory-split-item' + (splitAsset?.id === asset.id ? ' active' : '')} aria-pressed={splitAsset?.id === asset.id} onClick={() => chooseSplitAsset(asset)}><span>{asset.id}</span><b>{asset.name}</b><small>{asset.assignedTo || 'Unassigned'} · {asset.status}</small></button>
   const splitStockRow = (item: StockItem) => <button key={item.sku} className={'inventory-split-item' + (splitStock?.sku === item.sku ? ' active' : '')} aria-pressed={splitStock?.sku === item.sku} onClick={() => chooseSplitStock(item)}><span>{item.sku}</span><b>{item.name}</b><small>{item.quantity} on hand · minimum {item.minimum}</small></button>
   const renderSplitPane = (mode: InventorySplitPaneMode) => {
@@ -580,7 +111,6 @@ export default function InventoryPage({ focusId = '', focusRevision = 0, command
       : tab === 'assets' ? [{ name: 'In repair', assets: filteredAssets.filter((asset) => asset.status === 'In Repair') }, { name: 'Warranty soon', assets: filteredAssets.filter(warrantySoon) }, { name: 'Lost', assets: filteredAssets.filter((asset) => asset.status === 'Lost') }] : [{ name: 'Out of stock', stock: filteredStock.filter((item) => item.quantity === 0) }, { name: 'Low stock', stock: filteredStock.filter((item) => item.quantity > 0 && item.quantity <= item.minimum) }, { name: 'In stock', stock: filteredStock.filter((item) => item.quantity > item.minimum) }]
     return <div className="inventory-split-groups">{groups.map((group) => <section key={group.name}><h3>{group.name} <span>{(group.assets || group.stock || []).length}</span></h3>{tab === 'assets' ? (group.assets || []).map(splitAssetRow) : (group.stock || []).map(splitStockRow)}{!(group.assets || group.stock || []).length && <p className="inventory-group-empty">No records in this group.</p>}</section>)}{!groups.length && <div className="inventory-empty">No records match these filters.</div>}</div>
   }
-
   return <main className="main-content inventory-page">
     <div className="inventory-heading"><div><div className="eyebrow">SERVICE DESK · ASSET MANAGEMENT</div><h1>Inventory</h1><p>Know what is available, where it is, and who has it.</p></div><div className="inventory-heading-actions"><button className="primary-button" onClick={() => { setFormError(''); tab === 'assets' ? setShowAddAsset(true) : setShowAddStock(true) }}><Plus size={16} /> Add {tab === 'assets' ? 'asset' : 'stock item'}</button></div></div>
     <section className="inventory-kpis" aria-label="Inventory summary"><button className={statusFilter === 'All' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('All') }}><Package size={18} /><span>Total assets</span><strong>{assets.length}</strong></button><button className={statusFilter === 'Available' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('Available') }}><Check size={18} /><span>Available</span><strong>{counts.available}</strong></button><button className={statusFilter === 'Assigned' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('Assigned') }}><Box size={18} /><span>Assigned</span><strong>{counts.assigned}</strong></button><button className={statusFilter === 'In Repair' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('In Repair') }}><Wrench size={18} /><span>In repair</span><strong>{counts.repair}</strong></button><button className={statusFilter === 'Warranty soon' && tab === 'assets' ? 'selected' : ''} onClick={() => { setTab('assets'); setLowStockOnly(false); setInStockOnly(false); setQuery(''); setCategoryFilter('All categories'); setAssignedFilter('All people'); setTagFilter('All tags'); setHealthFilter('All health'); setStatusFilter('Warranty soon') }}><Clock3 size={18} /><span>Warranty soon</span><strong>{counts.warranty}</strong></button><button className={tab === 'stock' && lowStockOnly ? 'selected' : ''} onClick={() => { setTab('stock'); setQuery(''); setTagFilter('All tags'); setInStockOnly(false); setLowStockOnly(true) }}><ShieldAlert size={18} /><span>Low stock</span><strong>{counts.low}</strong></button></section>

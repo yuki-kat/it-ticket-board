@@ -21,7 +21,7 @@ services:
       - key: JWT_EXPIRY
         value: 24h
       - key: CORS_ORIGIN
-        value: https://it-ticket-board.onrender.com
+        value: https://it-ticket-board-frontend.onrender.com
       - key: GEMINI_API_KEY
         sync: false
 
@@ -31,9 +31,23 @@ services:
     plan: free
     buildCommand: cd app && npm ci && npm run build
     staticPublishPath: app/dist
+    headers:
+      # Same security headers the Vercel deployment used (app/vercel.json, now removed)
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
     envVars:
-      - key: VITE_GEMINI_API_KEY
-        sync: false
+      - key: VITE_API_URL
+        value: https://it-ticket-board-backend.onrender.com
 
 databases:
   - name: postgres

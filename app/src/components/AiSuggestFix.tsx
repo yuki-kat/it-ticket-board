@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { RotateCcw, Sparkles } from 'lucide-react'
+import { API_BASE } from '../api/base'
 
-// "Suggest fix" in the ticket record panel. Gemini is called through the site's own /api/suggest-fix
-// (app/api/suggest-fix.ts), so the API key never reaches the browser. It only works on the hosted site:
+// "Suggest fix" in the ticket record panel. Gemini is called through the backend's /api/suggest-fix
+// (server/src/api/suggest-fix.ts), so the API key never reaches the browser. It needs a reachable backend:
 // the downloaded file and the test link have no server behind them.
 
 type Suggestion = { likelyCauses: string[]; steps: string[]; escalateIf: string }
@@ -19,7 +20,7 @@ export function AiSuggestFix({ ticket }: { ticket: SuggestFixTicket }) {
     if (location.protocol === 'file:') { setState({ kind: 'error', message: hostedOnly }); return }
     setState({ kind: 'loading' })
     try {
-      const response = await fetch('api/suggest-fix', {
+      const response = await fetch(`${API_BASE}/suggest-fix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: ticket.title, description: ticket.description, recordType: ticket.recordType, severity: ticket.severity, assignmentGroup: ticket.assignmentGroup, tags: ticket.tags }),

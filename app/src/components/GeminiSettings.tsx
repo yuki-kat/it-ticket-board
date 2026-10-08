@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, CheckCircle, AlertCircle } from 'lucide-react'
-import { getGeminiConfig } from './api/gemini'
+import { getGeminiConfig } from '../api/gemini'
 
 interface GeminiSettingsProps {
   onClose: () => void

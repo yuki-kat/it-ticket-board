@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as api from '../api/client';
-import { currentSession, signOut as cloudSignOut, sendSignInLink, currentWorkspace, type Workspace } from '../cloud';
+import { currentSession, signOut as cloudSignOut, sendSignInLink, currentWorkspace, type Workspace } from '../lib/cloud';
 
 interface User {
   id: string;
