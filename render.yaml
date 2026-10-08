@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: cd server && npm ci --include=dev && npm run build
-    startCommand: cd server && npm start
+    startCommand: cd server && npm run migrate && npm start
     envVars:
       - key: NODE_ENV
         value: production
