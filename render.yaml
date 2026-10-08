@@ -53,4 +53,4 @@ databases:
   - name: postgres
     databaseName: ticket_board_db
     plan: free
-    version: 15
+    postgresMajorVersion: "16"
