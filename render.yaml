@@ -3,7 +3,7 @@ services:
     name: it-ticket-board-backend
     runtime: node
     plan: free
-    buildCommand: cd server && npm ci && npm run build
+    buildCommand: cd server && npm ci --include=dev && npm run build
     startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
