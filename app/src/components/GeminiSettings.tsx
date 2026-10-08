@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, CheckCircle, AlertCircle } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import { getGeminiConfig } from '../api/gemini'
 
 interface GeminiSettingsProps {
@@ -8,10 +8,21 @@ interface GeminiSettingsProps {
 
 export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
   const [isConfigured, setIsConfigured] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    const config = getGeminiConfig()
-    setIsConfigured(config.configured)
+    const checkConfig = async () => {
+      try {
+        const config = getGeminiConfig()
+        setIsConfigured(config.configured)
+      } catch (error) {
+        console.error('Error checking Gemini config:', error)
+        setIsConfigured(false)
+      } finally {
+        setIsChecking(false)
+      }
+    }
+    checkConfig()
   }, [])
 
   return (
@@ -38,19 +49,31 @@ export default function GeminiSettings({ onClose }: GeminiSettingsProps) {
             {/* Status Section */}
             <div style={{
               padding: 'var(--spacing-md)',
-              background: isConfigured ? 'rgba(74, 155, 111, 0.1)' : 'rgba(201, 76, 70, 0.1)',
+              background: isChecking ? 'rgba(100, 100, 100, 0.1)' : isConfigured ? 'rgba(74, 155, 111, 0.1)' : 'rgba(201, 76, 70, 0.1)',
               borderRadius: 'var(--radius-md)',
-              border: `1px solid ${isConfigured ? 'rgba(74, 155, 111, 0.3)' : 'rgba(201, 76, 70, 0.3)'}`,
+              border: `1px solid ${isChecking ? 'rgba(100, 100, 100, 0.3)' : isConfigured ? 'rgba(74, 155, 111, 0.3)' : 'rgba(201, 76, 70, 0.3)'}`,
               display: 'flex',
               alignItems: 'flex-start',
               gap: 'var(--spacing-md)'
             }}>
-              {isConfigured ? (
+              {isChecking ? (
+                <>
+                  <RefreshCw size={20} style={{ color: 'var(--color-text-secondary)', flexShrink: 0, marginTop: '2px', animation: 'spin 1s linear infinite' }} />
+                  <div>
+                    <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)' }}>
+                      Checking Configuration
+                    </h3>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
+                      Verifying Gemini API setup...
+                    </p>
+                  </div>
+                </>
+              ) : isConfigured ? (
                 <>
                   <CheckCircle size={20} style={{ color: 'var(--color-accent-green)', flexShrink: 0, marginTop: '2px' }} />
                   <div>
                     <h3 style={{ margin: 0, marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-accent-green)' }}>
-                      Gemini API Configured
+                      ✓ Gemini API Configured
                     </h3>
                     <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', margin: 0 }}>
                       Your server has been configured with a Gemini API key. AI features are active and ready to use.

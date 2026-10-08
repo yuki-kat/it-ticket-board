@@ -1,5 +1,21 @@
 /* Layout fixes loaded after every other stylesheet, so they win over the older rules they correct. */
 
+/* Animations */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 /* Previous / next page arrows: a small pair in the bottom-right corner instead of two buttons at
    mid-height on both edges, where they covered cards, filters and the table. */
 .quick-page-nav { inset: auto calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) auto; gap: 8px; padding: 0; transform: none; }
