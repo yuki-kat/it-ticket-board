@@ -1,7 +1,7 @@
 /* Design System: IT Ticket Board - Modern, Professional, Operational */
 
 :root {
-  /* Color Palette */
+  /* Color Palette - Light Mode (Default) */
   --color-primary: #1a7f7e;        /* Teal - primary actions, status indicators */
   --color-primary-light: #2a9f9e;  /* Lighter teal for hover states */
   --color-primary-dark: #0f5f5e;   /* Darker teal for active states */
@@ -21,6 +21,7 @@
   --color-text-primary: #1a2b2f;   /* Main text */
   --color-text-secondary: #5a6b6f; /* Secondary text */
   --color-text-tertiary: #8a9b9f;  /* Tertiary/muted text */
+  color-scheme: light;
 
   /* Typography */
   --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
@@ -242,4 +243,45 @@ textarea:focus-visible {
 
 .status-escalated {
   color: var(--color-accent-warm);
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-primary: #2a9f9e;
+    --color-primary-light: #3abfbe;
+    --color-primary-dark: #1a6f6e;
+    --color-primary-bg: #0a3f3e;
+
+    --color-neutral-white: #1a1f1e;
+    --color-neutral-bg: #0d1110;
+    --color-neutral-light: #1a1f1e;
+    --color-neutral-border: #2a3432;
+    --color-neutral-line: #3a4342;
+
+    --color-text-primary: #e8ebe9;
+    --color-text-secondary: #b0b9b6;
+    --color-text-tertiary: #707977;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-primary: #2a9f9e;
+  --color-primary-light: #3abfbe;
+  --color-primary-dark: #1a6f6e;
+  --color-primary-bg: #0a3f3e;
+
+  --color-neutral-white: #1a1f1e;
+  --color-neutral-bg: #0d1110;
+  --color-neutral-light: #1a1f1e;
+  --color-neutral-border: #2a3432;
+  --color-neutral-line: #3a4342;
+
+  --color-text-primary: #e8ebe9;
+  --color-text-secondary: #b0b9b6;
+  --color-text-tertiary: #707977;
+
+  color-scheme: dark;
 }

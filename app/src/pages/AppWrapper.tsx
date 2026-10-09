@@ -1,6 +1,11 @@
+import { useEffect } from 'react'
 import App from './App'
+import { initTheme } from '../utils/theme'
 
 export default function AppWrapper() {
-  // Skip authentication - show app directly
+  useEffect(() => {
+    initTheme()
+  }, [])
+
   return <App />
 }
