@@ -1609,6 +1609,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState('')
   const [isLoadingAI, setIsLoadingAI] = useState(false)
+  const [showSearchMenu, setShowSearchMenu] = useState(false)
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const performSearch = async () => {
     setIsLoadingAI(true)
@@ -1673,9 +1674,12 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
-    <div className="record-actions">
-      <button className="log-action-btn" onClick={performSearch} disabled={isLoadingAI}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Get AI recommendations'}</button>
-      <button className="log-action-btn" onClick={performTextSearch}><Search size={16} /> Search web</button>
+    <div className="record-actions" style={{ position: 'relative' }}>
+      <button className="log-action-btn" onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Search'}</button>
+      {showSearchMenu && <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'var(--color-bg-panel)', border: '1px solid var(--color-border)', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000 }}>
+        <button onClick={() => { performSearch(); setShowSearchMenu(false); }} disabled={isLoadingAI} style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px', color: 'var(--color-text-primary)', borderBottom: '1px solid var(--color-border)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>Search AI</button>
+        <button onClick={() => { performTextSearch(); setShowSearchMenu(false); }} style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px', color: 'var(--color-text-primary)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>Search web</button>
+      </div>}
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
