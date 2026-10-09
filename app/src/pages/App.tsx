@@ -26,7 +26,7 @@ import { exportCsv } from '../lib/exportCsv'
 import { exportXlsx } from '../lib/exportXlsx'
 import SearchPage from './SearchPage'
 import '../styles/search.css'
-import { useTicketSummary, useDescriptionAssist, useWorkNotesSuggestions, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
+import { useTicketSummary, useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import GeminiSettings from '../components/GeminiSettings'
 import { generateTicketSuggestions } from '../api/gemini'
 
@@ -1401,9 +1401,6 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [cachedSummaryId, setCachedSummaryId] = useState<string | null>(null)
   const { loading: summaryLoading, error: summaryError, result: summaryResult, generate: generateSummary } = useTicketSummary()
-  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false)
-  const [cachedSuggestionsId, setCachedSuggestionsId] = useState<string | null>(null)
-  const { loading: suggestionsLoading, error: suggestionsError, result: suggestionsResult, suggest: suggestWorkNotes } = useWorkNotesSuggestions()
   const [showQueueSuggestions, setShowQueueSuggestions] = useState(false)
   const [cachedQueueSuggestionsId, setCachedQueueSuggestionsId] = useState<string | null>(null)
   const { loading: queueLoading, error: queueError, result: queueResult, suggest: suggestQueue } = useQueueAssist()
@@ -1416,7 +1413,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const notesLength = notesText?.length || 0
   const shouldShowToggle = notesLength > 200
   useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
-  useEffect(() => { setCachedSummaryId(null); setCachedSuggestionsId(null); setCachedQueueSuggestionsId(null); setCachedPrioritySuggestionsId(null) }, [ticket.id])
+  useEffect(() => { setCachedSummaryId(null); setCachedQueueSuggestionsId(null); setCachedPrioritySuggestionsId(null) }, [ticket.id])
   const handleGetSummary = async () => {
     if (cachedSummaryId === ticket.id) return
     try {
@@ -1425,16 +1422,6 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
       setSummaryExpanded(true)
     } catch (err) {
       console.error('Summary generation failed:', err)
-    }
-  }
-  const handleGetSuggestions = async () => {
-    if (cachedSuggestionsId === ticket.id) return
-    try {
-      await suggestWorkNotes(ticket.title, ticket.description || '', notesText)
-      setCachedSuggestionsId(ticket.id)
-      setShowSuggestionsPanel(true)
-    } catch (err) {
-      console.error('Suggestions failed:', err)
     }
   }
   const handleGetQueueSuggestions = async () => {
@@ -1514,25 +1501,11 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         <section className="record-section">
           <div className="record-section-heading">
             <h3>Work notes</h3>
-            {onSaveNotes && <button className="primary-button" onClick={handleGetSuggestions} disabled={suggestionsLoading}><Sparkles size={16} />Get suggestions</button>}
           </div>
           {onSaveNotes ? (
             <>
               <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
               <button className="primary-button" onClick={() => onSaveNotes(notesText)} style={{ marginTop: '8px' }}>Save notes</button>
-              {showSuggestionsPanel && cachedSuggestionsId === ticket.id && (
-                <div className="suggestions-panel">
-                  {suggestionsLoading && <p className="text-muted">Getting suggestions...</p>}
-                  {suggestionsError && <p className="ai-error">{suggestionsError.message}</p>}
-                  {suggestionsResult && !suggestionsLoading && (
-                    <div className="suggestions-content">
-                      {suggestionsResult.split('\n').filter(Boolean).map((line: string, idx: number) => (
-                        <p key={idx} className="suggestion-item">{line}</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </>
           ) : (
             <div className="work-notes-display">
