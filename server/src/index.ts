@@ -9,6 +9,7 @@ import ticketRoutes from './api/tickets.js';
 import queueRoutes from './api/queues.js';
 import slaRoutes from './api/sla.js';
 import escalationMatrixRoutes from './api/escalation-matrix.js';
+import escalationAdvancedRoutes from './api/escalation-advanced.js';
 import emailRoutes from './api/email.js';
 import chatRoutes from './api/chat.js';
 import geminiRoutes from './api/gemini.js';
@@ -40,6 +41,7 @@ app.use('/api', ticketRoutes);
 app.use('/api', queueRoutes);
 app.use('/api', slaRoutes);
 app.use('/api', escalationMatrixRoutes);
+app.use('/api', escalationAdvancedRoutes);
 app.use('/api', emailRoutes);
 app.use('/api', chatRoutes);
 
