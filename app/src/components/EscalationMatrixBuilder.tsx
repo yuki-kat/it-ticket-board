@@ -116,14 +116,14 @@ export default function EscalationMatrixBuilder({
       const payload = {
         ...form,
         escalation_tier: parseInt(form.escalation_tier.toString()),
-        escalate_after_hours: form.escalation_method === 'automatic' ? parseInt(form.escalate_after_hours?.toString() || '0') : null,
+        escalate_after_hours: form.escalation_method === 'automatic' ? parseInt(form.escalate_after_hours?.toString() || '0') : undefined,
       }
 
       if (usePropsMode) {
         if (editingId && onRuleUpdate) {
-          await onRuleUpdate(editingId, payload)
+          await onRuleUpdate(editingId, payload as Omit<EscalationRule, 'id' | 'group_name'>)
         } else if (!editingId && onRuleCreate) {
-          await onRuleCreate(payload)
+          await onRuleCreate(payload as Omit<EscalationRule, 'id' | 'group_name'>)
         }
       } else {
         const method = editingId ? 'PUT' : 'POST'
@@ -217,7 +217,7 @@ export default function EscalationMatrixBuilder({
                 setShowForm(true)
                 setEditingId(null)
               }}
-              disabled={groups.length === 0}
+              disabled={!groups || groups.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus size={16} />
@@ -225,7 +225,7 @@ export default function EscalationMatrixBuilder({
             </button>
           </div>
 
-          {groups.length === 0 && (
+          {groups && groups.length === 0 && (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
               Create assignment groups first before setting up escalation rules.
             </div>
@@ -233,7 +233,7 @@ export default function EscalationMatrixBuilder({
 
           {loading ? (
             <p className="text-gray-600">Loading...</p>
-          ) : rules.length === 0 ? (
+          ) : !rules || rules.length === 0 ? (
             <p className="text-gray-600 text-center py-8">No escalation rules yet. Create one to get started.</p>
           ) : (
             <div className="space-y-8">
@@ -365,7 +365,7 @@ export default function EscalationMatrixBuilder({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">Select a group...</option>
-                {groups.map((g) => (
+                {groups && groups.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
                   </option>

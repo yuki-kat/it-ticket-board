@@ -73,8 +73,8 @@ export default function AssignmentGroupManager({
   const [form, setForm] = useState({
     name: '',
     description: '',
-    group_type: 'support' as const,
-    contact_type: 'email_group' as const,
+    group_type: 'support' as 'support' | 'engineering' | 'management' | 'vendor',
+    contact_type: 'email_group' as 'email_group' | 'slack_channel' | 'pagerduty_schedule' | 'individual',
     contact_address: '',
     contact_phone: '',
     timezone: 'UTC',
@@ -171,8 +171,8 @@ export default function AssignmentGroupManager({
     setForm({
       name: group.name,
       description: group.description || '',
-      group_type: group.group_type,
-      contact_type: group.contact_type,
+      group_type: group.group_type as 'support' | 'engineering' | 'management' | 'vendor',
+      contact_type: group.contact_type as 'email_group' | 'slack_channel' | 'pagerduty_schedule' | 'individual',
       contact_address: group.contact_address,
       contact_phone: group.contact_phone || '',
       timezone: group.timezone,
