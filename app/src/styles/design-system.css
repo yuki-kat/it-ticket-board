@@ -253,6 +253,11 @@ textarea:focus-visible {
     --color-primary-dark: #1a6f6e;
     --color-primary-bg: #0a3f3e;
 
+    --color-accent-warm: #ff9966;
+    --color-accent-red: #ff6b5b;
+    --color-accent-green: #66cc99;
+    --color-accent-amber: #ffb366;
+
     --color-neutral-white: #1a1f1e;
     --color-neutral-bg: #0d1110;
     --color-neutral-light: #1a1f1e;
@@ -273,6 +278,11 @@ textarea:focus-visible {
   --color-primary-dark: #1a6f6e;
   --color-primary-bg: #0a3f3e;
 
+  --color-accent-warm: #ff9966;
+  --color-accent-red: #ff6b5b;
+  --color-accent-green: #66cc99;
+  --color-accent-amber: #ffb366;
+
   --color-neutral-white: #1a1f1e;
   --color-neutral-bg: #0d1110;
   --color-neutral-light: #1a1f1e;
@@ -284,4 +294,8 @@ textarea:focus-visible {
   --color-text-tertiary: #707977;
 
   color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }

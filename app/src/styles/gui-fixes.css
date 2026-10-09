@@ -524,3 +524,86 @@
 :root[data-theme="dark"] .ai-suggest-button { border-color: #35505e; background: #1b2b35; color: #9fd0e2; }
 :root[data-theme="dark"] .ai-suggest-result h4 { color: #a0b8c2; }
 :root[data-theme="dark"] .ai-suggest-result ul, :root[data-theme="dark"] .ai-suggest-result ol { color: #d5e1e6; }
+
+/* Dark mode overrides for hardcoded colors in index.css */
+[data-theme="dark"] {
+  --color-neutral-bg: #0d1110;
+}
+
+[data-theme="dark"] body,
+[data-theme="dark"] .app-shell {
+  background-color: var(--color-neutral-bg) !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-theme="dark"] .topbar {
+  background-color: #1a1f1e !important;
+  border-bottom-color: var(--color-neutral-border) !important;
+}
+
+[data-theme="dark"] .matrix-panel,
+[data-theme="dark"] .form-panel {
+  background-color: var(--color-neutral-white) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-neutral-border) !important;
+}
+
+[data-theme="dark"] .lane,
+[data-theme="dark"] .ticket-card,
+[data-theme="dark"] .field input,
+[data-theme="dark"] .field select,
+[data-theme="dark"] .field textarea {
+  background-color: var(--color-neutral-white) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-neutral-border) !important;
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: var(--color-neutral-white) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-neutral-border) !important;
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] .text-secondary,
+[data-theme="dark"] .panel-intro {
+  color: var(--color-text-secondary) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--color-text-tertiary) !important;
+}
+
+[data-theme="dark"] .primary-button {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+  border-color: var(--color-primary) !important;
+}
+
+[data-theme="dark"] .primary-button:hover {
+  background-color: var(--color-primary-light) !important;
+}
+
+[data-theme="dark"] .matrix-button {
+  background-color: var(--color-neutral-white) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-neutral-border) !important;
+}
+
+[data-theme="dark"] .modal-dialog,
+[data-theme="dark"] .modal-content {
+  background-color: var(--color-neutral-white) !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-title {
+  color: var(--color-text-primary) !important;
+}
+
+[data-theme="dark"] .modal-body {
+  background-color: var(--color-neutral-white) !important;
+}
