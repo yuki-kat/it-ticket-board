@@ -143,6 +143,34 @@ CREATE TABLE IF NOT EXISTS escalation_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Custom escalation matrices (uploaded by organizations)
+CREATE TABLE IF NOT EXISTS escalation_matrices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL UNIQUE REFERENCES teams(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  file_type VARCHAR(50) NOT NULL, -- image/png, image/jpeg, application/pdf, etc.
+  file_size INT NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  uploaded_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Escalation tier to user/team channel mapping
+CREATE TABLE IF NOT EXISTS escalation_channels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  tier INT NOT NULL, -- 1, 2, 3, etc.
+  channel_type VARCHAR(50) NOT NULL, -- email, slack, teams, pagerduty, custom
+  channel_identifier VARCHAR(255) NOT NULL, -- email address, Slack channel ID, etc.
+  user_id UUID REFERENCES users(id), -- if routing to a person
+  team_member_id UUID REFERENCES users(id), -- if escalating to specific user
+  description VARCHAR(255), -- "Manager on call", "Senior Engineer", etc.
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(team_id, tier, channel_type, channel_identifier)
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);
@@ -157,3 +185,6 @@ CREATE INDEX IF NOT EXISTS idx_sla_templates_team_id ON sla_templates(team_id);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_team_id ON email_notifications(team_id);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_ticket_id ON email_notifications(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_events_ticket_id ON escalation_events(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_escalation_matrices_team_id ON escalation_matrices(team_id);
+CREATE INDEX IF NOT EXISTS idx_escalation_channels_team_id ON escalation_channels(team_id);
+CREATE INDEX IF NOT EXISTS idx_escalation_channels_tier ON escalation_channels(team_id, tier);

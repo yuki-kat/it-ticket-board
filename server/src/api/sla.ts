@@ -219,7 +219,7 @@ router.post('/tickets/:id/escalate', async (req: AuthRequest, res) => {
     const { reason = 'manual' } = req.body;
 
     const ticketResult = await query(
-      'SELECT id, current_escalation_tier FROM tickets WHERE id = $1',
+      'SELECT id, team_id, title, priority, current_escalation_tier FROM tickets WHERE id = $1',
       [id]
     );
 
@@ -250,7 +250,27 @@ router.post('/tickets/:id/escalate', async (req: AuthRequest, res) => {
       [id, ticket.current_escalation_tier, newTier, reason]
     );
 
-    res.json({ ticketId: id, oldTier: ticket.current_escalation_tier, newTier });
+    // Get escalation channel for the new tier
+    const channelResult = await query(
+      `SELECT * FROM escalation_channels
+       WHERE team_id = $1 AND tier = $2
+       LIMIT 1`,
+      [ticket.team_id, newTier]
+    );
+
+    let escalationChannel = null;
+    if (channelResult.rows.length > 0) {
+      escalationChannel = channelResult.rows[0];
+    }
+
+    res.json({
+      ticketId: id,
+      oldTier: ticket.current_escalation_tier,
+      newTier,
+      escalationChannel,
+      ticketTitle: ticket.title,
+      ticketPriority: ticket.priority,
+    });
   } catch (error) {
     console.error('Error escalating ticket:', error);
     res.status(500).json({ error: 'Failed to escalate ticket' });
