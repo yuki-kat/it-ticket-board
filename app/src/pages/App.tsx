@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, Moon, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
-import { AiSuggestFix } from '../components/AiSuggestFix'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
@@ -1719,8 +1718,6 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     {showLogAction && <div className="ticket-log-action"><div className="log-action-header"><h5>Log troubleshooting step</h5><button onClick={() => setShowLogAction(false)} aria-label="Close log action"><X size={16} /></button></div><div className="log-action-content"><textarea value={actionText} onChange={(event) => setActionText(event.target.value)} placeholder="What action did you take? (e.g., Checked system logs for error messages)" rows={3} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', boxSizing: 'border-box', fontFamily: 'inherit' }} /><button className="log-submit-btn" onClick={logAction} disabled={!actionText.trim()}><Plus size={14} /> Add to work notes</button></div></div>}
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
-    <AiSuggestFix ticket={ticket} />
-    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} />
   </section>
 }
 
