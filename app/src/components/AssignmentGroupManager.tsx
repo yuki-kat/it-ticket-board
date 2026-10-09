@@ -18,6 +18,13 @@ interface AssignmentGroup {
 
 interface AssignmentGroupManagerProps {
   teamId: string
+  groups?: AssignmentGroup[]
+  loading?: boolean
+  error?: string
+  onGroupCreate?: (data: Omit<AssignmentGroup, 'id' | 'member_count' | 'on_call_count'>) => Promise<void>
+  onGroupUpdate?: (id: string, data: Omit<AssignmentGroup, 'id' | 'member_count' | 'on_call_count'>) => Promise<void>
+  onGroupDelete?: (id: string) => Promise<void>
+  onGroupsRefresh?: () => Promise<void>
 }
 
 const TIMEZONES = [
@@ -41,12 +48,28 @@ const CONTACT_TYPES = [
   { id: 'individual', label: 'Individual', icon: Mail },
 ]
 
-export default function AssignmentGroupManager({ teamId }: AssignmentGroupManagerProps) {
-  const [groups, setGroups] = useState<AssignmentGroup[]>([])
+export default function AssignmentGroupManager({
+  teamId,
+  groups: propsGroups,
+  loading: propsLoading,
+  error: propsError,
+  onGroupCreate,
+  onGroupUpdate,
+  onGroupDelete,
+  onGroupsRefresh,
+}: AssignmentGroupManagerProps) {
+  // Use props if provided, otherwise use internal state
+  const usePropsMode = propsGroups !== undefined
+  const [localGroups, setLocalGroups] = useState<AssignmentGroup[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [localLoading, setLocalLoading] = useState(false)
+  const [localError, setLocalError] = useState('')
+
+  const groups = usePropsMode ? propsGroups : localGroups
+  const loading = usePropsMode ? propsLoading : localLoading
+  const error = usePropsMode ? propsError : localError
+  const setError = usePropsMode ? () => {} : setLocalError
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -64,18 +87,22 @@ export default function AssignmentGroupManager({ teamId }: AssignmentGroupManage
   }, [teamId])
 
   const loadGroups = async () => {
+    if (usePropsMode) {
+      await onGroupsRefresh?.()
+      return
+    }
     try {
-      setLoading(true)
+      setLocalLoading(true)
       const response = await fetch(`/api/teams/${teamId}/assignment-groups`, {
         headers: { 'Content-Type': 'application/json' },
       })
       if (!response.ok) throw new Error(await response.text())
       const data = await response.json()
-      setGroups(Array.isArray(data) ? data : [])
+      setLocalGroups(Array.isArray(data) ? data : [])
     } catch (err) {
-      setError(`Failed to load groups: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setLocalError(`Failed to load groups: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
-      setLoading(false)
+      setLocalLoading(false)
     }
   }
 
@@ -83,18 +110,26 @@ export default function AssignmentGroupManager({ teamId }: AssignmentGroupManage
     e.preventDefault()
     setError('')
     try {
-      const method = editingId ? 'PUT' : 'POST'
-      const url = editingId
-        ? `/api/teams/${teamId}/assignment-groups/${editingId}`
-        : `/api/teams/${teamId}/assignment-groups`
+      if (usePropsMode) {
+        if (editingId && onGroupUpdate) {
+          await onGroupUpdate(editingId, form)
+        } else if (!editingId && onGroupCreate) {
+          await onGroupCreate(form)
+        }
+      } else {
+        const method = editingId ? 'PUT' : 'POST'
+        const url = editingId
+          ? `/api/teams/${teamId}/assignment-groups/${editingId}`
+          : `/api/teams/${teamId}/assignment-groups`
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        })
 
-      if (!response.ok) throw new Error(await response.text())
+        if (!response.ok) throw new Error(await response.text())
+      }
 
       setForm({
         name: '',
@@ -118,10 +153,14 @@ export default function AssignmentGroupManager({ teamId }: AssignmentGroupManage
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this assignment group? This cannot be undone.')) return
     try {
-      const response = await fetch(`/api/teams/${teamId}/assignment-groups/${id}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) throw new Error(await response.text())
+      if (usePropsMode && onGroupDelete) {
+        await onGroupDelete(id)
+      } else {
+        const response = await fetch(`/api/teams/${teamId}/assignment-groups/${id}`, {
+          method: 'DELETE',
+        })
+        if (!response.ok) throw new Error(await response.text())
+      }
       await loadGroups()
     } catch (err) {
       setError(`Failed to delete group: ${err instanceof Error ? err.message : 'Unknown error'}`)

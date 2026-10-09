@@ -22,19 +22,44 @@ interface AssignmentGroup {
 
 interface EscalationMatrixBuilderProps {
   teamId: string
+  rules?: EscalationRule[]
+  groups?: AssignmentGroup[]
+  loading?: boolean
+  error?: string
+  onRuleCreate?: (data: Omit<EscalationRule, 'id' | 'group_name'>) => Promise<void>
+  onRuleUpdate?: (id: string, data: Omit<EscalationRule, 'id' | 'group_name'>) => Promise<void>
+  onRuleDelete?: (id: string) => Promise<void>
+  onRulesRefresh?: () => Promise<void>
 }
 
 const TICKET_TYPES = ['incident', 'service_request', 'change', 'problem']
 const PRIORITIES = ['critical', 'high', 'medium', 'low']
 const TIERS = [1, 2, 3]
 
-export default function EscalationMatrixBuilder({ teamId }: EscalationMatrixBuilderProps) {
-  const [rules, setRules] = useState<EscalationRule[]>([])
-  const [groups, setGroups] = useState<AssignmentGroup[]>([])
+export default function EscalationMatrixBuilder({
+  teamId,
+  rules: propsRules,
+  groups: propsGroups,
+  loading: propsLoading,
+  error: propsError,
+  onRuleCreate,
+  onRuleUpdate,
+  onRuleDelete,
+  onRulesRefresh,
+}: EscalationMatrixBuilderProps) {
+  const usePropsMode = propsRules !== undefined
+  const [localRules, setLocalRules] = useState<EscalationRule[]>([])
+  const [localGroups, setLocalGroups] = useState<AssignmentGroup[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [localLoading, setLocalLoading] = useState(false)
+  const [localError, setLocalError] = useState('')
+
+  const rules = usePropsMode ? propsRules : localRules
+  const groups = usePropsMode ? propsGroups : localGroups
+  const loading = usePropsMode ? propsLoading : localLoading
+  const error = usePropsMode ? propsError : localError
+  const setError = usePropsMode ? () => {} : setLocalError
   const [form, setForm] = useState({
     ticket_type: 'incident',
     priority: 'critical',
@@ -52,8 +77,12 @@ export default function EscalationMatrixBuilder({ teamId }: EscalationMatrixBuil
   }, [teamId])
 
   const loadRulesAndGroups = async () => {
+    if (usePropsMode) {
+      await onRulesRefresh?.()
+      return
+    }
     try {
-      setLoading(true)
+      setLocalLoading(true)
       const [rulesRes, groupsRes] = await Promise.all([
         fetch(`/api/teams/${teamId}/escalation-rules`),
         fetch(`/api/teams/${teamId}/assignment-groups`),
@@ -65,12 +94,12 @@ export default function EscalationMatrixBuilder({ teamId }: EscalationMatrixBuil
       const rulesData = await rulesRes.json()
       const groupsData = await groupsRes.json()
 
-      setRules(Array.isArray(rulesData) ? rulesData : [])
-      setGroups(Array.isArray(groupsData) ? groupsData : [])
+      setLocalRules(Array.isArray(rulesData) ? rulesData : [])
+      setLocalGroups(Array.isArray(groupsData) ? groupsData : [])
     } catch (err) {
-      setError(`Failed to load: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setLocalError(`Failed to load: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
-      setLoading(false)
+      setLocalLoading(false)
     }
   }
 
@@ -84,24 +113,32 @@ export default function EscalationMatrixBuilder({ teamId }: EscalationMatrixBuil
     }
 
     try {
-      const method = editingId ? 'PUT' : 'POST'
-      const url = editingId
-        ? `/api/teams/${teamId}/escalation-rules/${editingId}`
-        : `/api/teams/${teamId}/escalation-rules`
-
       const payload = {
         ...form,
         escalation_tier: parseInt(form.escalation_tier.toString()),
         escalate_after_hours: form.escalation_method === 'automatic' ? parseInt(form.escalate_after_hours?.toString() || '0') : null,
       }
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      if (usePropsMode) {
+        if (editingId && onRuleUpdate) {
+          await onRuleUpdate(editingId, payload)
+        } else if (!editingId && onRuleCreate) {
+          await onRuleCreate(payload)
+        }
+      } else {
+        const method = editingId ? 'PUT' : 'POST'
+        const url = editingId
+          ? `/api/teams/${teamId}/escalation-rules/${editingId}`
+          : `/api/teams/${teamId}/escalation-rules`
 
-      if (!response.ok) throw new Error(await response.text())
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) throw new Error(await response.text())
+      }
 
       setForm({
         ticket_type: 'incident',
@@ -125,10 +162,14 @@ export default function EscalationMatrixBuilder({ teamId }: EscalationMatrixBuil
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this escalation rule? This cannot be undone.')) return
     try {
-      const response = await fetch(`/api/teams/${teamId}/escalation-rules/${id}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) throw new Error(await response.text())
+      if (usePropsMode && onRuleDelete) {
+        await onRuleDelete(id)
+      } else {
+        const response = await fetch(`/api/teams/${teamId}/escalation-rules/${id}`, {
+          method: 'DELETE',
+        })
+        if (!response.ok) throw new Error(await response.text())
+      }
       await loadRulesAndGroups()
     } catch (err) {
       setError(`Failed to delete rule: ${err instanceof Error ? err.message : 'Unknown error'}`)
