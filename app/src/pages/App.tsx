@@ -1707,7 +1707,35 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   }
   const addSearchToNotes = () => {
     const timestamp = new Date().toLocaleString()
-    const entry = `[${timestamp}] Added search and AI recommendations:\n${searchResults}`
+    const convertToPastTense = (text: string) => {
+      const pastTenseMap: { [key: string]: string } = {
+        'Check': 'Checked', 'check': 'checked',
+        'Restart': 'Restarted', 'restart': 'restarted',
+        'Verify': 'Verified', 'verify': 'verified',
+        'Review': 'Reviewed', 'review': 'reviewed',
+        'Update': 'Updated', 'update': 'updated',
+        'Clear': 'Cleared', 'clear': 'cleared',
+        'Run': 'Ran', 'run': 'ran',
+        'Test': 'Tested', 'test': 'tested',
+        'Install': 'Installed', 'install': 'installed',
+        'Remove': 'Removed', 'remove': 'removed',
+        'Reset': 'Reset', 'reset': 'reset',
+        'Configure': 'Configured', 'configure': 'configured',
+        'Enable': 'Enabled', 'enable': 'enabled',
+        'Disable': 'Disabled', 'disable': 'disabled',
+        'Connect': 'Connected', 'connect': 'connected',
+        'Disconnect': 'Disconnected', 'disconnect': 'disconnected',
+        'Reboot': 'Rebooted', 'reboot': 'rebooted',
+        'Monitor': 'Monitored', 'monitor': 'monitored',
+        'Document': 'Documented', 'document': 'documented',
+      }
+      return text.replace(/^(\d+)\.\s*(\w+)/gm, (_match, num, verb) => {
+        const pastVerb = pastTenseMap[verb] || verb + 'ed'
+        return `${num}. ${pastVerb}`
+      })
+    }
+    const pastTenseSteps = convertToPastTense(searchResults)
+    const entry = `[${timestamp}] Troubleshooting steps taken:\n${pastTenseSteps}`
     const updatedNotes = ticket.notes ? `${ticket.notes}\n${entry}` : entry
     onSaveNotes(updatedNotes)
     setShowSearchResults(false)

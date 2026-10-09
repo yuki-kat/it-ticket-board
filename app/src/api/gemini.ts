@@ -100,20 +100,24 @@ export async function generateTicketSuggestions(
   priority: string,
   queue?: string
 ): Promise<string> {
-  const systemPrompt = `You are an IT support ticket analysis assistant. Analyze the provided ticket and provide:
-1. Initial analysis of the issue
-2. Potential root causes
-3. Recommended troubleshooting steps
-4. Estimated resolution time
-Keep responses concise and actionable.`;
+  const systemPrompt = `You are an IT support ticket analysis assistant. Analyze the provided ticket and provide ONLY numbered troubleshooting steps to resolve the issue.
+
+Format your response as:
+1. First troubleshooting step
+2. Second troubleshooting step
+3. Third troubleshooting step
+(etc.)
+
+Use clear, actionable steps in imperative form (e.g., "Check system logs", "Restart the service", "Verify network connectivity").
+Keep each step concise - one sentence maximum.`;
 
   const userMessage = `
-Queue: ${escapeXml(queue || 'General')}
-Priority: ${escapeXml(priority)}
 Title: ${escapeXml(title)}
 Description: ${escapeXml(description)}
+Priority: ${escapeXml(priority)}
+Queue: ${escapeXml(queue || 'General')}
 
-Please analyze this ticket and provide AI suggestions.`;
+Provide numbered troubleshooting steps to resolve this ticket.`;
 
   return callGeminiAPI({
     systemInstruction: {
