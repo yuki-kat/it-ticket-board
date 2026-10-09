@@ -1683,12 +1683,23 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState('')
+  const [isLoadingAI, setIsLoadingAI] = useState(false)
+  const summary = useTicketSummary()
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
-  const performSearch = () => {
-    const keywords = ticket.title.split(/\s+/).filter(w => w.length > 3).slice(0, 3).join(', ')
-    const results = `Search Results for: ${ticket.title}\n\nRelevant keywords: ${keywords}\n\nTop findings:\n1. Similar tickets in system\n2. Knowledge base articles\n3. Troubleshooting guides\n4. Community solutions\n5. Documentation links`
-    setSearchResults(results)
-    setShowSearchResults(true)
+  const performSearch = async () => {
+    setIsLoadingAI(true)
+    try {
+      const result = await summary.generate(ticket.title, ticket.description || '', ticket.notes || '')
+      const recommendations = result || `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}`
+      setSearchResults(recommendations)
+      setShowSearchResults(true)
+    } catch (error) {
+      const fallback = `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}\n\nCould not generate AI recommendations. Make sure Gemini API is configured.`
+      setSearchResults(fallback)
+      setShowSearchResults(true)
+    } finally {
+      setIsLoadingAI(false)
+    }
   }
   const addSearchToNotes = () => {
     const timestamp = new Date().toLocaleString()
@@ -1701,7 +1712,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
     <div className="record-actions">
-      <button className="log-action-btn" onClick={performSearch}><Search size={16} /> Get AI recommendations</button>
+      <button className="log-action-btn" onClick={performSearch} disabled={isLoadingAI}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Get AI recommendations'}</button>
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
