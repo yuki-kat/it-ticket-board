@@ -28,6 +28,7 @@ import SearchPage from './SearchPage'
 import '../styles/search.css'
 import { useTicketSummary, useDescriptionAssist, useWorkNotesSuggestions, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import GeminiSettings from '../components/GeminiSettings'
+import { generateTicketSuggestions } from '../api/gemini'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -1684,17 +1685,20 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState('')
   const [isLoadingAI, setIsLoadingAI] = useState(false)
-  const summary = useTicketSummary()
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const performSearch = async () => {
     setIsLoadingAI(true)
     try {
-      const result = await summary.generate(ticket.title, ticket.description || '', ticket.notes || '')
-      const recommendations = result || `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}`
-      setSearchResults(recommendations)
+      const solutions = await generateTicketSuggestions(
+        ticket.title,
+        ticket.description || '',
+        ticket.severity,
+        ticket.assignmentGroup
+      )
+      setSearchResults(solutions)
       setShowSearchResults(true)
     } catch (error) {
-      const fallback = `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}\n\nCould not generate AI recommendations. Make sure Gemini API is configured.`
+      const fallback = `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}\n\nCould not generate AI recommendations. Make sure Gemini API is configured on the server.`
       setSearchResults(fallback)
       setShowSearchResults(true)
     } finally {
