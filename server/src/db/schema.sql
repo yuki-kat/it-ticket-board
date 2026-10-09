@@ -45,17 +45,22 @@ CREATE TABLE IF NOT EXISTS tickets (
   queue_id UUID NOT NULL REFERENCES queues(id),
   title VARCHAR(255) NOT NULL,
   description TEXT,
+  ticket_type VARCHAR(50), -- incident, service_request, change, problem
   status VARCHAR(50) DEFAULT 'open', -- open, in_progress, resolved, closed
   priority VARCHAR(50) DEFAULT 'medium', -- low, medium, high, critical
   assigned_to UUID REFERENCES users(id),
+  assigned_group_id UUID REFERENCES assignment_groups(id), -- assignment group, not individual
   created_by UUID NOT NULL REFERENCES users(id),
   sla_template_id UUID REFERENCES sla_templates(id),
   first_response_at TIMESTAMP,
   sla_breached BOOLEAN DEFAULT FALSE,
   sla_breached_at TIMESTAMP,
   current_escalation_tier INT DEFAULT 1,
+  current_assignment_group_id UUID REFERENCES assignment_groups(id),
   escalated_to_tier_2_at TIMESTAMP,
   escalated_to_tier_3_at TIMESTAMP,
+  last_escalation_check TIMESTAMP, -- last time we checked if auto-escalation is needed
+  escalation_locked BOOLEAN DEFAULT FALSE, -- prevent further escalation if true
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -143,7 +148,69 @@ CREATE TABLE IF NOT EXISTS escalation_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Custom escalation matrices (uploaded by organizations)
+-- Assignment groups (teams of people, not individuals) - JIRA/ServiceNow pattern
+CREATE TABLE IF NOT EXISTS assignment_groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL, -- "Service Desk", "Desktop Engineers", "Network Team"
+  description TEXT,
+  group_type VARCHAR(50) NOT NULL, -- support, engineering, management, vendor
+  contact_type VARCHAR(50) NOT NULL, -- email_group, slack_channel, pagerduty_schedule, individual
+  contact_address VARCHAR(255) NOT NULL, -- email, Slack channel, PagerDuty schedule ID
+  contact_phone VARCHAR(20), -- for urgent escalations
+  timezone VARCHAR(50), -- Asia/Tokyo, Europe/Berlin, US/Pacific
+  business_hours_start INT DEFAULT 9, -- 9 AM
+  business_hours_end INT DEFAULT 18, -- 6 PM
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(team_id, name)
+);
+
+-- Assignment group members (who is in each group)
+CREATE TABLE IF NOT EXISTS assignment_group_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id UUID NOT NULL REFERENCES assignment_groups(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  is_on_call BOOLEAN DEFAULT FALSE,
+  on_call_until TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(group_id, user_id)
+);
+
+-- Escalation matrix (ticket_type × priority × tier → assignment_group)
+CREATE TABLE IF NOT EXISTS escalation_matrix_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  ticket_type VARCHAR(50) NOT NULL, -- incident, service_request, change, problem
+  priority VARCHAR(50) NOT NULL, -- critical, high, medium, low (or 1-4)
+  escalation_tier INT NOT NULL, -- 1, 2, 3 (first contact, specialist, expert)
+  assignment_group_id UUID NOT NULL REFERENCES assignment_groups(id),
+  escalation_method VARCHAR(50) NOT NULL, -- automatic, manual, both
+  escalate_after_hours INT, -- minutes before escalation (null = no auto-escalate)
+  escalate_on_sla_breach BOOLEAN DEFAULT TRUE,
+  notify_channels VARCHAR(255), -- comma-separated: email,slack,sms,phone
+  is_final_escalation BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(team_id, ticket_type, priority, escalation_tier)
+);
+
+-- Time thresholds for automatic escalation per SLA tier
+CREATE TABLE IF NOT EXISTS escalation_time_thresholds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  ticket_type VARCHAR(50) NOT NULL,
+  priority VARCHAR(50) NOT NULL,
+  tier_1_minutes INT, -- escalate from tier 1 to tier 2 after X minutes
+  tier_2_minutes INT, -- escalate from tier 2 to tier 3 after X minutes
+  tier_3_minutes INT, -- escalate from tier 3 to management after X minutes
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(team_id, ticket_type, priority)
+);
+
+-- Custom escalation matrices (uploaded by organizations - reference documents)
 CREATE TABLE IF NOT EXISTS escalation_matrices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id UUID NOT NULL UNIQUE REFERENCES teams(id) ON DELETE CASCADE,
@@ -156,7 +223,28 @@ CREATE TABLE IF NOT EXISTS escalation_matrices (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Escalation tier to user/team channel mapping
+-- Escalation history and audit trail
+CREATE TABLE IF NOT EXISTS escalation_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ticket_id UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  team_id UUID NOT NULL REFERENCES teams(id),
+  from_tier INT NOT NULL,
+  to_tier INT NOT NULL,
+  from_group_id UUID REFERENCES assignment_groups(id),
+  to_group_id UUID REFERENCES assignment_groups(id),
+  escalation_reason VARCHAR(255) NOT NULL, -- time_based, sla_breach, manual, priority_change
+  escalated_by UUID REFERENCES users(id), -- null if automatic
+  notification_sent BOOLEAN DEFAULT FALSE,
+  notification_channels VARCHAR(255), -- which channels received notification
+  notification_timestamp TIMESTAMP,
+  sla_impact VARCHAR(50), -- at_risk, breached, within_sla
+  ticket_priority VARCHAR(50),
+  ticket_type VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Escalation channels (for legacy simple routing)
 CREATE TABLE IF NOT EXISTS escalation_channels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
@@ -185,6 +273,27 @@ CREATE INDEX IF NOT EXISTS idx_sla_templates_team_id ON sla_templates(team_id);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_team_id ON email_notifications(team_id);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_ticket_id ON email_notifications(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_events_ticket_id ON escalation_events(ticket_id);
+-- Assignment group indexes
+CREATE INDEX IF NOT EXISTS idx_assignment_groups_team_id ON assignment_groups(team_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_groups_contact_type ON assignment_groups(team_id, contact_type);
+CREATE INDEX IF NOT EXISTS idx_assignment_group_members_group_id ON assignment_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_group_members_user_id ON assignment_group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_group_members_on_call ON assignment_group_members(is_on_call, on_call_until);
+
+-- Escalation matrix indexes
+CREATE INDEX IF NOT EXISTS idx_escalation_matrix_rules_lookup ON escalation_matrix_rules(team_id, ticket_type, priority, escalation_tier);
+CREATE INDEX IF NOT EXISTS idx_escalation_matrix_rules_group_id ON escalation_matrix_rules(assignment_group_id);
+
+-- Time thresholds indexes
+CREATE INDEX IF NOT EXISTS idx_escalation_time_thresholds_lookup ON escalation_time_thresholds(team_id, ticket_type, priority);
+
+-- Escalation history indexes
+CREATE INDEX IF NOT EXISTS idx_escalation_history_ticket_id ON escalation_history(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_escalation_history_team_id ON escalation_history(team_id);
+CREATE INDEX IF NOT EXISTS idx_escalation_history_timestamp ON escalation_history(created_at);
+CREATE INDEX IF NOT EXISTS idx_escalation_history_sla_impact ON escalation_history(sla_impact);
+
+-- Legacy channel indexes
 CREATE INDEX IF NOT EXISTS idx_escalation_matrices_team_id ON escalation_matrices(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_team_id ON escalation_channels(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_tier ON escalation_channels(team_id, tier);
