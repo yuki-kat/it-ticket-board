@@ -1518,7 +1518,8 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
           </div>
           {onSaveNotes ? (
             <>
-              <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} onBlur={(event) => onSaveNotes(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
+              <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
+              <button className="primary-button" onClick={() => onSaveNotes(notesText)} style={{ marginTop: '8px' }}>Save notes</button>
               {showSuggestionsPanel && cachedSuggestionsId === ticket.id && (
                 <div className="suggestions-panel">
                   {suggestionsLoading && <p className="text-muted">Getting suggestions...</p>}
