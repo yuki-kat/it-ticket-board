@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 // "Suggest fix": asks Gemini for likely causes and troubleshooting steps for one ticket.
 // Ported from the former Vercel function (app/api/suggest-fix.ts); the key stays on the server.
 const router = Router();
+router.use(authMiddleware);
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODELS = ['gemini-1.5-flash'];
@@ -41,7 +43,7 @@ async function callGemini(model: string, ticket: string): Promise<globalThis.Res
   });
 }
 
-router.post('/suggest-fix', async (req: Request, res: Response) => {
+router.post('/suggest-fix', async (req: AuthRequest, res: Response) => {
   if (!GEMINI_API_KEY) {
     return res.status(500).json({ error: 'AI suggestions are not set up on this site (GEMINI_API_KEY is missing).' });
   }

@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
+router.use(authMiddleware);
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODELS = ['gemini-1.5-flash'];
@@ -38,7 +40,7 @@ interface GeminiInteractionResponse {
 }
 
 // Generic Gemini API proxy endpoint
-router.post('/gemini', async (req: Request, res: Response) => {
+router.post('/gemini', async (req: AuthRequest, res: Response) => {
   try {
     if (!GEMINI_API_KEY) {
       return res.status(503).json({
