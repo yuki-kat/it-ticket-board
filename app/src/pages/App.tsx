@@ -1609,7 +1609,6 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState('')
   const [isLoadingAI, setIsLoadingAI] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const performSearch = async () => {
     setIsLoadingAI(true)
@@ -1631,13 +1630,9 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     }
   }
   const performTextSearch = () => {
-    if (!searchQuery.trim()) {
-      setSearchResults('Enter a search term to search the web.')
-      setShowSearchResults(true)
-      return
-    }
-    const encodedQuery = encodeURIComponent(searchQuery)
-    window.open(`https://www.google.com/search?q=${encodedQuery}`, '_blank')
+    const searchTerm = `${ticket.title} ${ticket.description || ''}`.trim()
+    const encodedQuery = encodeURIComponent(searchTerm)
+    window.open(`https://duckduckgo.com/?q=${encodedQuery}`, '_blank')
   }
   const addSearchToNotes = () => {
     const timestamp = new Date().toLocaleString()
@@ -1680,10 +1675,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
     <div className="record-actions">
       <button className="log-action-btn" onClick={performSearch} disabled={isLoadingAI}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Get AI recommendations'}</button>
-      <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-        <input type="text" placeholder="Search ticket..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') performTextSearch() }} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--color-border)', fontSize: '14px', minWidth: '150px' }} />
-        <button className="log-action-btn" onClick={performTextSearch}><Search size={16} /> Search</button>
-      </div>
+      <button className="log-action-btn" onClick={performTextSearch}><Search size={16} /> Search web</button>
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
