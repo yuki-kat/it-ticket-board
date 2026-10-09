@@ -53,31 +53,60 @@ export default function EscalateButton({
   const [showConfirm, setShowConfirm] = useState(false)
   const [escalationInfo, setEscalationInfo] = useState<{
     newTier: number
-    channel?: EscalationChannel
+    assignmentGroup?: {
+      id: string
+      name: string
+      contact_type: string
+      contact_address: string
+      contact_phone?: string
+    }
   } | null>(null)
+  const [error, setError] = useState('')
 
   const handleEscalateClick = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/tickets/${ticketId}/escalate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'manual escalation from UI' }),
-      })
+      setError('')
+
+      // Get team ID from localStorage (or you could pass it as a prop)
+      const teamData = localStorage.getItem('it-ticket-kanban-team-id')
+      const teamId = teamData ? JSON.parse(teamData) : 'default-team'
+
+      // Try new API first (escalate-advanced)
+      const response = await fetch(
+        `/api/teams/${teamId}/tickets/${ticketId}/escalate-advanced`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'manual_escalation' }),
+        }
+      ).catch(() =>
+        // Fallback to old API
+        fetch(`/api/tickets/${ticketId}/escalate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'manual escalation from UI' }),
+        })
+      )
 
       if (!response.ok) {
-        throw new Error(await response.text())
+        const errorText = await response.text()
+        if (response.status === 403) {
+          setError('You do not have permission to escalate this ticket.')
+          return
+        }
+        throw new Error(errorText)
       }
 
       const data = await response.json()
       setEscalationInfo({
         newTier: data.newTier,
-        channel: data.escalationChannel,
+        assignmentGroup: data.assignmentGroup,
       })
       setShowConfirm(true)
     } catch (error) {
       console.error('Escalation error:', error)
-      alert('Failed to escalate ticket')
+      setError(`Failed to escalate ticket: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsLoading(false)
     }
@@ -141,6 +170,12 @@ export default function EscalateButton({
         {isLoading ? 'Escalating...' : `Escalate to Tier ${currentTier + 1}`}
       </button>
 
+      {error && (
+        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
       {showConfirm && escalationInfo && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-lg">
@@ -159,26 +194,26 @@ export default function EscalateButton({
               </div>
             </div>
 
-            {escalationInfo.channel ? (
+            {escalationInfo.assignmentGroup ? (
               <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded">
                 <div className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                  {getChannelIcon(escalationInfo.channel.channel_type)}
-                  Notification will be sent to:
+                  {getChannelIcon(escalationInfo.assignmentGroup.contact_type)}
+                  Escalating to:
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">
-                    {getChannelLabel(escalationInfo.channel.channel_type)}
+                    {escalationInfo.assignmentGroup.name}
                   </p>
-                  <p className="text-sm text-gray-600">{escalationInfo.channel.channel_identifier}</p>
-                  {escalationInfo.channel.description && (
-                    <p className="text-xs text-gray-500 mt-1">{escalationInfo.channel.description}</p>
+                  <p className="text-sm text-gray-600">{escalationInfo.assignmentGroup.contact_address}</p>
+                  {escalationInfo.assignmentGroup.contact_phone && (
+                    <p className="text-xs text-gray-500 mt-1">Phone: {escalationInfo.assignmentGroup.contact_phone}</p>
                   )}
                 </div>
               </div>
             ) : (
               <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded">
                 <p className="text-sm text-amber-800">
-                  No escalation channel configured for Tier {escalationInfo.newTier}. Escalation will be recorded but no notification will be sent.
+                  No assignment group configured for Tier {escalationInfo.newTier}.
                 </p>
               </div>
             )}
@@ -195,6 +230,7 @@ export default function EscalateButton({
                 onClick={() => {
                   setShowConfirm(false)
                   setEscalationInfo(null)
+                  setError('')
                 }}
                 disabled={isLoading}
                 className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50"
