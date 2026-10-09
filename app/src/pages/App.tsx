@@ -26,7 +26,7 @@ import { exportCsv } from '../lib/exportCsv'
 import { exportXlsx } from '../lib/exportXlsx'
 import SearchPage from './SearchPage'
 import '../styles/search.css'
-import { useTicketSummary, useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
+import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import GeminiSettings from '../components/GeminiSettings'
 import { generateTicketSuggestions } from '../api/gemini'
 
@@ -1398,9 +1398,6 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
 function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
   const [expandedNotes, setExpandedNotes] = useState(false)
   const [notesText, setNotesText] = useState(ticket.notes || '')
-  const [summaryExpanded, setSummaryExpanded] = useState(false)
-  const [cachedSummaryId, setCachedSummaryId] = useState<string | null>(null)
-  const { loading: summaryLoading, error: summaryError, result: summaryResult, generate: generateSummary } = useTicketSummary()
   const [showQueueSuggestions, setShowQueueSuggestions] = useState(false)
   const [cachedQueueSuggestionsId, setCachedQueueSuggestionsId] = useState<string | null>(null)
   const { loading: queueLoading, error: queueError, result: queueResult, suggest: suggestQueue } = useQueueAssist()
@@ -1413,17 +1410,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const notesLength = notesText?.length || 0
   const shouldShowToggle = notesLength > 200
   useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
-  useEffect(() => { setCachedSummaryId(null); setCachedQueueSuggestionsId(null); setCachedPrioritySuggestionsId(null) }, [ticket.id])
-  const handleGetSummary = async () => {
-    if (cachedSummaryId === ticket.id) return
-    try {
-      await generateSummary(ticket.title, ticket.description || '', notesText)
-      setCachedSummaryId(ticket.id)
-      setSummaryExpanded(true)
-    } catch (err) {
-      console.error('Summary generation failed:', err)
-    }
-  }
+  useEffect(() => { setCachedQueueSuggestionsId(null); setCachedPrioritySuggestionsId(null) }, [ticket.id])
   const handleGetQueueSuggestions = async () => {
     if (cachedQueueSuggestionsId === ticket.id) return
     try {
@@ -1455,44 +1442,6 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         <section className="record-section">
           <div className="record-section-heading"><h3>Description</h3></div>
           <p>{ticket.description || 'No description recorded.'}</p>
-        </section>
-        <section className="record-section ai-summary-section">
-          <div className="record-section-heading">
-            <h3>AI Summary</h3>
-            <button className="primary-button" onClick={handleGetSummary} disabled={summaryLoading}>
-              <Sparkles size={14} />
-              <span>{summaryLoading ? 'Generating...' : 'Get Summary'}</span>
-            </button>
-          </div>
-          {summaryError && <div className="ai-error">⚠️ {summaryError.message}</div>}
-          {summaryResult && (
-            <div className="ai-summary-content">
-              {summaryExpanded ? (
-                <>
-                  <div className="summary-item">
-                    <strong>What's the issue?</strong>
-                    <p>{summaryResult.split('\n').slice(0, 3).join('\n')}</p>
-                  </div>
-                  <div className="summary-item">
-                    <strong>What's been tried?</strong>
-                    <p>{summaryResult.split('\n').slice(4, 7).join('\n')}</p>
-                  </div>
-                  <div className="summary-item">
-                    <strong>Suggested next step</strong>
-                    <p>{summaryResult.split('\n').slice(8, 11).join('\n')}</p>
-                  </div>
-                </>
-              ) : (
-                <p className="summary-preview">{summaryResult.split('\n')[0]}</p>
-              )}
-              <button className="summary-toggle" onClick={() => setSummaryExpanded(!summaryExpanded)}>
-                {summaryExpanded ? 'Show less' : 'Show more'}
-              </button>
-            </div>
-          )}
-          {!summaryResult && !summaryLoading && !summaryError && (
-            <p className="text-muted">Click "Get Summary" to analyze this ticket with AI.</p>
-          )}
         </section>
         <section className="record-section">
           <div className="record-section-heading"><h3>Tags</h3></div>
