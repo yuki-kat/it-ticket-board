@@ -3,8 +3,8 @@ import { Router, Request, Response } from 'express';
 const router = Router();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.1-flash-lite'];
-const GEMINI_INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 interface GeminiRequest {
   contents: Array<{
@@ -79,19 +79,18 @@ router.post('/gemini', async (req: Request, res: Response) => {
     };
 
     let geminiResponse: globalThis.Response | null = null;
-    let resultData: GeminiInteractionResponse | null = null;
     let text = '';
     let selectedModel = '';
     for (const [index, model] of GEMINI_MODELS.entries()) {
       try {
-        geminiResponse = await fetch(GEMINI_INTERACTIONS_URL, {
+        geminiResponse = await fetch(`${GEMINI_API_URL}/${model}:generateContent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-goog-api-key': GEMINI_API_KEY,
           },
-          body: JSON.stringify({ ...requestBody, model }),
-          signal: AbortSignal.timeout(20_000),
+          body: JSON.stringify(geminiRequest),
+          signal: AbortSignal.timeout(10_000),
         });
       } catch (error) {
         if (error instanceof Error && error.name === 'TimeoutError') {
@@ -99,19 +98,14 @@ router.post('/gemini', async (req: Request, res: Response) => {
             console.warn(`Gemini model ${model} timed out; trying fallback model ${GEMINI_MODELS[index + 1]}.`);
             continue;
           }
-          return res.status(504).json({ error: 'Gemini API timed out on the primary and fallback models' });
+          return res.status(504).json({ error: 'Gemini API timed out' });
         }
         throw error;
       }
 
       if (geminiResponse.ok) {
-        resultData = (await geminiResponse.json()) as GeminiInteractionResponse;
-        text = resultData.steps
-          ?.filter((step) => step.type === 'model_output')
-          .flatMap((step) => step.content ?? [])
-          .filter((content) => content.type === 'text')
-          .map((content) => content.text ?? '')
-          .join('') ?? '';
+        const data = await geminiResponse.json() as any;
+        text = data.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? '').join('') ?? '';
 
         if (text) {
           selectedModel = model;
@@ -123,7 +117,7 @@ router.post('/gemini', async (req: Request, res: Response) => {
           continue;
         }
 
-        return res.status(502).json({ error: 'Gemini API returned no text from the primary and fallback models' });
+        return res.status(502).json({ error: 'Gemini API returned no text' });
       }
 
       const error = await geminiResponse.json().catch(() => ({})) as Record<string, unknown>;
@@ -138,11 +132,11 @@ router.post('/gemini', async (req: Request, res: Response) => {
       console.warn(`Gemini model ${model} returned 503; trying fallback model ${GEMINI_MODELS[index + 1]}.`);
     }
 
-    if (!geminiResponse?.ok || !resultData) {
-      return res.status(502).json({ error: 'Gemini API request failed unexpectedly' });
+    if (!geminiResponse?.ok || !text) {
+      return res.status(502).json({ error: 'Gemini API request failed' });
     }
 
-    res.json({ text, usageMetadata: resultData.usage, model: selectedModel });
+    res.json({ text, model: selectedModel });
   } catch (error) {
     console.error('Gemini proxy error:', error);
     res.status(500).json({
