@@ -1398,7 +1398,7 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
 function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
   const [expandedNotes, setExpandedNotes] = useState(false)
   const [notesText, setNotesText] = useState(ticket.notes || '')
-  const [isSaved, setIsSaved] = useState(false)
+  const [showSavedPopup, setShowSavedPopup] = useState(false)
   const [showQueueSuggestions, setShowQueueSuggestions] = useState(false)
   const [cachedQueueSuggestionsId, setCachedQueueSuggestionsId] = useState<string | null>(null)
   const { loading: queueLoading, error: queueError, result: queueResult, suggest: suggestQueue } = useQueueAssist()
@@ -1412,7 +1412,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const shouldShowToggle = notesLength > 200
   useEffect(() => { setNotesText(ticket.notes || '') }, [ticket.id, ticket.notes])
   useEffect(() => { setCachedQueueSuggestionsId(null); setCachedPrioritySuggestionsId(null) }, [ticket.id])
-  useEffect(() => { if (isSaved) { const timer = setTimeout(() => setIsSaved(false), 1500); return () => clearTimeout(timer) } }, [isSaved])
+  useEffect(() => { if (showSavedPopup) { const timer = setTimeout(() => setShowSavedPopup(false), 2000); return () => clearTimeout(timer) } }, [showSavedPopup])
   const handleGetQueueSuggestions = async () => {
     if (cachedQueueSuggestionsId === ticket.id) return
     try {
@@ -1456,7 +1456,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
           {onSaveNotes ? (
             <>
               <textarea value={notesText} onChange={(event) => setNotesText(event.currentTarget.value)} placeholder="Internal notes or next action" rows={4} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
-              <button className="primary-button" onClick={() => { onSaveNotes(notesText); setIsSaved(true) }} style={{ marginTop: '8px' }}>{isSaved ? 'Saved' : 'Save notes'}</button>
+              <button className="primary-button" onClick={() => { onSaveNotes(notesText); setShowSavedPopup(true) }} style={{ marginTop: '8px' }}>Save notes</button>
             </>
           ) : (
             <div className="work-notes-display">
@@ -1602,6 +1602,13 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         </section>
       </aside>
     </div>
+    {showSavedPopup && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSavedPopup(false) }}>
+      <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '300px', textAlign: 'center' }}>
+        <button className="ticket-card-popout-close" onClick={() => setShowSavedPopup(false)} aria-label="Close">×</button>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Work notes saved</h3>
+        <p style={{ margin: '0', fontSize: '14px', color: 'var(--color-text-secondary)' }}>Your notes have been successfully saved.</p>
+      </div>
+    </div>}
   </>
 }
 
