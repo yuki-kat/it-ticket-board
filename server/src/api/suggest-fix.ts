@@ -5,7 +5,7 @@ import { Router, Request, Response } from 'express';
 const router = Router();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+const GEMINI_MODELS = ['gemini-1.5-flash'];
 const MAX_FIELD = 2000;
 
 const text = (value: unknown) => (typeof value === 'string' ? value.trim().slice(0, MAX_FIELD) : '');
