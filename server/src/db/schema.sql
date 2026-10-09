@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS tickets (
   priority VARCHAR(50) DEFAULT 'medium', -- low, medium, high, critical
   assigned_to UUID REFERENCES users(id),
   created_by UUID NOT NULL REFERENCES users(id),
+  sla_template_id UUID REFERENCES sla_templates(id),
+  first_response_at TIMESTAMP,
+  sla_breached BOOLEAN DEFAULT FALSE,
+  sla_breached_at TIMESTAMP,
+  current_escalation_tier INT DEFAULT 1,
+  escalated_to_tier_2_at TIMESTAMP,
+  escalated_to_tier_3_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -126,6 +133,16 @@ CREATE TABLE IF NOT EXISTS ai_suggestions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Escalation events
+CREATE TABLE IF NOT EXISTS escalation_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ticket_id UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  from_tier INT NOT NULL,
+  to_tier INT NOT NULL,
+  trigger_reason VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);
@@ -133,7 +150,10 @@ CREATE INDEX IF NOT EXISTS idx_queues_team_id ON queues(team_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_team_id ON tickets(team_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_queue_id ON tickets(queue_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_assigned_to ON tickets(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tickets_sla_breached ON tickets(sla_breached);
+CREATE INDEX IF NOT EXISTS idx_tickets_escalation_tier ON tickets(current_escalation_tier);
 CREATE INDEX IF NOT EXISTS idx_work_notes_ticket_id ON work_notes(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_sla_templates_team_id ON sla_templates(team_id);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_team_id ON email_notifications(team_id);
 CREATE INDEX IF NOT EXISTS idx_email_notifications_ticket_id ON email_notifications(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_escalation_events_ticket_id ON escalation_events(ticket_id);
