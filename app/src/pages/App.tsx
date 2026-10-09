@@ -1682,6 +1682,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
 }
 
 function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
+  const { user } = useAuth()
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState('')
@@ -1708,6 +1709,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   }
   const addSearchToNotes = () => {
     const timestamp = new Date().toLocaleString()
+    const userName = user?.name || 'User'
     const convertToPastTense = (text: string) => {
       const pastTenseMap: { [key: string]: string } = {
         'Check': 'Checked', 'check': 'checked',
@@ -1736,7 +1738,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       })
     }
     const pastTenseSteps = convertToPastTense(searchResults)
-    const entry = `[${timestamp}] Troubleshooting steps taken:\n${pastTenseSteps}`
+    const entry = `[${timestamp}] ${userName} - Troubleshooting steps taken:\n${pastTenseSteps}`
     const updatedNotes = ticket.notes ? `${ticket.notes}\n${entry}` : entry
     onSaveNotes(updatedNotes)
     setShowSearchResults(false)
