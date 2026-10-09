@@ -20,6 +20,7 @@ export function applyTheme(theme: Theme) {
   } else {
     root.setAttribute('data-theme', theme);
   }
+  console.log('Theme applied:', theme, 'data-theme=', root.getAttribute('data-theme'));
 }
 
 export function initTheme() {
