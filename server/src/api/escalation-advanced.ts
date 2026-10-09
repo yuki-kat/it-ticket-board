@@ -1,9 +1,91 @@
 import { Router } from 'express';
 import { query } from '../db/connection.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import {
+  canViewEscalationHistory,
+  canEscalateTicket,
+  getEscalationHistoryWithAccess,
+  rejectEscalationHistoryModification,
+} from '../utils/escalation-access-control.js';
 
 const router = Router();
 router.use(authMiddleware);
+
+// ============ ACCESS CONTROL ============
+
+// Set user as compliance officer (global admin only)
+router.post('/admin/compliance-officers/:userId', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.user?.user_id;
+
+    if (!currentUserId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Check if current user is system admin (has admin role in multiple teams or special flag)
+    const adminCheck = await query(
+      `SELECT 1 FROM users WHERE id = $1 AND is_system_admin = TRUE`,
+      [currentUserId]
+    );
+
+    if (adminCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Only system admins can manage compliance officers' });
+    }
+
+    // Update user as compliance officer
+    const result = await query(
+      `UPDATE users SET is_compliance_officer = TRUE WHERE id = $1 RETURNING *`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: `User ${result.rows[0].email} is now a compliance officer` });
+  } catch (error) {
+    console.error('Error setting compliance officer:', error);
+    res.status(500).json({ error: 'Failed to set compliance officer' });
+  }
+});
+
+// Remove user as compliance officer (global admin only)
+router.delete('/admin/compliance-officers/:userId', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.user?.user_id;
+
+    if (!currentUserId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Check if current user is system admin
+    const adminCheck = await query(
+      `SELECT 1 FROM users WHERE id = $1 AND is_system_admin = TRUE`,
+      [currentUserId]
+    );
+
+    if (adminCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Only system admins can manage compliance officers' });
+    }
+
+    // Update user to remove compliance officer flag
+    const result = await query(
+      `UPDATE users SET is_compliance_officer = FALSE WHERE id = $1 RETURNING *`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: `User ${result.rows[0].email} is no longer a compliance officer` });
+  } catch (error) {
+    console.error('Error removing compliance officer:', error);
+    res.status(500).json({ error: 'Failed to remove compliance officer' });
+  }
+});
 
 // ============ ASSIGNMENT GROUPS ============
 
@@ -243,6 +325,17 @@ router.post('/teams/:teamId/tickets/:ticketId/escalate-advanced', async (req: Au
   try {
     const { teamId, ticketId } = req.params;
     const { reason, escalated_by_user_id } = req.body;
+    const userId = req.user?.user_id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Check access control
+    const accessCheck = await canEscalateTicket(userId, ticketId, teamId);
+    if (!accessCheck.allowed) {
+      return res.status(403).json({ error: accessCheck.reason });
+    }
 
     // Get ticket
     const ticketResult = await query(
@@ -326,10 +419,21 @@ router.post('/teams/:teamId/tickets/:ticketId/escalate-advanced', async (req: Au
   }
 });
 
-// Get escalation history for ticket
+// Get escalation history for ticket (with access control)
 router.get('/teams/:teamId/tickets/:ticketId/escalation-history', async (req: AuthRequest, res) => {
   try {
     const { teamId, ticketId } = req.params;
+    const userId = req.user?.user_id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Check access control
+    const accessCheck = await canViewEscalationHistory(userId, ticketId, teamId);
+    if (!accessCheck.allowed) {
+      return res.status(403).json({ error: accessCheck.reason });
+    }
 
     const result = await query(
       `SELECT eh.*, ag.name as to_group_name, u.name as escalated_by_name
