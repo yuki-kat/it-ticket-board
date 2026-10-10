@@ -1832,7 +1832,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
           </div>
         </div>
       </div>}
-      <button className="log-action-btn" onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Search resolution'}</button>
+      <button onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: 500 }}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Search resolution'}</button>
       {showSearchMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSearchMenu(false) }}>
         <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '300px' }}>
           <button className="ticket-card-popout-close" onClick={() => setShowSearchMenu(false)} aria-label="Close search menu">×</button>
