@@ -91,7 +91,7 @@ The site is public, and anyone can create an account.
 
 | Variable | Why |
 | --- | --- |
-| `JWT_SECRET` | **Required.** Signs sign-in tokens. If it's missing, the server falls back to a development value that is visible in this public repo, which would let anyone forge a sign-in. Use a long random string. |
+| `JWT_SECRET` | **Required.** Signs sign-in tokens. Use a long random string (`openssl rand -base64 48`). With `NODE_ENV=production`, the server refuses to start if it's missing or left at a placeholder. Outside production it falls back to a development value that is public in this repo. |
 | `GEMINI_API_KEY` | Needed for **Find resolution**. Get one from Google AI Studio. |
 | `GEMINI_MODELS` | Optional. A comma-separated list of models to try in order. See `server/.env.example` for the defaults. |
 
