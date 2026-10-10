@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import '../styles/signin-page.css'
 
-export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
+export default function SignInPage({ onSignIn, onSkip }: { onSignIn: () => void; onSkip?: () => void }) {
   const { login, signup } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -25,7 +25,6 @@ export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
         console.log('Login completed, result:', result)
       }
       onSignIn()
-      window.location.reload()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Authentication failed'
       console.error('Auth error:', msg, err)
@@ -64,6 +63,7 @@ export default function SignInPage({ onSignIn }: { onSignIn: () => void }) {
           <button type="button" style={{ marginTop: '0.5rem', background: 'transparent', color: '#0066cc', border: 'none', cursor: 'pointer' }} onClick={() => setIsSignUp(!isSignUp)}>
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
+          {onSkip && <button type="button" style={{ background: 'transparent', color: '#5a7280', border: 'none', cursor: 'pointer' }} onClick={onSkip}>Continue without signing in</button>}
         </form>
       </div>
       <div className="signin-stats-side">

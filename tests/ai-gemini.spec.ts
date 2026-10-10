@@ -28,7 +28,7 @@ test.describe('Find resolution (Gemini via the backend)', () => {
 
   test('explains a missing sign-in', async ({ page }) => {
     await page.route('**/api/gemini', reply(401, { error: 'Missing authentication token' }))
-    await expect(await askAI(page)).toContainText('Sign in on the hosted site to use AI suggestions.')
+    await expect(await askAI(page)).toContainText('Sign in (Tools → Sign in) on the hosted site to use AI suggestions.')
   })
 
   test('shows the server reason when Gemini is busy', async ({ page }) => {

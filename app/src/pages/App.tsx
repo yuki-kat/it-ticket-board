@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, MessageSquare, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
+import SignInPage from './SignInPage'
 import SyncBadge from '../components/SyncBadge'
 import { useCloudSync, startSync, stopSync } from '../lib/cloudSync'
 import { useAuth } from '../contexts/AuthContext'
@@ -956,8 +957,8 @@ function App() {
 
   if (standaloneTicketId) return standaloneTicket ? <TicketRecordPage ticket={standaloneTicket} now={clock} /> : <div className="record-page-shell"><div className="record-not-found"><Ticket size={24} /><h1>Ticket not found</h1><p>The requested ticket is not available in this browser.</p><a href={window.location.href.split('#')[0]}>Return to home</a></div></div>
 
-  // Sign-in disabled for demo - direct access enabled
-  // if (page === 'signin') return <SignInPage onSignIn={() => setPage('home')} />
+  // The board opens without signing in; signing in (Tools → Sign in, or #/signin) is needed for server features such as AI.
+  if (page === 'signin') return <SignInPage onSignIn={() => { window.location.hash = '#/home' }} onSkip={() => setPage('home')} />
 
   return <div className={`app-shell view-${cardSize}`}>
     <header className="topbar">
@@ -991,7 +992,9 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
             <span className="header-tools-heading">ACCOUNT</span>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>Gemini AI Settings<small>Configure API key</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); logout() }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
+            {user
+              ? <button type="button" onClick={() => { setShowToolsMenu(false); void logout().then(() => setPage('signin')) }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
+              : <button type="button" onClick={() => { setShowToolsMenu(false); setPage('signin') }}><LogIn size={16} /><span>Sign in<small>Needed for AI suggestions</small></span></button>}
           </div>}
         </div>
         {/* Inventory has its own Add asset / Add stock item button beside its heading. The new-task page is the form itself. */}

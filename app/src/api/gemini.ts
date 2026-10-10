@@ -75,7 +75,7 @@ async function callGeminiAPI(request: GeminiRequest): Promise<string> {
   }
 
   const data = await response.json().catch(() => null) as { text?: string; error?: string } | null;
-  if (response.status === 401) throw new Error('Sign in on the hosted site to use AI suggestions.');
+  if (response.status === 401) throw new Error('Sign in (Tools → Sign in) on the hosted site to use AI suggestions.');
   if (response.status === 404 && !data?.error) throw new Error(HOSTED_ONLY);
   if (!response.ok) throw new Error(data?.error || `The AI server returned an error (${response.status}).`);
   if (!data?.text) throw new Error('Gemini returned an empty answer. Try again.');

@@ -2,11 +2,11 @@
  * Page addresses. The app is still one file, but each page has its own address after the #, so the
  * browser's Back and Forward buttons move between pages and a refresh or bookmark opens the same page:
  *
- *   #/home   #/tickets   #/inventory   #/explore   #/explore/priority   #/explore/priority/OPS-101
+ *   #/home   #/tickets   #/inventory   #/explore   #/explore/priority   #/explore/priority/OPS-101   #/signin
  *
  * (#ticket=OPS-101, the full-page ticket record opened in a new tab, is handled separately in App.tsx.)
  */
-export type PageId = 'home' | 'board' | 'inventory' | 'search' | 'explore' | 'new' | 'escalation'
+export type PageId = 'home' | 'board' | 'inventory' | 'search' | 'explore' | 'new' | 'escalation' | 'signin'
 export type ExploreKey = 'active' | 'priority' | 'overdue' | 'escalated'
 export type Route = { page: PageId; queue?: ExploreKey; ticket?: string }
 
@@ -26,6 +26,7 @@ export function parseRoute(hash: string): Route {
   if (first === 'inventory') return { page: 'inventory' }
   if (first === 'search') return { page: 'search' }
   if (first === 'new') return { page: 'new' }
+  if (first === 'signin') return { page: 'signin' }
   if (first === 'escalation') return { page: 'escalation' }
   if (first === 'explore') {
     const queue = EXPLORE_KEYS.find((key) => key === second)
@@ -40,7 +41,7 @@ export function parseRoute(hash: string): Route {
  * @returns Location hash string with proper encoding (e.g., "#/explore/priority/OPS-101")
  */
 export function routeHash({ page, queue, ticket }: Route): string {
-  if (page === 'new') return '#/' + page
+  if (page === 'new' || page === 'signin') return '#/' + page
   if (page !== 'explore') return '#/' + SLUGS[page]
   if (!queue) return '#/explore'
   return `#/explore/${queue}` + (ticket ? '/' + encodeURIComponent(ticket) : '')
