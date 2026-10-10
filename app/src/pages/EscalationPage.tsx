@@ -7,6 +7,7 @@ import AssignmentGroupManager from '../components/AssignmentGroupManager'
 import EscalationMatrixBuilder from '../components/EscalationMatrixBuilder'
 import MatrixUploadManager from '../components/MatrixUploadManager'
 import TeamMembers from '../components/TeamMembers'
+import ThresholdsManager from '../components/ThresholdsManager'
 
 type Tab = 'groups' | 'rules' | 'thresholds' | 'documents' | 'members'
 interface Team { id: string; name: string; slug: string; role: 'member' | 'admin' }
@@ -229,12 +230,7 @@ function TeamWorkspace({ team, currentUserEmail, onTeamsChanged }: { team: Team;
           />
         )}
 
-        {activeTab === 'thresholds' && (
-          <div className="p-6 text-center text-gray-600">
-            <p>Time threshold configuration coming soon</p>
-            <p className="text-sm text-gray-500">Configure minutes before escalation from each tier</p>
-          </div>
-        )}
+        {activeTab === 'thresholds' && <ThresholdsManager teamId={team.id} canEdit={isAdmin} />}
 
         {activeTab === 'documents' && (
           <div className="p-6 space-y-6">
