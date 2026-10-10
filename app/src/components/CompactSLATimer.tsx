@@ -134,9 +134,11 @@ export default function CompactSLATimer({
               ? 'bg-green-100 text-green-600 hover:bg-green-200'
               : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
-          title={isPaused ? 'Resume SLA' : 'Pause SLA'}
+          title={isPaused ? 'Resume SLA timer' : 'Pause SLA timer'}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}
         >
-          {isPaused ? <Play size={18} /> : <Pause size={18} />}
+          {isPaused ? <Play size={16} /> : <Pause size={16} />}
+          <span>{isPaused ? 'Resume SLA timer' : 'Pause SLA timer'}</span>
         </button>
       </div>
 
