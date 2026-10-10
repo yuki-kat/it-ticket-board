@@ -110,6 +110,45 @@ export function normalizeHealth(value: unknown): DeviceHealth {
 export const isWarrantySoon = (asset: AssetItem) => asset.status !== 'Retired' && asset.status !== 'Lost' && !!asset.warrantyEnd && asset.warrantyEnd >= new Date().toISOString().slice(0, 10) && new Date(asset.warrantyEnd).getTime() - Date.now() <= 60 * 86_400_000
 export const assetHealthLevel = (asset: AssetItem): HealthLevel => asset.health === 'Healthy' && isWarrantySoon(asset) ? 'Monitor' : asset.health
 
+// Asset actions, shared by the asset record, bulk actions, quick scan and the leaver transfer.
+export type AssetAction = 'assign' | 'return' | 'repair' | 'move' | 'retire' | 'lost'
+export type AssetActionForm = { person: string; department: string; location: string; issuedBy: string; expectedReturn: string; condition: AssetItem['condition']; note: string; returnStatus: 'Available' | 'In Repair' }
+export const assetActionHistoryLabels: Record<AssetAction, string> = { assign: 'Assigned', return: 'Returned', repair: 'Sent for repair', move: 'Location changed', retire: 'Retired', lost: 'Marked lost' }
+export const emptyActionForm = (): AssetActionForm => ({ person: '', department: 'Field Services', location: '', issuedBy: '', expectedReturn: '', condition: 'Good', note: '', returnStatus: 'Available' })
+/** The same rules that enable or disable the action buttons on an asset record. */
+export function canApplyAssetAction(asset: AssetItem, action: AssetAction): boolean {
+  if (action === 'return') return asset.status === 'Assigned'
+  if (action === 'lost') return asset.status !== 'Lost' && asset.status !== 'Retired'
+  if (action === 'move') return true
+  return asset.status !== 'Retired'
+}
+export function assetActionError(action: AssetAction, form: AssetActionForm): string {
+  if (action === 'assign' && !form.person.trim()) return 'Enter the person receiving this asset.'
+  if (action === 'assign' && !form.issuedBy.trim()) return 'Enter who issued this asset.'
+  if ((action === 'assign' || action === 'return' || action === 'repair' || action === 'move') && !form.location.trim()) return 'Enter the asset location.'
+  if ((action === 'retire' || action === 'lost') && !form.note.trim()) return 'Add a reason to the history.'
+  return ''
+}
+/** Applies an action to one asset and appends a history entry. `via` names where it came from, such as "quick scan". */
+export function applyAssetAction(asset: AssetItem, action: AssetAction, form: AssetActionForm, at: string, today: string, via = ''): AssetItem {
+  let next: AssetItem = { ...asset }
+  let detail = ''
+  if (action === 'assign') { next = { ...next, status: 'Assigned', assignedTo: form.person.trim(), department: form.department, location: form.location.trim(), assignedAt: today, expectedReturnAt: form.expectedReturn, issuedBy: form.issuedBy.trim(), condition: form.condition }; detail = (asset.assignedTo && asset.assignedTo !== next.assignedTo ? 'Reassigned from ' + asset.assignedTo + ' to ' + next.assignedTo : 'Assigned to ' + next.assignedTo) + ' by ' + next.issuedBy + (next.expectedReturnAt ? '; expected return ' + dateLabel(next.expectedReturnAt) : '') }
+  if (action === 'return') { next = { ...next, status: form.returnStatus, assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '', location: form.location.trim(), condition: form.condition }; detail = 'Returned by ' + (asset.assignedTo || 'previous holder') + '; moved to ' + next.location + ' as ' + next.status }
+  if (action === 'repair') { next = { ...next, status: 'In Repair', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '', location: form.location.trim(), condition: 'Damaged' }; detail = 'Sent for repair at ' + next.location }
+  if (action === 'move') { next = { ...next, location: form.location.trim() }; detail = 'Moved from ' + asset.location + ' to ' + next.location }
+  if (action === 'retire') { next = { ...next, status: 'Retired', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '' }; detail = 'Retired: ' + form.note.trim() }
+  if (action === 'lost') { next = { ...next, status: 'Lost', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '' }; detail = 'Marked lost: ' + form.note.trim() }
+  if (form.note.trim() && action !== 'retire' && action !== 'lost') detail += '. Note: ' + form.note.trim()
+  if (via) detail += ' (' + via + ')'
+  return { ...next, history: [...(asset.history || []), { at, action: assetActionHistoryLabels[action], detail }] }
+}
+/** Finds an asset by its asset tag (ID) or serial number, ignoring case and surrounding spaces, as a barcode scanner types them. */
+export const findAssetByCode = (assets: AssetItem[], code: string) => {
+  const value = code.trim().toLowerCase()
+  return value ? assets.find((asset) => asset.id.toLowerCase() === value || asset.serial.toLowerCase() === value) : undefined
+}
+
 export const ASSET_EXPORT_HEADERS = ['Asset ID', 'Item', 'Category', 'Status', 'Assigned to', 'Department', 'Location', 'Manufacturer', 'Model', 'Serial number', 'Condition', 'Device health', 'Assigned date', 'Expected return', 'Purchase date', 'Warranty ends', 'Tags', 'Linked tickets', 'Notes']
 export const STOCK_EXPORT_HEADERS = ['Stock ID', 'Item', 'Category', 'On hand', 'Minimum', 'Stock level', 'Location', 'Tags', 'Last updated']
 export const assetExportRows = (assets: AssetItem[], tickets: TicketReference[]): CsvValue[][] => assets.map((asset) => [asset.id, asset.name, asset.category, asset.status, asset.assignedTo, asset.department, asset.location, asset.manufacturer, asset.model, asset.serial, asset.condition, assetHealthLevel(asset), asset.assignedAt, asset.expectedReturnAt, asset.purchaseDate, asset.warrantyEnd, (asset.tags || []).join('; '), [...new Set([...asset.linkedTicketIds, ...tickets.filter((ticket) => ticket.assetId === asset.id).map((ticket) => ticket.id)])].join('; '), asset.notes])
