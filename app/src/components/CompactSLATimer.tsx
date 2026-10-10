@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react'
 import { Clock, Pause, Play } from 'lucide-react'
 
+const pad = (n: number) => String(n).padStart(2, '0')
+
+function formatDuration(totalSeconds: number) {
+  const d = Math.floor(totalSeconds / 86400)
+  const h = Math.floor((totalSeconds % 86400) / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  if (d) return `${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`
+  if (h) return `${h}h ${pad(m)}m ${pad(s)}s`
+  return `${m}m ${pad(s)}s`
+}
+
 interface CompactSLATimerProps {
   ticketId: string
   createdAt: string
@@ -18,23 +30,16 @@ export default function CompactSLATimer({
   resolutionTimeHours = 24,
   compact = true,
 }: CompactSLATimerProps) {
-  const [elapsedMinutes, setElapsedMinutes] = useState(0)
+  const [now, setNow] = useState(() => Date.now())
   const [isPaused, setIsPaused] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Calculate elapsed time
   useEffect(() => {
-    const calculateElapsed = () => {
-      const created = new Date(createdAt)
-      const now = new Date()
-      const elapsed = Math.floor((now.getTime() - created.getTime()) / 1000 / 60)
-      setElapsedMinutes(elapsed)
-    }
-
-    calculateElapsed()
-    const interval = setInterval(calculateElapsed, 10000) // Update every 10 seconds
+    const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
-  }, [createdAt])
+  }, [])
+
+  const elapsedSeconds = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 1000))
 
   // Load SLA pause state
   useEffect(() => {
@@ -75,17 +80,20 @@ export default function CompactSLATimer({
     }
   }
 
-  const responseMinutesRemaining = Math.max(0, responseTimeMinutes - elapsedMinutes)
-  const isOverResponse = elapsedMinutes > responseTimeMinutes
-  const statusColor = isOverResponse ? 'text-red-600' : 'text-green-600'
+  const responseSecondsLeft = responseTimeMinutes * 60 - elapsedSeconds
+  const resolutionSecondsLeft = resolutionTimeHours * 3600 - elapsedSeconds
+  const isOverResponse = responseSecondsLeft < 0
+  const isOverResolution = resolutionSecondsLeft < 0
+  const statusColor = isOverResolution ? 'text-red-600' : 'text-green-600'
+  const countdown = (secondsLeft: number) => `${formatDuration(Math.abs(secondsLeft))} ${secondsLeft < 0 ? 'overdue' : 'remaining'}`
 
   if (compact) {
     return (
       <div className="flex items-center gap-2 text-xs">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" title={`Resolution SLA: ${countdown(resolutionSecondsLeft)}`}>
           <Clock size={14} className={statusColor} />
-          <span className={`font-semibold ${statusColor}`}>
-            {responseMinutesRemaining}m {isPaused && '(⏸)'}
+          <span className={`font-semibold ${statusColor}`} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+            {isOverResolution ? '-' : ''}{formatDuration(Math.abs(resolutionSecondsLeft))} {isPaused && '(⏸)'}
           </span>
         </div>
         {status === 'awaiting-user' && (
@@ -105,14 +113,6 @@ export default function CompactSLATimer({
       </div>
     )
   }
-
-  // Full view
-  const hours = Math.floor(elapsedMinutes / 60)
-  const minutes = elapsedMinutes % 60
-  const timeStr = `${hours}h ${minutes}m`
-
-  const resolutionMinutesRemaining = Math.max(0, resolutionTimeHours * 60 - elapsedMinutes)
-  const isOverResolution = elapsedMinutes > resolutionTimeHours * 60
 
   return (
     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -145,20 +145,20 @@ export default function CompactSLATimer({
       <div className="space-y-2">
         <div className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
           <span className="text-sm text-gray-600">Elapsed</span>
-          <span className="text-sm font-mono font-bold text-gray-900">{timeStr}</span>
+          <span className="text-sm font-mono font-bold text-gray-900">{formatDuration(elapsedSeconds)}</span>
         </div>
 
         <div className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
           <span className="text-sm text-gray-600">Response Time</span>
-          <span className={`text-sm font-semibold ${isOverResponse ? 'text-red-600' : 'text-green-600'}`}>
-            {isOverResponse ? '⚠ ' : '✓ '}{responseMinutesRemaining}m remaining
+          <span className={`text-sm font-semibold ${isOverResponse ? 'text-red-600' : 'text-green-600'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {isOverResponse ? '⚠ ' : '✓ '}{countdown(responseSecondsLeft)}
           </span>
         </div>
 
         <div className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
           <span className="text-sm text-gray-600">Resolution Time</span>
-          <span className={`text-sm font-semibold ${isOverResolution ? 'text-red-600' : 'text-green-600'}`}>
-            {isOverResolution ? '⚠ ' : '✓ '}{resolutionMinutesRemaining}m remaining
+          <span className={`text-sm font-semibold ${isOverResolution ? 'text-red-600' : 'text-green-600'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {isOverResolution ? '⚠ ' : '✓ '}{countdown(resolutionSecondsLeft)}
           </span>
         </div>
       </div>
