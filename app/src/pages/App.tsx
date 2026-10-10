@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, Moon, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, MessageSquare, Moon, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
@@ -1176,6 +1176,7 @@ function SettingsPanel({ screenPattern, onScreenPatternChange, view, onViewChang
 
 function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketItem; onClose: () => void; onOpenTicket: () => void }) {
   const [showCallMenu, setShowCallMenu] = useState(false)
+  const [showMessageMenu, setShowMessageMenu] = useState(false)
 
   const initiateCall = (service: 'Teams' | 'ZOOM' | 'Webex') => {
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
@@ -1204,19 +1205,57 @@ function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketIte
     setShowCallMenu(false)
   }
 
+  const sendMessage = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const messageEntry = `[${timestamp}] - [${service}] Message sent to ${userInfo}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${messageEntry}` : messageEntry
+    ticket.notes = updatedNotes
+
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowMessageMenu(false)
+  }
+
   return <div className="description-popup">
     <div className="description-popup-header">
       <h3>{ticket.title}</h3>
       <button onClick={onClose} aria-label="Close"><X size={18} /></button>
     </div>
     <div className="description-popup-content">
-      <div className="description-popup-actions" style={{ position: 'relative', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Phone size={14} /> Call</button>
-        {showCallMenu && <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #d9e0e2', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000, minWidth: '160px', marginTop: '4px' }}>
-          <button onClick={() => initiateCall('Teams')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Teams</button>
-          <button onClick={() => initiateCall('ZOOM')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>ZOOM</button>
-          <button onClick={() => initiateCall('Webex')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Webex</button>
-        </div>}
+      <div className="description-popup-actions" style={{ position: 'relative', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Phone size={14} /> Call</button>
+          {showCallMenu && <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #d9e0e2', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000, minWidth: '160px', marginTop: '4px' }}>
+            <button onClick={() => initiateCall('Teams')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Teams</button>
+            <button onClick={() => initiateCall('ZOOM')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>ZOOM</button>
+            <button onClick={() => initiateCall('Webex')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Webex</button>
+          </div>}
+        </div>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setShowMessageMenu(!showMessageMenu)} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><MessageSquare size={14} /> Message</button>
+          {showMessageMenu && <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #d9e0e2', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000, minWidth: '160px', marginTop: '4px' }}>
+            <button onClick={() => sendMessage('Teams')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Teams</button>
+            <button onClick={() => sendMessage('ZOOM')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>ZOOM</button>
+            <button onClick={() => sendMessage('Webex')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Webex</button>
+          </div>}
+        </div>
+        <button onClick={() => { const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); const userInfo = ticket.affectedUser || ticket.requester || 'User'; const emailEntry = `[${timestamp}] - Email sent to ${userInfo}`; ticket.notes = ticket.notes ? `${ticket.notes}\n${emailEntry}` : emailEntry; const email = ticket.affectedUserEmail || ''; if (email) { const link = document.createElement('a'); link.href = `mailto:${email}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Mail size={14} /> Email</button>
         <div style={{ flex: 1 }} />
         <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={true} />
       </div>
@@ -1775,6 +1814,8 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [showSearchMenu, setShowSearchMenu] = useState(false)
   const [showCallMenu, setShowCallMenu] = useState(false)
+  const [showMessageMenu, setShowMessageMenu] = useState(false)
+  const [showEmailMenu, setShowEmailMenu] = useState(false)
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const performSearch = async () => {
     setIsLoadingAI(true)
@@ -1831,6 +1872,56 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
 
     setShowCallMenu(false)
   }
+  const sendMessage = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const userEmail = ticket.affectedUserEmail || ''
+
+    const messageEntry = `[${timestamp}] ${engineerName} - [${service}] Message sent to ${userInfo}${userEmail ? ' (' + userEmail + ')' : ''}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${messageEntry}` : messageEntry
+    onSaveNotes(updatedNotes)
+
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowMessageMenu(false)
+  }
+  const sendEmailMessage = () => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const userEmail = ticket.affectedUserEmail || ''
+
+    const emailEntry = `[${timestamp}] ${engineerName} - Email sent to ${userInfo}${userEmail ? ' (' + userEmail + ')' : ''}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${emailEntry}` : emailEntry
+    onSaveNotes(updatedNotes)
+
+    if (userEmail) {
+      const link = document.createElement('a')
+      link.href = `mailto:${userEmail}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowEmailMenu(false)
+  }
   const addSearchToNotes = () => {
     const timestamp = new Date().toLocaleString()
     const userName = user?.name || 'User'
@@ -1870,9 +1961,10 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
-    <div className="record-actions">
-      <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: '1px solid #0066cc', background: '#0066cc', color: '#fff', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '600', minHeight: '40px' }}><Phone size={16} /> Call user</button>
-      {showCallMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCallMenu(false) }}>
+    <div className="record-actions" style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: '1px solid #0066cc', background: '#0066cc', color: '#fff', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '600', minHeight: '40px' }}><Phone size={16} /> Call user</button>
+        {showCallMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCallMenu(false) }}>
         <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
           <button className="ticket-card-popout-close" onClick={() => setShowCallMenu(false)} aria-label="Close call menu">×</button>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Choose platform</h3>
@@ -1887,6 +1979,41 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
           </div>
         </div>
       </div>}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => setShowMessageMenu(!showMessageMenu)} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '600', minHeight: '40px' }}><MessageSquare size={16} /> Send message</button>
+        {showMessageMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowMessageMenu(false) }}>
+        <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
+          <button className="ticket-card-popout-close" onClick={() => setShowMessageMenu(false)} aria-label="Close message menu">×</button>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Choose platform</h3>
+          <div style={{ fontSize: '12px', color: '#6b7c80', marginBottom: '16px', padding: '0 8px' }}>
+            <p style={{ margin: '0', lineHeight: '1.4' }}>Message to <b>{ticket.affectedUser || ticket.requester || 'user'}</b></p>
+            {ticket.affectedUserEmail && <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9aa3a5' }}>{ticket.affectedUserEmail}</p>}
+          </div>
+          <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => sendMessage('Teams')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Teams</button>
+            <button className="ticket-card-popout-open" onClick={() => sendMessage('ZOOM')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>ZOOM</button>
+            <button className="ticket-card-popout-open" onClick={() => sendMessage('Webex')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Webex</button>
+          </div>
+        </div>
+      </div>}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => setShowEmailMenu(!showEmailMenu)} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '600', minHeight: '40px' }}><Mail size={16} /> Send email</button>
+        {showEmailMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowEmailMenu(false) }}>
+        <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
+          <button className="ticket-card-popout-close" onClick={() => setShowEmailMenu(false)} aria-label="Close email menu">×</button>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Send email</h3>
+          <div style={{ fontSize: '12px', color: '#6b7c80', marginBottom: '16px', padding: '0 8px' }}>
+            <p style={{ margin: '0', lineHeight: '1.4' }}>Email to <b>{ticket.affectedUser || ticket.requester || 'user'}</b></p>
+            {ticket.affectedUserEmail && <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9aa3a5' }}>{ticket.affectedUserEmail}</p>}
+          </div>
+          <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => sendEmailMessage()} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Send email</button>
+          </div>
+        </div>
+      </div>}
+      </div>
       <button onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: 500, minHeight: '36px', minWidth: 'fit-content', whiteSpace: 'nowrap' }}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Search resolution'}</button>
       {showSearchMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSearchMenu(false) }}>
         <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '300px' }}>
