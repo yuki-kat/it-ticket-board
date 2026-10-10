@@ -278,6 +278,13 @@ CREATE TABLE IF NOT EXISTS sla_matrices (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Matrix files are stored in the database (file_data): the hosting plan's local disk is wiped when the
+-- service sleeps. file_path remains only for rows uploaded before this change.
+ALTER TABLE escalation_matrices ADD COLUMN IF NOT EXISTS file_data BYTEA;
+ALTER TABLE escalation_matrices ALTER COLUMN file_path DROP NOT NULL;
+ALTER TABLE sla_matrices ADD COLUMN IF NOT EXISTS file_data BYTEA;
+ALTER TABLE sla_matrices ALTER COLUMN file_path DROP NOT NULL;
+
 -- Escalation history and audit trail
 CREATE TABLE IF NOT EXISTS escalation_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

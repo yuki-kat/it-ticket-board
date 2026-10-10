@@ -1,10 +1,8 @@
-import { Router, Request } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { query } from '../db/connection.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import multer, { FileFilterCallback } from 'multer';
-import path from 'path';
 import fs from 'fs/promises';
-import { v4 as uuidv4 } from 'uuid';
 import { isUuid, requireTeamRole } from '../utils/team-access.js';
 
 const router = Router();
@@ -191,208 +189,146 @@ function generateDefaultSlaMatrixSvg(): string {
   </svg>`;
 }
 
-// Initialize default matrices for a team
-// The escalation and SLA pages load together, so two requests can run this at once; ON CONFLICT keeps that safe.
-async function initializeDefaultMatrices(teamId: string, userId: string) {
-  try {
-    // Check if matrices already exist
-    const existingEsc = await query('SELECT id FROM escalation_matrices WHERE team_id = $1', [teamId]);
-    const existingSla = await query('SELECT id FROM sla_matrices WHERE team_id = $1', [teamId]);
-
-    if (existingEsc.rows.length === 0) {
-      const escSvg = generateDefaultEscalationMatrixSvg();
-      const escPath = path.join(process.cwd(), 'uploads', 'escalation-matrices', `default-escalation-${teamId}.svg`);
-
-      await fs.mkdir(path.dirname(escPath), { recursive: true });
-      await fs.writeFile(escPath, escSvg);
-
-      await query(
-        `INSERT INTO escalation_matrices (team_id, file_name, file_type, file_size, file_path, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (team_id) DO NOTHING`,
-        [teamId, 'Default Escalation Matrix', 'image/svg+xml', escSvg.length, escPath, userId]
-      );
-    }
-
-    if (existingSla.rows.length === 0) {
-      const slaSvg = generateDefaultSlaMatrixSvg();
-      const slaPath = path.join(process.cwd(), 'uploads', 'sla-matrices', `default-sla-${teamId}.svg`);
-
-      await fs.mkdir(path.dirname(slaPath), { recursive: true });
-      await fs.writeFile(slaPath, slaSvg);
-
-      await query(
-        `INSERT INTO sla_matrices (team_id, file_name, file_type, file_size, file_path, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (team_id) DO NOTHING`,
-        [teamId, 'Default SLA Matrix', 'image/svg+xml', slaSvg.length, slaPath, userId]
-      );
-    }
-  } catch (error) {
-    console.error('Error initializing default matrices:', error);
-  }
-}
-
-// Configure multer for file uploads
-const uploadsDir = path.join(process.cwd(), 'uploads', 'escalation-matrices');
+// Matrix documents (escalation and SLA) share the same routes. Files are stored in Postgres (file_data):
+// the hosting plan's local disk is wiped whenever the service sleeps. file_path is only read for rows
+// uploaded before that change, and such rows are moved into the database the first time they are downloaded.
+type MatrixKind = 'escalation' | 'sla';
+const MATRICES: Record<MatrixKind, { table: string; label: string; defaultName: string; svg: () => string }> = {
+  escalation: { table: 'escalation_matrices', label: 'escalation matrix', defaultName: 'Default Escalation Matrix', svg: generateDefaultEscalationMatrixSvg },
+  sla: { table: 'sla_matrices', label: 'SLA matrix', defaultName: 'Default SLA Matrix', svg: generateDefaultSlaMatrixSvg },
+};
+const MATRIX_COLUMNS = 'id, team_id, file_name, file_type, file_size, uploaded_by, created_at, updated_at';
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+];
 
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req: Request, _file, cb: (error: Error | null, destination: string) => void) => {
-      fs.mkdir(uploadsDir, { recursive: true })
-        .then(() => cb(null, uploadsDir))
-        .catch(err => cb(err, uploadsDir));
-    },
-    filename: (_req: Request, file, cb: (error: Error | null, filename: string) => void) => {
-      const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
-      const ext = path.extname(file.originalname);
-      const name = path.basename(file.originalname, ext);
-      cb(null, `${name}-${uniqueSuffix}${ext}`);
-    },
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_BYTES },
   fileFilter: (_req: Request, file, cb: FileFilterCallback) => {
-    // Allow common image and document formats
-    const allowedMimes = [
-      'image/png',
-      'image/jpeg',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-    ];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`File type not allowed: ${file.mimetype}`));
-    }
+    if (ALLOWED_TYPES.includes(file.mimetype)) cb(null, true);
+    else cb(new Error(`File type not allowed: ${file.mimetype}`));
   },
 });
 
-// Upload escalation matrix
-router.post(
-  '/teams/:teamId/escalation-matrix/upload',
-  teamAdmin,
-  upload.single('file'),
-  async (req: AuthRequest & { file?: any }, res) => {
+// Multer reports a too-large or wrong-type file as an error; answer it as a 400 the page can show.
+const receiveFile = (req: Request, res: Response, next: NextFunction) =>
+  upload.single('file')(req, res, (error: unknown) => {
+    if (!error) return next();
+    const message = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE'
+      ? 'File is larger than 10 MB'
+      : error instanceof Error ? error.message : 'Upload failed';
+    res.status(400).json({ error: message });
+  });
+
+async function removeLegacyFile(filePath: string | null | undefined) {
+  if (!filePath) return;
+  await fs.unlink(filePath).catch(() => {});
+}
+
+// The escalation and SLA pages load together; ON CONFLICT keeps two concurrent first visits safe.
+async function ensureDefaultMatrix(kind: MatrixKind, teamId: string, userId: string) {
+  const matrix = MATRICES[kind];
+  const svg = Buffer.from(matrix.svg());
+  await query(
+    `INSERT INTO ${matrix.table} (team_id, file_name, file_type, file_size, file_data, uploaded_by)
+     VALUES ($1, $2, 'image/svg+xml', $3, $4, $5)
+     ON CONFLICT (team_id) DO NOTHING`,
+    [teamId, matrix.defaultName, svg.length, svg, userId]
+  );
+}
+
+function addMatrixRoutes(kind: MatrixKind) {
+  const matrix = MATRICES[kind];
+  const base = `/teams/:teamId/${kind}-matrix`;
+
+  router.post(`${base}/upload`, teamAdmin, receiveFile, async (req: AuthRequest, res: Response) => {
     try {
       const { teamId } = req.params;
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file provided' });
-      }
+      const file = (req as AuthRequest & { file?: Express.Multer.File }).file;
+      if (!file) return res.status(400).json({ error: 'No file provided' });
 
-      const userId = req.user?.user_id;
-      if (!userId) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
-
-      // Delete existing matrix for this team
-      const existingResult = await query(
-        'SELECT file_path FROM escalation_matrices WHERE team_id = $1',
-        [teamId]
-      );
-      if (existingResult.rows.length > 0) {
-        try {
-          await fs.unlink(existingResult.rows[0].file_path);
-        } catch (e) {
-          console.error('Failed to delete old escalation matrix file:', e);
-        }
-      }
-
-      // Save new matrix reference
+      const previous = await query(`SELECT file_path FROM ${matrix.table} WHERE team_id = $1`, [teamId]);
       const result = await query(
-        `INSERT INTO escalation_matrices (team_id, file_name, file_type, file_size, file_path, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO ${matrix.table} (team_id, file_name, file_type, file_size, file_data, file_path, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, NULL, $6)
          ON CONFLICT (team_id) DO UPDATE SET
-           file_name = $2, file_type = $3, file_size = $4, file_path = $5, updated_at = CURRENT_TIMESTAMP
-         RETURNING *`,
-        [
-          teamId,
-          req.file.originalname,
-          req.file.mimetype,
-          req.file.size,
-          req.file.path,
-          userId,
-        ]
+           file_name = $2, file_type = $3, file_size = $4, file_data = $5, file_path = NULL,
+           uploaded_by = $6, updated_at = CURRENT_TIMESTAMP
+         RETURNING ${MATRIX_COLUMNS}`,
+        [teamId, file.originalname, file.mimetype, file.size, file.buffer, req.user?.user_id]
       );
-
+      await removeLegacyFile(previous.rows[0]?.file_path);
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Error uploading escalation matrix:', error);
-      res.status(500).json({ error: 'Failed to upload escalation matrix' });
+      console.error(`Error uploading ${matrix.label}:`, error);
+      res.status(500).json({ error: `Failed to upload ${matrix.label}` });
     }
-  }
-);
+  });
 
-// Get escalation matrix (with auto-initialize defaults)
-router.get('/teams/:teamId/escalation-matrix', teamMember, async (req: AuthRequest, res) => {
-  try {
-    const { teamId } = req.params;
-    const userId = req.user?.user_id;
-
-    let result = await query('SELECT * FROM escalation_matrices WHERE team_id = $1', [teamId]);
-
-    if (result.rows.length === 0) {
-      // Initialize defaults if not present
-      if (userId) {
-        await initializeDefaultMatrices(teamId, userId);
-        result = await query('SELECT * FROM escalation_matrices WHERE team_id = $1', [teamId]);
+  router.get(base, teamMember, async (req: AuthRequest, res: Response) => {
+    try {
+      const { teamId } = req.params;
+      const select = () => query(`SELECT ${MATRIX_COLUMNS} FROM ${matrix.table} WHERE team_id = $1`, [teamId]);
+      let result = await select();
+      if (result.rows.length === 0 && req.user?.user_id) {
+        await ensureDefaultMatrix(kind, teamId, req.user.user_id);
+        result = await select();
       }
+      if (result.rows.length === 0) return res.status(404).json({ error: `No ${matrix.label} available` });
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error(`Error fetching ${matrix.label}:`, error);
+      res.status(500).json({ error: `Failed to fetch ${matrix.label}` });
     }
+  });
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'No escalation matrix available' });
-    }
+  router.get(`${base}/download`, teamMember, async (req: AuthRequest, res: Response) => {
+    try {
+      const { teamId } = req.params;
+      const result = await query(`SELECT file_name, file_type, file_data, file_path FROM ${matrix.table} WHERE team_id = $1`, [teamId]);
+      const row = result.rows[0];
+      if (!row) return res.status(404).json({ error: `No ${matrix.label} found` });
 
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching escalation matrix:', error);
-    res.status(500).json({ error: 'Failed to fetch escalation matrix' });
-  }
-});
-
-// Download escalation matrix file
-router.get('/teams/:teamId/escalation-matrix/download', teamMember, async (req: AuthRequest, res) => {
-  try {
-    const { teamId } = req.params;
-    const result = await query('SELECT * FROM escalation_matrices WHERE team_id = $1', [teamId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'No escalation matrix found' });
-    }
-
-    const matrix = result.rows[0];
-    res.download(matrix.file_path, matrix.file_name);
-  } catch (error) {
-    console.error('Error downloading escalation matrix:', error);
-    res.status(500).json({ error: 'Failed to download escalation matrix' });
-  }
-});
-
-// Delete escalation matrix
-router.delete('/teams/:teamId/escalation-matrix', teamAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { teamId } = req.params;
-
-    const result = await query(
-      'DELETE FROM escalation_matrices WHERE team_id = $1 RETURNING file_path',
-      [teamId]
-    );
-
-    if (result.rows.length > 0) {
-      try {
-        await fs.unlink(result.rows[0].file_path);
-      } catch (e) {
-        console.error('Failed to delete file:', e);
+      let data: Buffer | null = row.file_data;
+      if (!data && row.file_path) data = await fs.readFile(row.file_path).catch(() => null);
+      if (!data && row.file_name === matrix.defaultName) data = Buffer.from(matrix.svg());
+      if (!data) return res.status(404).json({ error: 'This file is no longer stored on the server. Upload it again.' });
+      if (!row.file_data) {
+        await query(`UPDATE ${matrix.table} SET file_data = $1, file_size = $2, file_path = NULL WHERE team_id = $3`, [data, data.length, teamId]);
+        await removeLegacyFile(row.file_path);
       }
-    }
 
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting escalation matrix:', error);
-    res.status(500).json({ error: 'Failed to delete escalation matrix' });
-  }
-});
+      res.attachment(row.file_name);
+      res.type(row.file_type);
+      res.send(data);
+    } catch (error) {
+      console.error(`Error downloading ${matrix.label}:`, error);
+      res.status(500).json({ error: `Failed to download ${matrix.label}` });
+    }
+  });
+
+  router.delete(base, teamAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const result = await query(`DELETE FROM ${matrix.table} WHERE team_id = $1 RETURNING file_path`, [req.params.teamId]);
+      await removeLegacyFile(result.rows[0]?.file_path);
+      res.json({ success: true });
+    } catch (error) {
+      console.error(`Error deleting ${matrix.label}:`, error);
+      res.status(500).json({ error: `Failed to delete ${matrix.label}` });
+    }
+  });
+}
+
+addMatrixRoutes('escalation');
 
 // Add escalation channel (map tier to user/team)
 router.post('/teams/:teamId/escalation-channels', teamAdmin, async (req: AuthRequest, res) => {
@@ -565,166 +501,6 @@ This ticket has been escalated and requires immediate attention.
   }
 });
 
-// Configure multer for SLA matrix uploads
-const slaUploadsDir = path.join(process.cwd(), 'uploads', 'sla-matrices');
-
-const slaUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req: Request, _file, cb: (error: Error | null, destination: string) => void) => {
-      fs.mkdir(slaUploadsDir, { recursive: true })
-        .then(() => cb(null, slaUploadsDir))
-        .catch(err => cb(err, slaUploadsDir));
-    },
-    filename: (_req: Request, file, cb: (error: Error | null, filename: string) => void) => {
-      const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
-      const ext = path.extname(file.originalname);
-      const name = path.basename(file.originalname, ext);
-      cb(null, `${name}-${uniqueSuffix}${ext}`);
-    },
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
-  fileFilter: (_req: Request, file, cb: FileFilterCallback) => {
-    const allowedMimes = [
-      'image/png',
-      'image/jpeg',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-    ];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`File type not allowed: ${file.mimetype}`));
-    }
-  },
-});
-
-// Upload SLA matrix
-router.post(
-  '/teams/:teamId/sla-matrix/upload',
-  teamAdmin,
-  slaUpload.single('file'),
-  async (req: AuthRequest & { file?: any }, res) => {
-    try {
-      const { teamId } = req.params;
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file provided' });
-      }
-
-      const userId = req.user?.user_id;
-      if (!userId) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
-
-      // Delete existing matrix for this team
-      const existingResult = await query(
-        'SELECT file_path FROM sla_matrices WHERE team_id = $1',
-        [teamId]
-      );
-      if (existingResult.rows.length > 0) {
-        try {
-          await fs.unlink(existingResult.rows[0].file_path);
-        } catch (e) {
-          console.error('Failed to delete old SLA matrix file:', e);
-        }
-      }
-
-      // Save new matrix reference
-      const result = await query(
-        `INSERT INTO sla_matrices (team_id, file_name, file_type, file_size, file_path, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (team_id) DO UPDATE SET
-           file_name = $2, file_type = $3, file_size = $4, file_path = $5, updated_at = CURRENT_TIMESTAMP
-         RETURNING *`,
-        [
-          teamId,
-          req.file.originalname,
-          req.file.mimetype,
-          req.file.size,
-          req.file.path,
-          userId,
-        ]
-      );
-
-      res.json(result.rows[0]);
-    } catch (error) {
-      console.error('Error uploading SLA matrix:', error);
-      res.status(500).json({ error: 'Failed to upload SLA matrix' });
-    }
-  }
-);
-
-// Get SLA matrix (with auto-initialize defaults)
-router.get('/teams/:teamId/sla-matrix', teamMember, async (req: AuthRequest, res) => {
-  try {
-    const { teamId } = req.params;
-    const userId = req.user?.user_id;
-
-    let result = await query('SELECT * FROM sla_matrices WHERE team_id = $1', [teamId]);
-
-    if (result.rows.length === 0) {
-      // Initialize defaults if not present
-      if (userId) {
-        await initializeDefaultMatrices(teamId, userId);
-        result = await query('SELECT * FROM sla_matrices WHERE team_id = $1', [teamId]);
-      }
-    }
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'No SLA matrix available' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching SLA matrix:', error);
-    res.status(500).json({ error: 'Failed to fetch SLA matrix' });
-  }
-});
-
-// Download SLA matrix file
-router.get('/teams/:teamId/sla-matrix/download', teamMember, async (req: AuthRequest, res) => {
-  try {
-    const { teamId } = req.params;
-    const result = await query('SELECT * FROM sla_matrices WHERE team_id = $1', [teamId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'No SLA matrix found' });
-    }
-
-    const matrix = result.rows[0];
-    res.download(matrix.file_path, matrix.file_name);
-  } catch (error) {
-    console.error('Error downloading SLA matrix:', error);
-    res.status(500).json({ error: 'Failed to download SLA matrix' });
-  }
-});
-
-// Delete SLA matrix
-router.delete('/teams/:teamId/sla-matrix', teamAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { teamId } = req.params;
-
-    const result = await query(
-      'DELETE FROM sla_matrices WHERE team_id = $1 RETURNING file_path',
-      [teamId]
-    );
-
-    if (result.rows.length > 0) {
-      try {
-        await fs.unlink(result.rows[0].file_path);
-      } catch (e) {
-        console.error('Failed to delete file:', e);
-      }
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting SLA matrix:', error);
-    res.status(500).json({ error: 'Failed to delete SLA matrix' });
-  }
-});
+addMatrixRoutes('sla');
 
 export default router;
