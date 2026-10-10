@@ -3,62 +3,58 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Tests](https://github.com/yuki-kat/it-ticket-board/actions/workflows/tests.yml/badge.svg)](https://github.com/yuki-kat/it-ticket-board/actions)
 
-A **lightweight, single-file IT service desk board** for managing tickets, assets, and operations. No install, no server—just open it in your browser.
+An **IT service desk board** for tickets, SLAs, escalation and asset inventory. It runs two ways:
+
+- **As one file, offline.** Double-click `index.html`. No install, no server, and your data stays in your browser.
+- **Hosted, with accounts.** The hosted site adds sign-in, shared team escalation settings and AI-suggested fixes, backed by a small Node + Postgres server.
 
 ## ✨ Features
 
-- **📋 Multiple ticket views** — Kanban board, list view, split view, calendar, analytics, and more
-- **🏠 Operations dashboard** — Home screen with KPI cards, insights, and queue management
-- **📦 Asset & stock inventory** — Track devices with health monitoring and supply levels
-- **🚨 Escalation matrix** — Built-in SLA reference and escalation workflow guidance
-- **📧 Email-to-ticket import** — Draft tickets directly from email text
-- **📊 Reports & exports** — CSV, Excel, and custom data analysis
-- **🔍 Global search** — Find tickets across all statuses with advanced filtering
-- **👥 Workspaces** — Team collaboration with role-based access (optional with Supabase)
-- **💾 Backup & restore** — Download all data as JSON, restore anytime
-- **🌐 Works offline** — Everything functions without internet (local storage mode)
+- **📋 Ticket views**: Kanban, list, split, calendar, analytics and more, with saved views, tabs and a State dropdown on every ticket
+- **⏱️ Live SLA timers**: count down to the second and show overdue time. Pausing and resuming is logged to the work notes. The clock pauses automatically while a ticket is *Waiting on User* and stops at *Resolved*, following the same pattern as ServiceNow's "On Hold – Awaiting Caller"
+- **🤖 Find resolution**: AI-suggested fixes from Google Gemini (hosted site, after signing in)
+- **📞 Call user**: start a Teams, Zoom or Webex call from a ticket and log how it went to the work notes
+- **🏠 Operations dashboard**: KPI cards, insights, and an Explore page for drilling into queues
+- **🚨 Escalation**: teams with admin and member roles, assignment groups, escalation rules, time thresholds per priority, and uploaded reference documents (escalation and SLA matrices)
+- **📦 Asset & stock inventory**: assign and return devices, track history, device health and stock levels, and link assets to tickets
+- **📧 Email-to-ticket**: draft a ticket from pasted email text
+- **📊 Exports**: CSV and two-sheet Excel workbooks
+- **👥 Workspaces & sync**: share one board across a team (Supabase)
+- **💾 Backup & restore**: download everything as JSON and restore it later
+- **🌐 Works offline**: the single file needs no internet
 
-## 🚀 Quick Start
+## 🚀 Quick start
 
-### Local Use (Offline)
+### Offline, on your own computer
 
-1. Download or clone this repo
-2. Double-click **`index.html`**
-3. That's it. Your data stays in your browser.
+1. Download or clone this repo.
+2. Double-click **`index.html`**.
 
-**Note:** Open `index.html` from the file system, not a web server, for full offline functionality.
+Open it from the file system rather than a local web server. Saved data belongs to that file: a copy with a different name or location starts fresh. To keep your data, save a new version over the old file, or use **Settings → Backup and restore**.
 
-### Team Collaboration (With Database)
+### Hosted
 
-For multiple team members sharing tickets and assets:
-
-1. Follow the [Database Setup](#database-and-workspaces-supabase) section below
-2. Deploy to Vercel (or any host)
-3. Team members sign in and join your workspace
+Open **https://it-ticket-board-frontend.onrender.com** and sign in (see [Accounts and admins](#accounts-and-admins)). The backend runs on Render's free plan, which sleeps after 15 minutes without traffic, so the first request after a quiet spell can take about a minute.
 
 ---
 
-## 📌 Key Highlights
-
-- **Your data stays with you** — Local storage by default. No cloud required.
-- **Zero dependencies** — No install, no build step. Just open the file.
-- **Modern browser** — Works on Chrome, Firefox, Safari, Edge (2023+)
-- **Keyboard shortcuts** — `Esc` closes dialogs, `Ctrl+Shift+D` opens debug log
-- **Mobile responsive** — Adapts to phone, tablet, and desktop screens
-
 ## How it is put together
 
-- **`app/`** is the source: React + TypeScript, built with Vite. This is where every change is made.
-- **`index.html`** is **built from `app/`** into one self-contained file. Do not edit it by hand; it says so at the top. Since 26 Sep 2026 it is no longer a compiled bundle with add-on scripts, which is what used to cause stacked, hard-to-find bugs.
-- **`tests/`** are browser tests that open `index.html` exactly as it ships.
-- **`legacy/`** holds a copy of the old compiled page, so you can compare the two. Delete it once you are happy with the new one.
+| Folder | What it holds |
+| --- | --- |
+| `app/` | The front end: React + TypeScript, built with Vite. Every UI change is made here. |
+| `index.html` | **Built from `app/`** into one self-contained file (`cd app && npm run build:page`). Don't edit it by hand. |
+| `server/` | The backend: Express + Postgres. Handles sign-in, teams, escalation settings, document uploads and the Gemini proxy. |
+| `tests/` | Playwright browser tests that open `index.html` exactly as it ships. |
+| `supabase/` | SQL for workspaces and sync. |
+| `legacy/` | The old compiled page, kept for comparison. |
 
 ## Making changes
 
-You need Node.js (version 22) and, for the tests, Google Chrome.
+You need Node.js 22, and Google Chrome for the tests.
 
-1. Create a branch (for example `fix-insight-popup`).
-2. Edit the source in `app/src/`. To try it while you work: `cd app && npm ci && npm run dev`.
+1. Create a branch (for example `fix-insight-popup`). Never commit straight to `main`, because every merge into `main` goes live.
+2. Edit the source in `app/src/` (and `server/src/` for the backend). To try the front end while you work: `cd app && npm ci && npm run dev`.
 3. Rebuild the page and run the tests:
 
    ```bash
@@ -66,78 +62,109 @@ You need Node.js (version 22) and, for the tests, Google Chrome.
    cd ../tests && npm ci && npm test
    ```
 
-4. Commit **both** the source and the rebuilt `index.html`, push, and open a pull request. GitHub rebuilds the page from the source and **fails the pull request if `index.html` is out of date**, so a forgotten rebuild can't slip through.
-5. Merge into `main` once the **Browser tests** check is green. `main` always holds a working version.
+4. Commit **both** the source and the rebuilt `index.html`, push, and open a pull request. GitHub rebuilds the page and **fails the pull request if `index.html` is out of date**.
+5. Merge once the **Browser tests** check is green.
 
-## Hosting (Vercel)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
 
-The app is hosted on Vercel, connected to this repo (Vercel project **app**, root directory `app/`). Vercel builds the React source itself, so only the built app goes online; the tests, `legacy/` and `supabase/` never do. Every merge into `main` updates the live site, and every pull request gets its own preview address, linked in a comment on the pull request.
+### Running the backend locally
 
-- **Login protection:** Vercel's deployment protection is on, so only people signed in to the Vercel account can open the site. Keep it on until the app is ready for customers.
-- **Security headers:** `app/vercel.json` turns off framing and MIME sniffing, sets a strict referrer policy, and blocks camera, microphone and location.
-- **Sign-in** (Settings → Account) only works on the hosted site, not on a double-clicked `index.html`, because the sign-in email has to link back to a web address.
+```bash
+cd server
+npm ci
+cp .env.example .env      # then set DATABASE_URL, JWT_SECRET and GEMINI_API_KEY
+npm run migrate           # creates or updates the tables; safe to run again
+npm run dev               # http://localhost:3001
+```
 
-**One-time setup for sign-in:**
+## Hosting (Render)
 
-1. In Vercel, open project **app** → **Domains** and note the production address.
-2. In Supabase: Authentication → URL Configuration. Set **Site URL** to that address and add it under **Redirect URLs**. To sign in on pull request previews too, also add `https://app-git-*-yuki-0306.vercel.app/**`.
-3. Optional, until you're ready for other people: in Supabase, turn off **Allow new users to sign up**, so only accounts that already exist can sign in (you can invite people from the Supabase dashboard).
+`render.yaml` defines everything, and Render deploys it whenever `main` changes:
+
+- **it-ticket-board-backend**: the Node server. Every start runs `npm run migrate` first. If a deploy fails, the previous version keeps running.
+- **it-ticket-board-frontend**: the built React app as a static site, with security headers that block framing and MIME sniffing, set a strict referrer policy, and turn off camera, microphone and location.
+- **postgres**: Postgres 16.
+
+The site is public, and anyone can create an account.
+
+**Environment variables to set in the Render dashboard** (backend service → Environment):
+
+| Variable | Why |
+| --- | --- |
+| `JWT_SECRET` | **Required.** Signs sign-in tokens. If it's missing, the server falls back to a development value that is visible in this public repo, which would let anyone forge a sign-in. Use a long random string. |
+| `GEMINI_API_KEY` | Needed for **Find resolution**. Get one from Google AI Studio. |
+| `GEMINI_MODELS` | Optional. A comma-separated list of models to try in order. See `server/.env.example` for the defaults. |
+
+## Accounts and admins
+
+There are two separate sign-ins, for different features:
+
+- **Tools → Sign in** (email and password, handled by this repo's server). Needed for **Find resolution** and the **Escalation** page.
+- **Settings → Account** (an email link, handled by Supabase). Needed for **workspaces and sync**.
+
+Roles on the Escalation page:
+
+- **Team admin.** Whoever creates a team is its admin. Admins add people by email (they must have signed up first), change roles, and edit groups, rules, thresholds and documents. Members get a read-only view. A team always keeps at least one admin.
+- **System admin.** Can manage every team. Set it in the database: `UPDATE users SET is_system_admin = TRUE WHERE lower(email) = lower('you@example.com');`
+
+### Test admin accounts
+
+`server/scripts/seed-admins.ts` creates two system-admin accounts. They are ordinary accounts with properly hashed passwords, not a way around sign-in. No credentials are stored in the repo: set them through environment variables, or leave the passwords unset and the script generates them and prints them once.
+
+```bash
+cd server
+DATABASE_URL='postgres://…' npx tsx scripts/seed-admins.ts
+```
+
+Optional variables: `SEED_ADMIN1_EMAIL`, `SEED_ADMIN1_PASSWORD` and `SEED_ADMIN1_NAME`, and the same for `SEED_ADMIN2`. The defaults are `admin1@test.local` and `admin2@test.local`. Running it again resets the passwords. Change or remove these accounts before real use.
 
 ## Database and workspaces (Supabase)
 
-The database is set up by two files in `supabase/`. Run each once, in order, in Supabase: **SQL Editor → New query → paste the file → Run**. Both are safe to run again.
+Workspaces and sync use Supabase, set up by two files in `supabase/`. Run each once, in order, in Supabase: **SQL Editor → New query → paste the file → Run**. Both are safe to run again.
 
 1. `schema.sql`: the tables for tickets, deleted tickets, assets, stock and personal settings.
-2. `002_workspaces.sql`: **company workspaces**. Tickets, assets and stock belong to a workspace (a company or IT team) instead of one person, so several IT staff can share them. Existing data is kept: anyone who already has data gets a workspace called "My workspace", as its admin.
+2. `002_workspaces.sql`: **company workspaces**. Tickets, assets and stock belong to a workspace instead of one person, so several IT staff can share them. Existing data is kept.
 
-Roles: an **admin** can invite people, change roles and remove members; an **agent** can work with the workspace's tickets, assets and stock. A workspace always keeps at least one admin. Access is enforced by the database's row level security, not by the app, so a member can never see another workspace's data.
+For the email-link sign-in to return to the hosted site, open Supabase → Authentication → URL Configuration, set **Site URL** to `https://it-ticket-board-frontend.onrender.com`, and add it under **Redirect URLs**.
 
-In the app, **Settings → Account** shows your workspace, your role and the team. Admins invite colleagues by email; they join automatically the first time they sign in with that email. Someone signing in with no workspace and no invite gets their own workspace. Screen pattern, Home layout and saved views stay personal.
+Workspace roles: an **admin** can invite people, change roles and remove members; an **agent** can work with the workspace's tickets, assets and stock. Access is enforced by the database's row level security, not by the app, so a member never sees another workspace's data.
 
 ## Sync
 
-**Settings → Account → Sync** keeps the board in the workspace's database, so everyone in the workspace works from the same tickets, deleted tickets, assets and stock. It needs sign-in (so the hosted site) and `002_workspaces.sql`. Settings stay personal and are not synced.
-
-How it starts depends on what the workspace already has:
-
-- **An empty workspace:** **Copy this board into …** sends everything in this browser, or **Start with an empty board**.
-- **A workspace with a board:** **Use …'s board** shows that board here instead of what is here now.
-
-Either way, what the browser had is kept first: **Backup and restore → Put it back** returns to it, and stops syncing.
-
-While syncing:
+**Settings → Account → Sync** keeps the board in the workspace's database, so everyone in the workspace works from the same tickets, deleted tickets, assets and stock. Settings stay personal.
 
 - A change is sent about a second after it is made. The top bar shows **Saving…**, then **Saved to** the workspace.
-- The workspace is read every 30 seconds while the page is visible, and whenever the window gets focus or the connection comes back, so colleagues' changes arrive. **Sync now** in Settings does both straight away.
-- With no connection, changes wait in the browser, also over a reload or restart, and are sent when the connection is back. The top bar says **Offline, changes kept here**.
-- Two people changing the same ticket: the change sent last wins, for the whole ticket (not field by field). A ticket changed here that someone else deleted is kept and sent again.
-- Syncing stops, and the board in the browser stays as it is, when you stop it in Settings, sign out, restore a backup or put the previous data back, or are removed from the workspace.
+- The workspace is read every 30 seconds while the page is visible, and whenever the window gets focus or the connection comes back. **Sync now** in Settings does both straight away.
+- With no connection, changes wait in the browser (also across a reload) and are sent when the connection is back.
+- If two people change the same ticket, the change sent last wins for the whole ticket.
+- Before sync starts, what the browser had is kept: **Backup and restore → Put it back** returns to it and stops syncing.
 
-How it works: the browser remembers a fingerprint of each record as the database last had it (under `it-ticket-kanban-sync-v1`, which is not part of backups). Comparing against it shows what changed here since, and what changed in the database. The rules are in `app/src/syncLogic.ts` (tested in `tests/sync-logic.spec.ts`); sending and reading are in `app/src/cloudSync.ts` (tested in `tests/sync.spec.ts`).
+The rules are in `app/src/syncLogic.ts`, and sending and reading in `app/src/cloudSync.ts`.
+
+SLA pause state is kept in each browser and is not synced yet.
 
 ## Backup and restore
 
-**Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from such a file. Restoring shows what is in the file next to what is in the browser, checks the file first (a bad file changes nothing), replaces the tickets, assets, stock and settings, and keeps the replaced data under one key so the last restore can be undone with **Put it back**. In a browser that syncs with a workspace, restoring or putting data back stops syncing first, so the workspace is not changed.
+**Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from one. Restoring compares the file with what's in the browser and checks the file first, so a bad file changes nothing. It keeps the replaced data, so the last restore can be undone with **Put it back**.
 
-File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets, deletedTickets, assets, stock }, settings }`. `records` are the plain lists, ready to import into a database later; `settings` are the remaining saved preferences as text. The code is in `app/src/backup.ts`.
+File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets, deletedTickets, assets, stock }, settings }`. The code is in `app/src/backup.ts`.
 
 ## What is in the source
 
-- **Home** (`HomePopouts.tsx`, `HomeInsights.tsx`): the Ticket overview and Needs attention cards and their popups, and the Operations insights: eight cards, their Settings switches, a detail popup for each, and "Arrange card" with its saved order.
-- **Explore tickets** (`ExplorePage.tsx`): its own page, opened from Home. Choose a queue, pick a ticket, see its summary; side by side on a wide screen, one step at a time on a phone.
-- **Page addresses** (`route.ts`): each page has its own address after the `#` (`#/home`, `#/tickets`, `#/inventory`, `#/explore/priority/OPS-101`), so Back and Forward move between pages and a refresh or bookmark opens the same page. It is still one file.
-- **Tickets** (`App.tsx`): the list, split, Kanban and other views, the "All Views" picker (`ViewPicker.tsx`), saved views, tabs, and exports (CSV and Excel).
-- **Inventory** (`InventoryPage.tsx`): assets and stock, device health with a demo "Sync from Action1", and exports.
-- **Around the edges:** `Overlay.tsx` (the round × in the corner and Escape to close every dialog, top one first), `QuickPageNav.tsx` (the previous/next page arrows), `screenPattern.ts` (background patterns), `debug.ts` and `DebugPanel.tsx` (the debug log).
-
-Saved data uses the same storage keys as the old page, so nothing is lost when moving between them.
+- **Tickets** (`pages/App.tsx`): views, saved views, tabs, the ticket record panel (State dropdown, Find resolution, Call user), and exports.
+- **SLA timers** (`components/CompactSLATimer.tsx`, `utils/slaPause.ts`): the per-second countdown, pause and resume, and automatic pausing by status.
+- **Escalation** (`pages/EscalationPage.tsx`, `components/TeamMembers.tsx`, `AssignmentGroupManager.tsx`, `EscalationMatrixBuilder.tsx`, `ThresholdsManager.tsx`, `MatrixUploadManager.tsx`): teams, members, groups, rules, thresholds and documents.
+- **Home and Explore** (`HomePopouts.tsx`, `HomeInsights.tsx`, `ExplorePage.tsx`): dashboard cards, insights and queue drill-down.
+- **Inventory** (`pages/InventoryPage.tsx`, `InventoryView.tsx`): assets and stock.
+- **Page addresses** (`lib/route.ts`): `#/home`, `#/tickets`, `#/inventory`, `#/search`, `#/explore/…`, `#/escalation` and `#/signin`. Back, Forward, refresh and bookmarks all work.
+- **Backend** (`server/src/api/`): `auth`, `teams`, `escalation-matrix` (uploads are stored in Postgres, up to 10 MB each), `escalation-advanced` (groups, rules, thresholds), and the Gemini proxy (`utils/gemini.ts`, which falls back across models and retries rate limits).
 
 ## Automated tests
 
-The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: the Home totals and their queues, every popup (opening, the four ways of closing, keyboard use, focus), the Explore tickets page and the page addresses (Back, Forward, refresh), the Operations insights and arranging (including saved order), Home settings, opening a ticket, Inventory device health, every export (the downloaded files are checked, including the two-sheet Excel workbook), the extras around the edges, the debug log, backups, sign-in, workspaces and sync. Each test starts with a fresh browser profile, so nothing depends on your saved tickets. The sign-in, workspace and sync tests talk to a stand-in for Supabase (`tests/fake-supabase.ts`), so they need no account and no network.
+The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: Home and Explore, every popup, page addresses, insights, opening tickets, SLA pause and resume, the State dropdown, Find resolution, team pages and thresholds, Inventory, every export, backups, sign-in, workspaces and sync. Each test starts with a fresh browser profile. Tests that need a server talk to stand-ins (`tests/fake-supabase.ts` and per-test fake backends), so they need no account and no network.
 
 ```bash
 cd tests && npm ci && npm test
 ```
 
-`npm run test:headed` shows the browser while it runs. GitHub runs the same tests on every pull request and on `main`; the result shows on the pull request as **Browser tests**. If a run fails, open it on the Actions tab and download the `playwright-report` file.
+`npm run test:headed` shows the browser while it runs. GitHub runs the same tests on every pull request and on `main`; the result shows as **Browser tests**. If a run fails, open it on the Actions tab and download the `playwright-report` file.
