@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { apiFetch, responseError } from '../api/base'
 import { Plus, Trash2, Edit2, Mail, MessageSquare, Phone } from 'lucide-react'
 
 interface AssignmentGroup {
@@ -25,6 +26,7 @@ interface AssignmentGroupManagerProps {
   onGroupUpdate?: (id: string, data: Omit<AssignmentGroup, 'id' | 'member_count' | 'on_call_count'>) => Promise<void>
   onGroupDelete?: (id: string) => Promise<void>
   onGroupsRefresh?: () => Promise<void>
+  canEdit?: boolean
 }
 
 const TIMEZONES = [
@@ -57,6 +59,7 @@ export default function AssignmentGroupManager({
   onGroupUpdate,
   onGroupDelete,
   onGroupsRefresh,
+  canEdit = true,
 }: AssignmentGroupManagerProps) {
   // Use props if provided, otherwise use internal state
   const usePropsMode = propsGroups !== undefined
@@ -93,10 +96,10 @@ export default function AssignmentGroupManager({
     }
     try {
       setLocalLoading(true)
-      const response = await fetch(`/api/teams/${teamId}/assignment-groups`, {
+      const response = await apiFetch(`/teams/${teamId}/assignment-groups`, {
         headers: { 'Content-Type': 'application/json' },
       })
-      if (!response.ok) throw new Error(await response.text())
+      if (!response.ok) throw new Error(await responseError(response))
       const data = await response.json()
       setLocalGroups(Array.isArray(data) ? data : [])
     } catch (err) {
@@ -119,16 +122,16 @@ export default function AssignmentGroupManager({
       } else {
         const method = editingId ? 'PUT' : 'POST'
         const url = editingId
-          ? `/api/teams/${teamId}/assignment-groups/${editingId}`
-          : `/api/teams/${teamId}/assignment-groups`
+          ? `/teams/${teamId}/assignment-groups/${editingId}`
+          : `/teams/${teamId}/assignment-groups`
 
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(form),
         })
 
-        if (!response.ok) throw new Error(await response.text())
+        if (!response.ok) throw new Error(await responseError(response))
       }
 
       setForm({
@@ -156,10 +159,10 @@ export default function AssignmentGroupManager({
       if (usePropsMode && onGroupDelete) {
         await onGroupDelete(id)
       } else {
-        const response = await fetch(`/api/teams/${teamId}/assignment-groups/${id}`, {
+        const response = await apiFetch(`/teams/${teamId}/assignment-groups/${id}`, {
           method: 'DELETE',
         })
-        if (!response.ok) throw new Error(await response.text())
+        if (!response.ok) throw new Error(await responseError(response))
       }
       await loadGroups()
     } catch (err) {
@@ -200,6 +203,7 @@ export default function AssignmentGroupManager({
         <>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold text-gray-900">Assignment Groups</h2>
+            {canEdit && (
             <button
               onClick={() => {
                 setShowForm(true)
@@ -210,6 +214,7 @@ export default function AssignmentGroupManager({
               <Plus size={16} />
               New Group
             </button>
+            )}
           </div>
 
           {loading ? (
@@ -235,20 +240,24 @@ export default function AssignmentGroupManager({
                         {group.on_call_count > 0 && <span className="font-semibold">On-call: {group.on_call_count}</span>}
                       </div>
                     </div>
+                    {canEdit && (
                     <div className="flex gap-2 ml-4">
                       <button
+                        aria-label={`Edit ${group.name}`}
                         onClick={() => handleEdit(group)}
                         className="p-2 hover:bg-gray-200 rounded"
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
+                        aria-label={`Delete ${group.name}`}
                         onClick={() => handleDelete(group.id)}
                         className="p-2 hover:bg-red-100 text-red-600 rounded"
                       >
                         <Trash2 size={16} />
                       </button>
                     </div>
+                    )}
                   </div>
                 </div>
               ))}

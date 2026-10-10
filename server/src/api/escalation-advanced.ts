@@ -7,7 +7,7 @@ import {
   getEscalationHistoryWithAccess,
   rejectEscalationHistoryModification,
 } from '../utils/escalation-access-control.js';
-import { requireTeamRole } from '../utils/team-access.js';
+import { isUuid, requireTeamRole } from '../utils/team-access.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -195,6 +195,22 @@ router.put('/teams/:teamId/assignment-groups/:groupId', teamAdmin, async (req: A
   }
 });
 
+router.delete('/teams/:teamId/assignment-groups/:groupId', teamAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { teamId, groupId } = req.params;
+    if (!isUuid(groupId)) return res.status(404).json({ error: 'Assignment group not found' });
+    const result = await query('DELETE FROM assignment_groups WHERE id = $1 AND team_id = $2 RETURNING id', [groupId, teamId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Assignment group not found' });
+    res.json({ success: true });
+  } catch (error) {
+    if ((error as { code?: string }).code === '23503') {
+      return res.status(409).json({ error: 'This group is used by escalation rules or tickets. Change those first.' });
+    }
+    console.error('Error deleting assignment group:', error);
+    res.status(500).json({ error: 'Failed to delete assignment group' });
+  }
+});
+
 // ============ ESCALATION MATRIX RULES ============
 
 // Create escalation matrix rule (ticket type × priority × tier → group)
@@ -275,6 +291,59 @@ router.get('/teams/:teamId/escalation-rules', teamMember, async (req: AuthReques
   } catch (error) {
     console.error('Error fetching escalation rules:', error);
     res.status(500).json({ error: 'Failed to fetch escalation rules' });
+  }
+});
+
+router.put('/teams/:teamId/escalation-rules/:ruleId', teamAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { teamId, ruleId } = req.params;
+    if (!isUuid(ruleId)) return res.status(404).json({ error: 'Escalation rule not found' });
+    const {
+      ticket_type, priority, escalation_tier, assignment_group_id, escalation_method,
+      escalate_after_hours, escalate_on_sla_breach, notify_channels, is_final_escalation,
+    } = req.body;
+    if (assignment_group_id !== undefined) {
+      const group = await query('SELECT 1 FROM assignment_groups WHERE id = $1 AND team_id = $2', [assignment_group_id, teamId]);
+      if (!isUuid(assignment_group_id) || group.rows.length === 0) return res.status(400).json({ error: 'Assignment group not found in this team' });
+    }
+    const result = await query(
+      `UPDATE escalation_matrix_rules
+       SET ticket_type = COALESCE($1, ticket_type),
+           priority = COALESCE($2, priority),
+           escalation_tier = COALESCE($3, escalation_tier),
+           assignment_group_id = COALESCE($4, assignment_group_id),
+           escalation_method = COALESCE($5, escalation_method),
+           escalate_after_hours = $6,
+           escalate_on_sla_breach = COALESCE($7, escalate_on_sla_breach),
+           notify_channels = COALESCE($8, notify_channels),
+           is_final_escalation = COALESCE($9, is_final_escalation),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10 AND team_id = $11
+       RETURNING *`,
+      [ticket_type, priority, escalation_tier, assignment_group_id, escalation_method,
+       escalate_after_hours ?? null, escalate_on_sla_breach, notify_channels, is_final_escalation, ruleId, teamId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Escalation rule not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') {
+      return res.status(409).json({ error: 'A rule for this ticket type, priority and tier already exists' });
+    }
+    console.error('Error updating escalation rule:', error);
+    res.status(500).json({ error: 'Failed to update escalation rule' });
+  }
+});
+
+router.delete('/teams/:teamId/escalation-rules/:ruleId', teamAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { teamId, ruleId } = req.params;
+    if (!isUuid(ruleId)) return res.status(404).json({ error: 'Escalation rule not found' });
+    const result = await query('DELETE FROM escalation_matrix_rules WHERE id = $1 AND team_id = $2 RETURNING id', [ruleId, teamId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Escalation rule not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting escalation rule:', error);
+    res.status(500).json({ error: 'Failed to delete escalation rule' });
   }
 });
 

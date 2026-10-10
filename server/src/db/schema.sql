@@ -51,14 +51,14 @@ CREATE TABLE IF NOT EXISTS tickets (
   status VARCHAR(50) DEFAULT 'open', -- open, in_progress, resolved, closed
   priority VARCHAR(50) DEFAULT 'medium', -- low, medium, high, critical
   assigned_to UUID REFERENCES users(id),
-  assigned_group_id UUID REFERENCES assignment_groups(id), -- assignment group, not individual
+  assigned_group_id UUID, -- assignment group, not individual (foreign key added below, after assignment_groups exists)
   created_by UUID NOT NULL REFERENCES users(id),
-  sla_template_id UUID REFERENCES sla_templates(id),
+  sla_template_id UUID, -- foreign key added below, after sla_templates exists
   first_response_at TIMESTAMP,
   sla_breached BOOLEAN DEFAULT FALSE,
   sla_breached_at TIMESTAMP,
   current_escalation_tier INT DEFAULT 1,
-  current_assignment_group_id UUID REFERENCES assignment_groups(id),
+  current_assignment_group_id UUID, -- foreign key added below
   escalated_to_tier_2_at TIMESTAMP,
   escalated_to_tier_3_at TIMESTAMP,
   last_escalation_check TIMESTAMP, -- last time we checked if auto-escalation is needed
@@ -354,7 +354,8 @@ CREATE INDEX IF NOT EXISTS idx_sla_matrices_team_id ON sla_matrices(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_team_id ON escalation_channels(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_tier ON escalation_channels(team_id, tier);
 
--- Add foreign key constraint for current_assignment_group_id if it doesn't exist
+-- tickets is created before the tables these columns point to, so their foreign keys are added here.
+-- Each is added only when missing, so existing databases (which already have them) are unchanged.
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
@@ -362,5 +363,19 @@ DO $$ BEGIN
   ) THEN
     ALTER TABLE tickets ADD CONSTRAINT tickets_current_assignment_group_id_fkey
       FOREIGN KEY (current_assignment_group_id) REFERENCES assignment_groups(id);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name='tickets' AND constraint_name='tickets_assigned_group_id_fkey'
+  ) THEN
+    ALTER TABLE tickets ADD CONSTRAINT tickets_assigned_group_id_fkey
+      FOREIGN KEY (assigned_group_id) REFERENCES assignment_groups(id);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name='tickets' AND constraint_name='tickets_sla_template_id_fkey'
+  ) THEN
+    ALTER TABLE tickets ADD CONSTRAINT tickets_sla_template_id_fkey
+      FOREIGN KEY (sla_template_id) REFERENCES sla_templates(id);
   END IF;
 END $$;

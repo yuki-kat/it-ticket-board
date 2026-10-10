@@ -192,6 +192,7 @@ function generateDefaultSlaMatrixSvg(): string {
 }
 
 // Initialize default matrices for a team
+// The escalation and SLA pages load together, so two requests can run this at once; ON CONFLICT keeps that safe.
 async function initializeDefaultMatrices(teamId: string, userId: string) {
   try {
     // Check if matrices already exist
@@ -207,7 +208,7 @@ async function initializeDefaultMatrices(teamId: string, userId: string) {
 
       await query(
         `INSERT INTO escalation_matrices (team_id, file_name, file_type, file_size, file_path, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (team_id) DO NOTHING`,
         [teamId, 'Default Escalation Matrix', 'image/svg+xml', escSvg.length, escPath, userId]
       );
     }
@@ -221,7 +222,7 @@ async function initializeDefaultMatrices(teamId: string, userId: string) {
 
       await query(
         `INSERT INTO sla_matrices (team_id, file_name, file_type, file_size, file_path, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (team_id) DO NOTHING`,
         [teamId, 'Default SLA Matrix', 'image/svg+xml', slaSvg.length, slaPath, userId]
       );
     }

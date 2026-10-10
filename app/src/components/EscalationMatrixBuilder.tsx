@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { apiFetch, responseError } from '../api/base'
 import { Plus, Trash2, Edit2 } from 'lucide-react'
 
 interface EscalationRule {
@@ -30,6 +31,7 @@ interface EscalationMatrixBuilderProps {
   onRuleUpdate?: (id: string, data: Omit<EscalationRule, 'id' | 'group_name'>) => Promise<void>
   onRuleDelete?: (id: string) => Promise<void>
   onRulesRefresh?: () => Promise<void>
+  canEdit?: boolean
 }
 
 const TICKET_TYPES = ['incident', 'service_request', 'change', 'problem']
@@ -46,6 +48,7 @@ export default function EscalationMatrixBuilder({
   onRuleUpdate,
   onRuleDelete,
   onRulesRefresh,
+  canEdit = true,
 }: EscalationMatrixBuilderProps) {
   const usePropsMode = propsRules !== undefined
   const [localRules, setLocalRules] = useState<EscalationRule[]>([])
@@ -84,8 +87,8 @@ export default function EscalationMatrixBuilder({
     try {
       setLocalLoading(true)
       const [rulesRes, groupsRes] = await Promise.all([
-        fetch(`/api/teams/${teamId}/escalation-rules`),
-        fetch(`/api/teams/${teamId}/assignment-groups`),
+        apiFetch(`/teams/${teamId}/escalation-rules`),
+        apiFetch(`/teams/${teamId}/assignment-groups`),
       ])
 
       if (!rulesRes.ok) throw new Error(await rulesRes.text())
@@ -128,16 +131,16 @@ export default function EscalationMatrixBuilder({
       } else {
         const method = editingId ? 'PUT' : 'POST'
         const url = editingId
-          ? `/api/teams/${teamId}/escalation-rules/${editingId}`
-          : `/api/teams/${teamId}/escalation-rules`
+          ? `/teams/${teamId}/escalation-rules/${editingId}`
+          : `/teams/${teamId}/escalation-rules`
 
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
 
-        if (!response.ok) throw new Error(await response.text())
+        if (!response.ok) throw new Error(await responseError(response))
       }
 
       setForm({
@@ -165,10 +168,10 @@ export default function EscalationMatrixBuilder({
       if (usePropsMode && onRuleDelete) {
         await onRuleDelete(id)
       } else {
-        const response = await fetch(`/api/teams/${teamId}/escalation-rules/${id}`, {
+        const response = await apiFetch(`/teams/${teamId}/escalation-rules/${id}`, {
           method: 'DELETE',
         })
-        if (!response.ok) throw new Error(await response.text())
+        if (!response.ok) throw new Error(await responseError(response))
       }
       await loadRulesAndGroups()
     } catch (err) {
@@ -212,6 +215,7 @@ export default function EscalationMatrixBuilder({
         <>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold text-gray-900">Escalation Rules</h2>
+            {canEdit && (
             <button
               onClick={() => {
                 setShowForm(true)
@@ -223,6 +227,7 @@ export default function EscalationMatrixBuilder({
               <Plus size={16} />
               New Rule
             </button>
+            )}
           </div>
 
           {groups && groups.length === 0 && (
@@ -265,20 +270,24 @@ export default function EscalationMatrixBuilder({
                                     {rule.is_final_escalation && <span className="font-semibold">FINAL TIER</span>}
                                   </div>
                                 </div>
+                                {canEdit && (
                                 <div className="flex gap-2 ml-4">
                                   <button
+                                    aria-label="Edit rule"
                                     onClick={() => handleEdit(rule)}
                                     className="p-2 hover:bg-gray-200 rounded"
                                   >
                                     <Edit2 size={16} />
                                   </button>
                                   <button
+                                    aria-label="Delete rule"
                                     onClick={() => handleDelete(rule.id)}
                                     className="p-2 hover:bg-red-100 text-red-600 rounded"
                                   >
                                     <Trash2 size={16} />
                                   </button>
                                 </div>
+                                )}
                               </div>
                             </div>
                           ))}
