@@ -8,15 +8,37 @@ An **IT service desk board** for tickets, SLAs, escalation and asset inventory. 
 - **As one file, offline.** Double-click `index.html`. No install, no server, and your data stays in your browser.
 - **Hosted, with accounts.** The hosted site adds sign-in, shared team escalation settings and AI-suggested fixes, backed by a small Node + Postgres server.
 
+**Try it:** download [`index.html`](index.html) and open it, or use the [hosted site](https://it-ticket-board-frontend.onrender.com) (free hosting, so the first visit can take about a minute to wake up). Both start with sample tickets and assets.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/home.png" alt="Home: ticket overview, items needing attention and operations insights"></td>
+    <td><img src="docs/screenshots/tickets.png" alt="Tickets list with priority, state and live resolution SLA timers"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Home</b>: what needs attention right now</td>
+    <td align="center"><b>Tickets</b>: list view with live SLA timers</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/work-notes.png" alt="Work notes popup with escalation details, notes and Copy all"></td>
+    <td><img src="docs/screenshots/inventory.png" alt="Inventory with quick scan, leaver transfer and device health"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Work notes</b>: one view for escalation handovers</td>
+    <td align="center"><b>Inventory</b>: who has which device, and its health</td>
+  </tr>
+</table>
+
 ## ✨ Features
 
 - **📋 Ticket views**: Kanban, list, split, calendar, analytics and more, with saved views, tabs and a State dropdown on every ticket
 - **⏱️ Live SLA timers**: count down to the second and show overdue time. Pausing and resuming is logged to the work notes. The clock pauses automatically while a ticket is *Waiting on User* and stops at *Resolved*, following the same pattern as ServiceNow's "On Hold – Awaiting Caller"
 - **🤖 Find resolution**: AI-suggested fixes from Google Gemini (hosted site, after signing in)
 - **📞 Call user**: start a Teams, Zoom or Webex call from a ticket and log how it went to the work notes
+- **📝 Work notes for escalation**: a large view of a ticket's notes with its priority, state, tier and owner, a box for timestamped notes, and **Copy all** to paste the handover into an email or Teams
 - **🏠 Operations dashboard**: KPI cards, insights, and an Explore page for drilling into queues
 - **🚨 Escalation**: teams with admin and member roles, assignment groups, escalation rules, time thresholds per priority, and uploaded reference documents (escalation and SLA matrices)
-- **📦 Asset & stock inventory**: assign and return devices, track history, device health and stock levels, and link assets to tickets
+- **📦 Asset & stock inventory**: assign and return devices, track history, device health and stock levels, and link assets to tickets. **Quick scan** finds a device by serial or asset tag (or checks a batch back in), **bulk actions** work on shift-click selections, and **Leaver transfer** moves everything a departing person holds in one step
 - **📧 Email-to-ticket**: draft a ticket from pasted email text
 - **📊 Exports**: CSV and two-sheet Excel workbooks
 - **👥 Workspaces & sync**: share one board across a team (Supabase)
