@@ -779,6 +779,7 @@ function App() {
   const toggleTicketStar = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
   const saveTicketTags = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, tags: parseTicketTags(value) } : ticket))
   const saveTicketNotes = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, notes: value } : ticket))
+  const setTicketStatus = (id: string, status: Status) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, status } : ticket))
   const selectedAssetId = selectedTicket ? selectedTicket.assetId || assets.find((asset) => asset.linkedTicketIds.includes(selectedTicket.id))?.id || '' : ''
   const standaloneTicket = tickets.find((ticket) => ticket.id === standaloneTicketId)
 
@@ -1056,7 +1057,7 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
     {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
 
@@ -1472,10 +1473,12 @@ function MyWorkView({ tickets, allTickets, now, openTicket }: { tickets: TicketI
 
 
 /** State, priority and resolution SLA across the top of a ticket record. */
-function RecordStatusStrip({ ticket, now }: { ticket: TicketItem; now: number }) {
+function RecordStatusStrip({ ticket, now, onSetStatus }: { ticket: TicketItem; now: number; onSetStatus?: (status: Status) => void }) {
   const sla = slaTime(ticket, now)
   return <div className="record-status-strip">
-    <div><span>State</span><b>{ticket.status}</b></div>
+    <div><span>State</span>{onSetStatus
+      ? <select className="record-state-select" aria-label="State" value={ticket.status} onChange={(event) => onSetStatus(event.currentTarget.value as Status)}>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>
+      : <b>{ticket.status}</b>}</div>
     <div><span>Priority</span><b>{ticket.severity}</b></div>
     <div><span>Resolution SLA</span><b className={sla.breached && ticket.status !== 'Resolved' ? 'record-breached' : ''}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</b></div>
   </div>
@@ -1513,7 +1516,7 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
   </div>
 }
 
-function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
+function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes, onSetStatus }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void; onSetStatus?: (status: Status) => void }) {
   const { user } = useAuth()
   const [expandedNotes, setExpandedNotes] = useState(false)
   const [notesText, setNotesText] = useState(ticket.notes || '')
@@ -1571,7 +1574,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
     setShowSavedPopup(true)
   }
   return <>
-    <RecordStatusStrip ticket={ticket} now={now} />
+    <RecordStatusStrip ticket={ticket} now={now} onSetStatus={onSetStatus} />
     <div className="record-layout-two-col">
       <div className="record-main">
         <section className="record-section">
@@ -1787,7 +1790,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onClose: () => void }) {
   const { user } = useAuth()
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -2011,7 +2014,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     <div style={{ padding: '0 16px' }}>
       {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
     </div>
-    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
+    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} onSetStatus={onSetStatus} />
   </section>
 }
 

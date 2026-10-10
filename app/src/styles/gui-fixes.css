@@ -148,3 +148,7 @@
 .ai-guidance-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .ai-guidance-header h5 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #5a7280; }
 
+
+/* Ticket panel: the State box in the status strip is an editable dropdown. */
+.record-status-strip .record-state-select { width: 100%; max-width: 100%; height: 32px; padding: 0 8px; border: 1px solid #cfdde2; border-radius: 6px; background: #fff; color: #294c5b; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.record-status-strip .record-state-select:focus-visible { outline: 2px solid #2f7f8a; outline-offset: 1px; }

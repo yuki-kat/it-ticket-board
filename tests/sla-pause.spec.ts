@@ -37,17 +37,17 @@ test.describe('SLA pause (browser)', () => {
     await expect(resolutionTime(page)).toHaveText(frozen)
   })
 
-  test('leaving Waiting on User resumes the clock and logs how long it was paused', async ({ page }) => {
-    const { id } = await openTicket(page, 'Waiting on User')
+  test('the State dropdown pauses on Waiting on User and resumes when the user replies', async ({ page }) => {
+    const { panel } = await openTicket(page, 'In Progress')
+    const state = panel.getByLabel('State')
+    await state.selectOption('Waiting on User')
+    await expect(panel).toContainText('Paused · waiting on user')
+    const frozen = await resolutionTime(page).innerText()
     await page.clock.fastForward(3 * 60_000)
-    await page.evaluate((ticketId) => {
-      const tickets = JSON.parse(localStorage.getItem('it-ticket-kanban-v1') || '[]')
-      tickets.find((t: { id: string }) => t.id === ticketId).status = 'In Progress'
-      localStorage.setItem('it-ticket-kanban-v1', JSON.stringify(tickets))
-    }, id)
-    await page.reload()
-    const { panel } = await openTicket(page, 'In Progress', id)
+    await expect(resolutionTime(page)).toHaveText(frozen)
+    await state.selectOption('In Progress')
     await expect(panel).toContainText(/SLA timer resumed automatically - status changed to In Progress \(paused for 3m \d+s\)/)
+    await expect(panel).toContainText('State updated')
   })
 
   test('Resolved stops the clock', async ({ page }) => {
