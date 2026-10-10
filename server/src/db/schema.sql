@@ -93,6 +93,18 @@ DO $$ BEGIN
     ALTER TABLE tickets ADD COLUMN escalation_locked BOOLEAN DEFAULT FALSE;
   EXCEPTION WHEN duplicate_column THEN NULL;
   END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_paused BOOLEAN DEFAULT FALSE;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_paused_at TIMESTAMP;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_paused_total_ms BIGINT DEFAULT 0;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
 END $$;
 
 -- Work notes
