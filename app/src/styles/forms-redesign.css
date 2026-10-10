@@ -99,7 +99,9 @@
   cursor: not-allowed;
 }
 
-.form-field input:invalid {
+/* :user-invalid waits until the field has been edited or the form submitted; :invalid marked empty
+   required fields red as soon as the page opened. */
+.form-field input:user-invalid {
   border-color: var(--color-accent-red);
 }
 
