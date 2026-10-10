@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Copy, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, NotebookPen, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
@@ -590,6 +590,8 @@ function App() {
   const [selectedTicketId, setSelectedTicketId] = useState('')
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
   const [descriptionPopupTicketId, setDescriptionPopupTicketId] = useState('')
+  // Big work-notes popup; remembers where it was opened from so Back returns there (one popup at a time).
+  const [workNotes, setWorkNotes] = useState<{ id: string; from: 'popup' | 'record' } | null>(null)
   const [inventoryFocusId, setInventoryFocusId] = useState('')
   const [inventoryFocusRevision, setInventoryFocusRevision] = useState(0)
   const [inventoryCommand, setInventoryCommand] = useState<InventoryCommand | null>(null)
@@ -1060,9 +1062,10 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); setWorkNotes({ id: selectedTicket.id, from: 'record' }) }} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
-    {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
+    {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onSaveNotes={(value) => saveTicketNotes(descriptionPopupTicketId, value)} onOpenWorkNotes={() => { setDescriptionPopupTicketId(''); setWorkNotes({ id: descriptionPopupTicketId, from: 'popup' }) }} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
+    {workNotes && tickets.find(t => t.id === workNotes.id) && <Overlay className="work-notes-overlay" onClose={() => setWorkNotes(null)}><WorkNotesPopup ticket={tickets.find(t => t.id === workNotes.id)!} onSaveNotes={(value) => saveTicketNotes(workNotes.id, value)} backLabel={workNotes.from === 'popup' ? 'Back to ticket summary' : 'Back to full ticket'} onBack={() => { setWorkNotes(null); if (workNotes.from === 'popup') setDescriptionPopupTicketId(workNotes.id); else setSelectedTicketId(workNotes.id) }} onClose={() => setWorkNotes(null)} /></Overlay>}
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
@@ -1209,7 +1212,7 @@ function SettingsPanel({ screenPattern, onScreenPatternChange, view, onViewChang
   </section>
 }
 
-function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketItem; onClose: () => void; onOpenTicket: () => void }) {
+function DescriptionPopup({ ticket, onSaveNotes, onOpenWorkNotes, onClose, onOpenTicket }: { ticket: TicketItem; onSaveNotes: (value: string) => void; onOpenWorkNotes: () => void; onClose: () => void; onOpenTicket: () => void }) {
   const [showCallMenu, setShowCallMenu] = useState(false)
   const [showMessageMenu, setShowMessageMenu] = useState(false)
 
@@ -1219,7 +1222,7 @@ function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketIte
     const callEntry = `[${timestamp}] - [${service}] Call initiated with ${userInfo}`
     const currentNotes = ticket.notes || ''
     const updatedNotes = currentNotes ? `${currentNotes}\n${callEntry}` : callEntry
-    ticket.notes = updatedNotes
+    onSaveNotes(updatedNotes)
 
     const serviceUrls: { [key: string]: string } = {
       'Teams': 'https://teams.microsoft.com/',
@@ -1246,7 +1249,7 @@ function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketIte
     const messageEntry = `[${timestamp}] - [${service}] Message sent to ${userInfo}`
     const currentNotes = ticket.notes || ''
     const updatedNotes = currentNotes ? `${currentNotes}\n${messageEntry}` : messageEntry
-    ticket.notes = updatedNotes
+    onSaveNotes(updatedNotes)
 
     const serviceUrls: { [key: string]: string } = {
       'Teams': 'https://teams.microsoft.com/',
@@ -1290,7 +1293,7 @@ function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketIte
             <button onClick={() => sendMessage('Webex')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Webex</button>
           </div>}
         </div>
-        <button onClick={() => { const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); const userInfo = ticket.affectedUser || ticket.requester || 'User'; const emailEntry = `[${timestamp}] - Email sent to ${userInfo}`; ticket.notes = ticket.notes ? `${ticket.notes}\n${emailEntry}` : emailEntry; const email = ticket.affectedUserEmail || ''; if (email) { const link = document.createElement('a'); link.href = `mailto:${email}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Mail size={14} /> Email</button>
+        <button onClick={() => { const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); const userInfo = ticket.affectedUser || ticket.requester || 'User'; const emailEntry = `[${timestamp}] - Email sent to ${userInfo}`; onSaveNotes(ticket.notes ? `${ticket.notes}\n${emailEntry}` : emailEntry); const email = ticket.affectedUserEmail || ''; if (email) { const link = document.createElement('a'); link.href = `mailto:${email}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Mail size={14} /> Email</button>
         <div style={{ flex: 1 }} />
         {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}
       </div>
@@ -1307,10 +1310,69 @@ function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketIte
         <p>{ticket.recordType}</p>
       </div>
       <div className="description-actions">
+        <button onClick={onOpenWorkNotes} className="description-notes-btn"><NotebookPen size={14} /> Work notes</button>
         <button onClick={onOpenTicket} className="description-open-btn">Open full ticket <ArrowRight size={14} /></button>
       </div>
     </div>
   </div>
+}
+
+// Large view of a ticket's work notes for escalation handovers: read them, add a timestamped note, or copy everything.
+function WorkNotesPopup({ ticket, onSaveNotes, onBack, backLabel, onClose }: { ticket: TicketItem; onSaveNotes: (value: string) => void; onBack: () => void; backLabel: string; onClose: () => void }) {
+  const [draft, setDraft] = useState('')
+  const [copyState, setCopyState] = useState<'' | 'copied' | 'select'>('')
+  const notesRef = useRef<HTMLPreElement>(null)
+  const notes = (ticket.notes || '').trim()
+  const facts: [string, string][] = [['Priority', ticket.severity], ['State', ticket.status], ['Escalation tier', `Tier ${ticket.currentTier}`], ['Assignment group', ticket.assignmentGroup || 'Unassigned'], ['Assigned to', ticket.assignee || 'Unassigned']]
+
+  const addNote = () => {
+    const text = draft.trim()
+    if (!text) return
+    const stamp = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date())
+    const entry = `[${stamp}] - ${text}`
+    onSaveNotes(notes ? `${ticket.notes}\n${entry}` : entry)
+    setDraft('')
+    setCopyState('')
+  }
+
+  // Copies a short ticket summary plus every note, ready to paste into an escalation email or Teams.
+  const copyAll = async () => {
+    const text = `${ticket.id} · ${ticket.title}\n${facts.map(([label, value]) => `${label}: ${value}`).join('\n')}\n\nWork notes:\n${notes || 'No work notes recorded.'}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyState('copied')
+    } catch {
+      if (notesRef.current) {
+        const range = document.createRange()
+        range.selectNodeContents(notesRef.current)
+        window.getSelection()?.removeAllRanges()
+        window.getSelection()?.addRange(range)
+      }
+      setCopyState('select')
+    }
+  }
+
+  return <section className="work-notes-popup" role="dialog" aria-modal="true" aria-labelledby="work-notes-title">
+    <header className="work-notes-header">
+      <div><div className="eyebrow">WORK NOTES · ESCALATION HANDOVER</div><h2 id="work-notes-title">{ticket.id} · {ticket.title}</h2></div>
+      <button className="work-notes-close" onClick={onClose} aria-label="Close work notes"><X size={18} /></button>
+    </header>
+    <dl className="work-notes-facts">{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+    {notes
+      ? <pre ref={notesRef} className="work-notes-body" tabIndex={0} aria-label="Work notes">{notes}</pre>
+      : <div className="work-notes-empty">No work notes recorded yet. Add the first one below.</div>}
+    <div className="work-notes-add">
+      <label htmlFor="work-notes-new">Add a note</label>
+      <textarea id="work-notes-new" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) addNote() }} rows={3} placeholder="What was tried, and what the next tier needs to know" />
+      <small>Saved with today's date and time. Cmd+Enter adds it.</small>
+    </div>
+    <footer className="work-notes-footer">
+      <button className="text-button" onClick={onBack}><ArrowLeft size={14} /> {backLabel}</button>
+      <span className="work-notes-status" role="status">{copyState === 'copied' ? 'Copied the ticket summary and notes.' : copyState === 'select' ? 'Copying was blocked. The notes are selected: press Cmd+C.' : ''}</span>
+      <button className="work-notes-copy" onClick={copyAll}><Copy size={14} /> Copy all</button>
+      <button className="primary-button" onClick={addNote} disabled={!draft.trim()}><Plus size={14} /> Add note</button>
+    </footer>
+  </section>
 }
 
 function ReportsPanel({ tickets, now, onClose }: { tickets: TicketItem[]; now: number; onClose: () => void }) {
@@ -1793,7 +1855,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes, onSetSta
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onOpenWorkNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onOpenWorkNotes: () => void; onClose: () => void }) {
   const { user } = useAuth()
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -2001,6 +2063,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
         </div>
       </div>}
       </div>
+      <button className="record-notes-button" onClick={onOpenWorkNotes}><NotebookPen size={16} /> Work notes</button>
       <button onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: 500, minHeight: '36px', minWidth: 'fit-content', whiteSpace: 'nowrap' }}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Find resolution'}</button>
       {showSearchMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSearchMenu(false) }}>
         <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '300px' }}>

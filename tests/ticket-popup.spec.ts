@@ -59,3 +59,42 @@ test('an overdue Resolution SLA timer fits inside its column', async ({ page }) 
   const fits = await cell.evaluate((td) => td.querySelector('span')!.getBoundingClientRect().right <= td.getBoundingClientRect().right + 0.5)
   expect(fits).toBe(true)
 })
+
+test.describe('Work notes popup', () => {
+  test('opens from the ticket summary, adds a timestamped note that is saved, and Back returns to the summary', async ({ page }) => {
+    await openTickets(page)
+    await page.locator('.list-title-link').first().click()
+    await page.locator('.description-popup').getByRole('button', { name: 'Work notes' }).click()
+
+    const notes = page.locator('.work-notes-popup')
+    await expect(notes).toBeVisible()
+    await expect(page.locator('.description-popup')).toHaveCount(0) // one popup at a time
+    await expect(notes.locator('.work-notes-facts')).toContainText('Escalation tier')
+
+    await expect(notes.getByRole('button', { name: 'Add note' })).toBeDisabled()
+    await notes.getByLabel('Add a note').fill('Escalating to Tier 2: still failing after restart.')
+    await notes.getByRole('button', { name: 'Add note' }).click()
+    await expect(notes.locator('.work-notes-body')).toContainText(/\[[A-Z][a-z]{2} \d{1,2}, \d{2}:\d{2} [AP]M\] - Escalating to Tier 2/)
+    await expect(notes.getByLabel('Add a note')).toHaveValue('')
+
+    await notes.getByRole('button', { name: /Back to ticket summary/ }).click()
+    await expect(page.locator('.work-notes-popup')).toHaveCount(0)
+    await expect(page.locator('.description-popup')).toBeVisible()
+
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('it-ticket-kanban-v1') || '[]')[0].notes as string)
+    expect(saved).toContain('Escalating to Tier 2: still failing after restart.')
+  })
+
+  test('opens from the full ticket panel and Back returns to it', async ({ page }) => {
+    await openTickets(page)
+    await page.locator('.task-table tbody tr').first().locator('td').nth(1).click()
+    await expect(page.locator('.record-overlay')).toBeVisible()
+    await page.locator('.record-overlay').getByRole('button', { name: 'Work notes' }).click()
+
+    const notes = page.locator('.work-notes-popup')
+    await expect(notes).toBeVisible()
+    await expect(page.locator('.record-overlay')).toHaveCount(0)
+    await notes.getByRole('button', { name: /Back to full ticket/ }).click()
+    await expect(page.locator('.record-overlay')).toBeVisible()
+  })
+})
