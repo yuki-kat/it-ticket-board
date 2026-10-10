@@ -1210,13 +1210,15 @@ function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketIte
       <button onClick={onClose} aria-label="Close"><X size={18} /></button>
     </div>
     <div className="description-popup-content">
-      <div className="description-popup-actions">
+      <div className="description-popup-actions" style={{ position: 'relative', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
         <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: 500, minHeight: '36px', minWidth: 'fit-content', whiteSpace: 'nowrap' }}><Phone size={16} /> Call user</button>
         {showCallMenu && <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #d9e0e2', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000, minWidth: '200px', marginTop: '8px' }}>
           <button onClick={() => initiateCall('Teams')} style={{ width: '100%', padding: '12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#333', borderBottom: '1px solid #f0f0f0' }}>Teams</button>
           <button onClick={() => initiateCall('ZOOM')} style={{ width: '100%', padding: '12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#333', borderBottom: '1px solid #f0f0f0' }}>ZOOM</button>
           <button onClick={() => initiateCall('Webex')} style={{ width: '100%', padding: '12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#333' }}>Webex</button>
         </div>}
+        <div style={{ flex: 1 }} />
+        <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={true} />
       </div>
       <div className="description-section">
         <h5>Short description</h5>
