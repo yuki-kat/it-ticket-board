@@ -3,7 +3,7 @@
  * Proxies requests through backend endpoint for secure server-side API key handling
  */
 
-import { API_BASE } from './base';
+import { API_BASE, authHeader } from './base';
 
 // Escape XML special characters to prevent prompt injection
 const escapeXml = (str: string): string => {
@@ -51,24 +51,34 @@ interface GeminiRequest {
 }
 
 
+const HOSTED_ONLY = 'AI suggestions only work on the hosted site. This copy (a downloaded file or the test link) has no server behind it.';
+
+// Allows for the free Render backend waking up (about a minute) plus the server's own retries.
+const REQUEST_TIMEOUT_MS = 120_000;
+
 async function callGeminiAPI(request: GeminiRequest): Promise<string> {
-  const response = await fetch(`${API_BASE}/gemini`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
+  if (location.protocol === 'file:') throw new Error(HOSTED_ONLY);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(`Server Error: ${error.error || response.statusText}`);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/gemini`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(request),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new Error('The AI server did not answer in time. If it was asleep, try again in a minute.');
+    }
+    throw new Error(`Could not reach the AI server. ${HOSTED_ONLY}`);
   }
 
-  const data = await response.json() as { text: string };
-  if (!data.text) {
-    throw new Error('No response from Gemini API');
-  }
+  const data = await response.json().catch(() => null) as { text?: string; error?: string } | null;
+  if (response.status === 401) throw new Error('Sign in on the hosted site to use AI suggestions.');
+  if (response.status === 404 && !data?.error) throw new Error(HOSTED_ONLY);
+  if (!response.ok) throw new Error(data?.error || `The AI server returned an error (${response.status}).`);
+  if (!data?.text) throw new Error('Gemini returned an empty answer. Try again.');
   return data.text;
 }
 

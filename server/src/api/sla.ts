@@ -388,7 +388,7 @@ router.get('/tickets/:id/sla/effective-time', async (req: AuthRequest, res) => {
 
     res.json({
       ticketId: id,
-      totalElapsedMs,
+      totalElapsedMs: totalElapsed,
       totalPausedMs,
       effectiveMs,
       effectiveMinutes,

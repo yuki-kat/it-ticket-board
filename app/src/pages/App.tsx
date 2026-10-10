@@ -1813,7 +1813,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       setSearchResults(solutions)
       setShowSearchResults(true)
     } catch (error) {
-      const fallback = `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}\n\nCould not generate AI recommendations. Make sure Gemini API is configured on the server.`
+      const fallback = `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}\n\nCould not generate AI recommendations: ${error instanceof Error ? error.message : 'unknown error'}`
       setSearchResults(fallback)
       setShowSearchResults(true)
     } finally {
