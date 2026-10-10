@@ -11,30 +11,6 @@
   --signin-badge-p3-light: #ca8a04;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --signin-bg-light: #0d1924;
-    --signin-surface-light: #1a2940;
-    --signin-text-light: #f3f4f6;
-    --signin-accent-light: #60a5fa;
-    --signin-subtitle-light: #a0aec0;
-    --signin-badge-p1-light: #fca5a5;
-    --signin-badge-p2-light: #fed7aa;
-    --signin-badge-p3-light: #fcd34d;
-  }
-}
-
-:root[data-theme="dark"] {
-  --signin-bg-light: #0d1924;
-  --signin-surface-light: #1a2940;
-  --signin-text-light: #f3f4f6;
-  --signin-accent-light: #60a5fa;
-  --signin-subtitle-light: #a0aec0;
-  --signin-badge-p1-light: #fca5a5;
-  --signin-badge-p2-light: #fed7aa;
-  --signin-badge-p3-light: #fcd34d;
-}
-
 .signin-page {
   display: flex;
   align-items: center;
@@ -62,16 +38,6 @@
   flex-direction: column;
   justify-content: center;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .signin-form-side {
-    border-right-color: rgba(255, 255, 255, 0.08);
-  }
-}
-
-:root[data-theme="dark"] .signin-form-side {
-  border-right-color: rgba(255, 255, 255, 0.08);
 }
 
 .signin-header {
@@ -139,16 +105,6 @@
   color: rgba(13, 25, 36, 0.5);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .form-field input::placeholder {
-    color: rgba(243, 244, 246, 0.5);
-  }
-}
-
-:root[data-theme="dark"] .form-field input::placeholder {
-  color: rgba(243, 244, 246, 0.5);
-}
-
 .signin-button {
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
@@ -190,16 +146,6 @@
   background-color: rgba(0, 0, 0, 0.02);
   border-radius: 8px;
   text-align: center;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .stat-card {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-}
-
-:root[data-theme="dark"] .stat-card {
-  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .stat-value {
@@ -247,16 +193,6 @@
   font-size: 13px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ticket-item {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-}
-
-:root[data-theme="dark"] .ticket-item {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
 .ticket-id {
   font-family: 'DM Mono', monospace;
   font-size: 12px;
@@ -296,18 +232,6 @@
   color: #0d1924;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ticket-badge.priority-p2,
-  :root:not([data-theme="light"]) .ticket-badge.priority-p3 {
-    color: #0d1924;
-  }
-}
-
-:root[data-theme="dark"] .ticket-badge.priority-p2,
-:root[data-theme="dark"] .ticket-badge.priority-p3 {
-  color: #0d1924;
-}
-
 .sla-compliance {
   display: flex;
   flex-direction: column;
@@ -325,16 +249,6 @@
   background-color: rgba(0, 0, 0, 0.08);
   border-radius: 3px;
   overflow: hidden;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .sla-bar {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-}
-
-:root[data-theme="dark"] .sla-bar {
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .sla-fill {
@@ -361,16 +275,6 @@
     padding: 32px;
     border-right: none;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .signin-form-side {
-      border-bottom-color: rgba(255, 255, 255, 0.08);
-    }
-  }
-
-  :root[data-theme="dark"] .signin-form-side {
-    border-bottom-color: rgba(255, 255, 255, 0.08);
   }
 
   .signin-header {
