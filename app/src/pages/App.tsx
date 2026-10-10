@@ -31,6 +31,7 @@ import GeminiSettings from '../components/GeminiSettings'
 import { generateTicketSuggestions } from '../api/gemini'
 import EscalationPage from './EscalationPage'
 import CompactSLATimer from '../components/CompactSLATimer'
+import { onPauseChange, pausedMsFor, syncStatusPause } from '../utils/slaPause'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -223,7 +224,7 @@ function resolutionTargetMs(severity: Severity) {
 }
 
 function slaTime(ticket: TicketItem, now: number) {
-  const deadline = new Date(ticket.createdAt).getTime() + resolutionTargetMs(ticket.severity)
+  const deadline = new Date(ticket.createdAt).getTime() + resolutionTargetMs(ticket.severity) + pausedMsFor(ticket.id, now)
   const delta = deadline - now
   const minutes = Math.floor(Math.abs(delta) / 60_000)
   const days = Math.floor(minutes / (24 * 60))
@@ -231,6 +232,14 @@ function slaTime(ticket: TicketItem, now: number) {
   const remainingMinutes = minutes % 60
   const duration = days ? `${days}d ${hours}h` : `${hours}h ${remainingMinutes}m`
   return { deadline, label: delta < 0 ? `${duration} over` : `${duration} left`, breached: delta < 0 }
+}
+
+function formatPausedFor(ms: number) {
+  const totalSeconds = Math.round(ms / 1000)
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  return h ? `${h}h ${m}m ${s}s` : m ? `${m}m ${s}s` : `${s}s`
 }
 
 function slaAtRisk(ticket: TicketItem, now: number) {
@@ -241,7 +250,7 @@ function slaAtRisk(ticket: TicketItem, now: number) {
 function escalationDue(ticket: TicketItem, now: number) {
   if (ticket.status === 'Resolved' || ticket.currentTier >= 3) return false
   const nextTier = (ticket.currentTier + 1) as 2 | 3
-  return now - new Date(ticket.createdAt).getTime() >= escalationTargetMs(ticket.severity, nextTier)
+  return now - new Date(ticket.createdAt).getTime() - pausedMsFor(ticket.id, now) >= escalationTargetMs(ticket.severity, nextTier)
 }
 
 function dueTodayOrLate(ticket: TicketItem, now: number) {
@@ -617,6 +626,21 @@ function App() {
   useEffect(() => { localStorage.setItem(HOME_WIDGETS_STORAGE_KEY, JSON.stringify(homeWidgets)) }, [homeWidgets])
   useEffect(() => { localStorage.setItem(SAVED_TICKET_VIEWS_KEY, JSON.stringify(savedTicketViews)) }, [savedTicketViews])
   useEffect(() => { const interval = window.setInterval(() => setClock(Date.now()), 30_000); return () => window.clearInterval(interval) }, [])
+  useEffect(() => onPauseChange((change) => {
+    setClock(Date.now())
+    if (!change) return
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const who = change.reason === 'manual' ? user?.name || 'Engineer' : 'System'
+    const held = formatPausedFor(change.pausedForMs)
+    const action = change.reason === 'manual'
+      ? change.paused ? 'SLA timer paused' : `SLA timer resumed (paused for ${held})`
+      : change.reason === 'resolved'
+        ? change.paused ? 'SLA clock stopped - ticket resolved' : `SLA clock resumed - ticket reopened as ${change.status} (stopped for ${held})`
+        : change.paused ? 'SLA timer paused automatically - waiting on user' : `SLA timer resumed automatically - status changed to ${change.status} (paused for ${held})`
+    const entry = `[${timestamp}] ${who} - ${action}`
+    setTickets((current) => current.map((ticket) => ticket.id === change.ticketId ? { ...ticket, notes: ticket.notes ? `${ticket.notes}\n${entry}` : entry } : ticket))
+  }), [user?.name])
+  useEffect(() => { tickets.forEach((ticket) => syncStatusPause(ticket.id, ticket.status)) }, [tickets])
   useEffect(() => { if (page !== 'new') setShowFormOptional(false) }, [page])
   useEffect(() => {
     if (page !== 'new') return

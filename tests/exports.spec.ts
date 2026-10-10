@@ -15,7 +15,16 @@ async function collect(page: Page, action: () => Promise<void>, count: number): 
   return downloads
 }
 async function text(download: Download) { return (await readFile((await download.path())!, 'utf8')).replace(/^﻿/, '') }
-const dataRows = (csv: string) => csv.trim().split(/\r?\n/).length - 1
+// Counts record breaks outside quoted cells, so multi-line work notes stay one row.
+const dataRows = (csv: string) => {
+  let rows = 0
+  let quoted = false
+  for (const char of csv.trim()) {
+    if (char === '"') quoted = !quoted
+    else if (char === '\n' && !quoted) rows++
+  }
+  return rows
+}
 
 test.describe('Exports (source)', () => {
   test.beforeEach(async ({ page }) => openApp(page))

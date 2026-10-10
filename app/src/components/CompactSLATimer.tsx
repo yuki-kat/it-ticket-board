@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Clock, Pause, Play } from 'lucide-react'
+import { onPauseChange, readPause, togglePause, type PauseState } from '../utils/slaPause'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -12,6 +13,7 @@ function formatDuration(totalSeconds: number) {
   if (h) return `${h}h ${pad(m)}m ${pad(s)}s`
   return `${m}m ${pad(s)}s`
 }
+
 
 interface CompactSLATimerProps {
   ticketId: string
@@ -31,53 +33,25 @@ export default function CompactSLATimer({
   compact = true,
 }: CompactSLATimerProps) {
   const [now, setNow] = useState(() => Date.now())
-  const [isPaused, setIsPaused] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [pause, setPause] = useState<PauseState>(() => readPause(ticketId))
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [])
 
-  const elapsedSeconds = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 1000))
-
-  // Load SLA pause state
   useEffect(() => {
-    const loadSLAState = async () => {
-      try {
-        const response = await fetch(`/api/tickets/${ticketId}/sla/effective-time`, {
-          headers: { 'Content-Type': 'application/json' },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setIsPaused(data.isPaused)
-        }
-      } catch (err) {
-        console.error('Failed to load SLA state:', err)
-      }
-    }
-
-    loadSLAState()
+    setPause(readPause(ticketId))
+    return onPauseChange(() => setPause(readPause(ticketId)))
   }, [ticketId])
 
-  const handlePauseResume = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setLoading(true)
-    try {
-      const endpoint = isPaused ? 'resume' : 'pause'
-      const response = await fetch(`/api/tickets/${ticketId}/sla/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
+  const isPaused = pause.pausedAt !== null
+  const pausedMs = pause.pausedMs + (isPaused ? now - (pause.pausedAt as number) : 0)
+  const elapsedSeconds = Math.max(0, Math.floor((now - new Date(createdAt).getTime() - pausedMs) / 1000))
 
-      if (response.ok) {
-        setIsPaused(!isPaused)
-      }
-    } catch (err) {
-      console.error('Failed to update SLA pause state:', err)
-    } finally {
-      setLoading(false)
-    }
+  const handlePauseResume = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    togglePause(ticketId)
   }
 
   const responseSecondsLeft = responseTimeMinutes * 60 - elapsedSeconds
@@ -99,8 +73,7 @@ export default function CompactSLATimer({
         {status === 'awaiting-user' && (
           <button
             onClick={handlePauseResume}
-            disabled={loading}
-            className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
             title={isPaused ? 'Resume SLA' : 'Pause SLA'}
           >
             {isPaused ? (
@@ -116,19 +89,19 @@ export default function CompactSLATimer({
 
   return (
     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-4" style={{ flexWrap: 'wrap', gap: '8px' }}>
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
           <Clock size={20} className="text-blue-600" />
-          <h3 className="font-semibold text-gray-900">SLA Timer</h3>
+          <h3 className="font-semibold text-gray-900" style={{ whiteSpace: 'nowrap' }}>SLA Timer</h3>
           {isPaused && (
-            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
-              Paused
+            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded" style={{ whiteSpace: 'nowrap' }}>
+              {pause.reason === 'resolved' ? 'Stopped · resolved' : pause.reason === 'waiting-on-user' ? 'Paused · waiting on user' : 'Paused'}
             </span>
           )}
         </div>
         <button
           onClick={handlePauseResume}
-          disabled={loading || status === 'resolved' || status === 'closed'}
+          disabled={status === 'Resolved'}
           className={`p-2 rounded transition-colors ${
             isPaused
               ? 'bg-green-100 text-green-600 hover:bg-green-200'
