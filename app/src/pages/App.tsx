@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Copy, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, NotebookPen, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Copy, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, NotebookPen, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X, Zap } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
@@ -26,6 +26,8 @@ import SavedViews, { loadSavedViews, type SavedView } from '../components/SavedV
 import { exportCsv } from '../lib/exportCsv'
 import { exportXlsx } from '../lib/exportXlsx'
 import SearchPage from './SearchPage'
+import QuickActionsPage, { type QuickCommand } from './QuickActionsPage'
+import { recordUse } from '../lib/usage'
 import '../styles/search.css'
 import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import GeminiSettings from '../components/GeminiSettings'
@@ -81,6 +83,9 @@ type TicketItem = {
 type DeletedTicket = TicketItem & { deletedAt: string }
 
 const statuses: Status[] = ['New', 'In Progress', 'Waiting on User', 'Escalated', 'Resolved']
+// Ticket lists offered as Quick actions commands, and the commands shown before anything has been learned.
+const QUICK_FILTERS: [MetricFilter, string][] = [['active', 'open tickets'], ['high-priority', 'P1 / P2 open'], ['overdue', 'past SLA'], ['at-risk', 'at risk'], ['escalated', 'escalated'], ['escalation-due', 'escalation due'], ['waiting', 'waiting on user'], ['unassigned', 'unassigned'], ['due-today', 'due today'], ['resolved', 'closed tickets']]
+const QUICK_STARTERS = ['go:board', 'new-task', 'filter:overdue', 'filter:escalated', 'work-notes', 'status:In Progress', 'reports', 'go:inventory']
 const recordTypes: RecordType[] = ['Incident', 'Problem', 'Change Request', 'Work Order']
 const tableNames: Record<RecordType, string> = { Incident: 'incident', Problem: 'problem', 'Change Request': 'change_request', 'Work Order': 'wm_order_task' }
 const departments = ['Field Services', 'Finance', 'People & HR', 'Facilities', 'Platform Engineering', 'Commerce', 'Customer Care', 'Data & Analytics', 'Security']
@@ -591,7 +596,7 @@ function App() {
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
   const [descriptionPopupTicketId, setDescriptionPopupTicketId] = useState('')
   // Big work-notes popup; remembers where it was opened from so Back returns there (one popup at a time).
-  const [workNotes, setWorkNotes] = useState<{ id: string; from: 'popup' | 'record' } | null>(null)
+  const [workNotes, setWorkNotes] = useState<{ id: string; from: 'popup' | 'record' | 'quick' } | null>(null)
   const [inventoryFocusId, setInventoryFocusId] = useState('')
   const [inventoryFocusRevision, setInventoryFocusRevision] = useState(0)
   const [inventoryCommand, setInventoryCommand] = useState<InventoryCommand | null>(null)
@@ -779,10 +784,12 @@ function App() {
   const currentSuggestion = triageSuggestion(form.title, form.description, form.severity)
   const groupText = `${form.title} ${form.description}`
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId)
-  const toggleTicketStar = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
+  const toggleTicketStar = (id: string) => { recordUse('star', id); toggleTicketStarRaw(id) }
+  const toggleTicketStarRaw = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
   const saveTicketTags = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, tags: parseTicketTags(value) } : ticket))
   const saveTicketNotes = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, notes: value } : ticket))
-  const setTicketStatus = (id: string, status: Status) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, status } : ticket))
+  const setTicketStatus = (id: string, status: Status) => { recordUse(`status:${status}`, id); setTicketStatusRaw(id, status) }
+  const setTicketStatusRaw = (id: string, status: Status) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, status } : ticket))
   const selectedAssetId = selectedTicket ? selectedTicket.assetId || assets.find((asset) => asset.linkedTicketIds.includes(selectedTicket.id))?.id || '' : ''
   const standaloneTicket = tickets.find((ticket) => ticket.id === standaloneTicketId)
 
@@ -923,8 +930,9 @@ function App() {
   }
   const openMatrixForTicket = (id: string) => openMatrixPanel(id)
 
-  const openNewForm = (seed: Partial<typeof emptyForm> = {}) => { setForm({ ...emptyForm, ...seed }); setFormError(''); setImportedFromEmail(false); setShowFormOptional(false); setPage('new'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const openNewForm = (seed: Partial<typeof emptyForm> = {}) => { recordUse('new-task'); setForm({ ...emptyForm, ...seed }); setFormError(''); setImportedFromEmail(false); setShowFormOptional(false); setPage('new'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const showTickets = (filter: MetricFilter = 'all', useList = false) => {
+    if (filter !== 'all') recordUse(`filter:${filter}`)
     setPage('board')
     setMetricFilter(filter)
     setQuery('')
@@ -934,17 +942,26 @@ function App() {
     if (useList) setCardSize('list')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const openExplore = () => { setExploreQueue(undefined); setExploreTicketId(undefined); setPage('explore'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const openExplore = () => { recordUse('go:explore'); setExploreQueue(undefined); setExploreTicketId(undefined); setPage('explore'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const goToPage = (target: PageId) => {
+    // Opening Quick actions is not a command, so A → (Quick actions) → B still teaches "B follows A".
+    if (target !== 'quick') recordUse(`go:${target}`)
     if (target === 'board') { showTickets(); return }
     if (target === 'inventory') setInventoryFocusId('')
     setPage(target)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  // Opening things counts as a use for the Quick actions page; going Back to them does not.
+  const openTicket = (id: string) => { if (id) recordUse('open-ticket', id); setSelectedTicketId(id) }
+  const openTicketSummary = (id: string) => { if (id) recordUse('ticket-summary', id); setDescriptionPopupTicketId(id) }
+  const openWorkNotes = (id: string, from: 'popup' | 'record' | 'quick') => { recordUse('work-notes', id); setWorkNotes({ id, from }) }
+  const openReports = () => { recordUse('reports'); setShowReports(true) }
+  const openImport = () => { recordUse('import-email'); setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }
   const linkTicketToAsset = (ticketId: string, assetId: string) => setTickets((current) => current.map((ticket) => ticket.id === ticketId ? { ...ticket, assetId } : ticket))
   const createTicketForAsset = (asset: AssetItem) => openNewForm({ assetId: asset.id, title: asset.name + ' issue', requester: asset.assignedTo, affectedUser: asset.assignedTo, department: asset.department })
   const openAssetFromTicket = (id: string) => { setSelectedTicketId(''); setInventoryFocusId(id); setInventoryFocusRevision((value) => value + 1); setPage('inventory'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const runInventoryCommand = (action: InventoryCommand['action']) => {
+    recordUse(`inventory:${action}`)
     setShowToolsMenu(false)
     setInventoryFocusId('')
     setPage('inventory')
@@ -952,10 +969,33 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const runExport = (format: 'csv' | 'xlsx') => {
+    recordUse(`export:${format}`)
     setShowToolsMenu(false)
     if (page === 'inventory') setInventoryCommand({ action: format === 'csv' ? 'export-csv' : 'export-xlsx', revision: ++inventoryCommandRevision.current })
     else exportCurrentTickets(format)
   }
+
+  // Commands the Quick actions page can rank and run. Ids match the recordUse() calls in the handlers above.
+  const quickCommands: QuickCommand[] = [
+    { id: 'go:home', label: 'Home', group: 'Go to', icon: <Activity size={16} />, needsTicket: false, run: () => goToPage('home') },
+    { id: 'go:board', label: 'Tickets', group: 'Go to', icon: <Ticket size={16} />, needsTicket: false, run: () => goToPage('board') },
+    { id: 'go:search', label: 'Search', group: 'Go to', icon: <Search size={16} />, needsTicket: false, run: () => goToPage('search') },
+    { id: 'go:inventory', label: 'Inventory', group: 'Go to', icon: <Layers size={16} />, needsTicket: false, run: () => goToPage('inventory') },
+    { id: 'go:escalation', label: 'Escalation', group: 'Go to', icon: <ShieldAlert size={16} />, needsTicket: false, run: () => goToPage('escalation') },
+    { id: 'go:explore', label: 'Explore tickets', group: 'Go to', icon: <Workflow size={16} />, needsTicket: false, run: openExplore },
+    ...QUICK_FILTERS.map(([filter, label]): QuickCommand => ({ id: `filter:${filter}`, label: `Show ${label}`, group: 'Ticket list', icon: <ListChecks size={16} />, needsTicket: false, run: () => showTickets(filter, true) })),
+    { id: 'new-task', label: 'New task', group: 'Create', icon: <Plus size={16} />, needsTicket: false, run: () => openNewForm() },
+    { id: 'import-email', label: 'Ticket from email', group: 'Create', icon: <Mail size={16} />, needsTicket: false, run: openImport },
+    { id: 'reports', label: 'Reports', group: 'Tools', icon: <BarChart3 size={16} />, needsTicket: false, run: openReports },
+    { id: 'export:csv', label: 'Export tickets (CSV)', group: 'Tools', icon: <Download size={16} />, needsTicket: false, run: () => exportCurrentTickets('csv') },
+    { id: 'inventory:add-asset', label: 'Add asset', group: 'Inventory', icon: <Plus size={16} />, needsTicket: false, run: () => runInventoryCommand('add-asset') },
+    { id: 'inventory:low-stock', label: 'Low stock', group: 'Inventory', icon: <AlertTriangle size={16} />, needsTicket: false, run: () => runInventoryCommand('low-stock') },
+    { id: 'open-ticket', label: 'Open ticket', group: 'Ticket', icon: <Ticket size={16} />, needsTicket: true, run: openTicket },
+    { id: 'ticket-summary', label: 'Ticket summary', group: 'Ticket', icon: <Search size={16} />, needsTicket: true, run: openTicketSummary },
+    { id: 'work-notes', label: 'Work notes', group: 'Ticket', icon: <NotebookPen size={16} />, needsTicket: true, run: (id) => openWorkNotes(id, 'quick') },
+    ...statuses.map((status): QuickCommand => ({ id: `status:${status}`, label: `Set to ${status}`, group: 'Ticket', icon: <ArrowRight size={16} />, needsTicket: true, run: (id) => setTicketStatus(id, status) })),
+    { id: 'star', label: 'Star or unstar', group: 'Ticket', icon: <Star size={16} />, needsTicket: true, run: toggleTicketStar },
+  ]
 
   if (standaloneTicketId) return standaloneTicket ? <TicketRecordPage ticket={standaloneTicket} now={clock} /> : <div className="record-page-shell"><div className="record-not-found"><Ticket size={24} /><h1>Ticket not found</h1><p>The requested ticket is not available in this browser.</p><a href={window.location.href.split('#')[0]}>Return to home</a></div></div>
 
@@ -967,12 +1007,13 @@ function App() {
       <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button><button className={page === 'escalation' ? 'active' : ''} aria-current={page === 'escalation' ? 'page' : undefined} onClick={() => goToPage('escalation')}>Escalation</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
+        <button type="button" className={`header-quick-button${page === 'quick' ? ' active' : ''}`} onClick={() => goToPage('quick')} aria-current={page === 'quick' ? 'page' : undefined} title="Your most-used commands"><Zap size={15} /> <span className="topbar-label">Quick actions</span></button>
         <div className="header-tools" ref={toolsMenuRef}>
           <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu" aria-label="Tools"><Menu size={16} /> <span className="topbar-label">Tools</span> <ChevronDown size={13} /></button>
           {showToolsMenu && <div className="header-tools-menu" id="header-tools-menu" aria-label="Tools">
             {page !== 'inventory' && <>
               <span className="header-tools-heading">QUICK ACTIONS</span>
-              <button type="button" onClick={() => { setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }}><Mail size={16} /><span>Import email<small>Draft a ticket from an email</small></span></button>
+              <button type="button" onClick={openImport}><Mail size={16} /><span>Import email<small>Draft a ticket from an email</small></span></button>
               <button type="button" onClick={() => { setShowToolsMenu(false); openMatrixPanel() }}><ShieldAlert size={16} /><span>Escalation matrix<small>Priorities, timing, and contacts</small></span></button>
             </>}
             {page === 'inventory' && <>
@@ -990,7 +1031,7 @@ function App() {
               <button type="button" onClick={() => runExport('xlsx')}><Download size={16} /><span>Tickets · Excel<small>Current filters</small></span></button>
             </>}
             <span className="header-tools-heading">DATA</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
+            <button type="button" onClick={() => { setShowToolsMenu(false); openReports() }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
             <span className="header-tools-heading">ACCOUNT</span>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>Gemini AI Settings<small>Configure API key</small></span></button>
@@ -1003,12 +1044,12 @@ function App() {
         {page !== 'inventory' && page !== 'new' && <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> <span className="topbar-label">New task</span></button>}
       </div>
     </header>
-    <QuickPageNav page={(page === 'explore' || page === 'new' || page === 'escalation') ? 'home' : page} onChange={goToPage} />
+    <QuickPageNav page={(page === 'explore' || page === 'new' || page === 'escalation' || page === 'quick') ? 'home' : page} onChange={goToPage} />
     <DebugPanel />
-    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={setSelectedTicketId} searchTicket={openRelatedTicket} openReports={() => setShowReports(true)} openSettings={() => setShowSettings(true)} widgets={homeWidgets} openExplore={openExplore} /> : page === 'explore' ? <ExplorePage queues={exploreQueuesFor(tickets, clock)} tickets={tickets} queue={exploreQueue} ticketId={exploreTicketId}
+    {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={openTicket} searchTicket={openRelatedTicket} openReports={() => openReports()} openSettings={() => setShowSettings(true)} widgets={homeWidgets} openExplore={openExplore} /> : page === 'explore' ? <ExplorePage queues={exploreQueuesFor(tickets, clock)} tickets={tickets} queue={exploreQueue} ticketId={exploreTicketId}
       onSelectQueue={(queue) => { setExploreQueue(queue); setExploreTicketId(undefined) }} onSelectTicket={setExploreTicketId}
       onOpenQueue={(queue) => showTickets(EXPLORE_FILTERS[queue], true)} onOpenAll={() => showTickets('all', true)} onOpenRecord={setSelectedTicketId} onHome={() => goToPage('home')}
-      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'search' ? <SearchPage tickets={tickets} openTicket={setSelectedTicketId} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={setSelectedTicketId} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : page === 'escalation' ? <EscalationPage onClose={() => goToPage('home')} onSignIn={() => goToPage('signin')} /> : <main className="main-content">
+      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'search' ? <SearchPage tickets={tickets} openTicket={openTicket} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={openTicket} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : page === 'escalation' ? <EscalationPage onClose={() => goToPage('home')} onSignIn={() => goToPage('signin')} /> : page === 'quick' ? <QuickActionsPage commands={quickCommands} tickets={tickets} starterIds={QUICK_STARTERS} now={clock} /> : <main className="main-content">
       <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
       <div className="prototype-note"><span className="prototype-dot" /><b>Sync: live</b><span>Email intake: mock · 0 new</span><span>{tickets.length} cards on the board, {open.length} open. SLA clocks count calendar time.</span><button onClick={() => setShowModel(true)}>How this maps <ArrowRight size={13} /></button></div>
       <section className="summary-strip" aria-label="Task summary">
@@ -1044,7 +1085,7 @@ function App() {
       <label><span>Group</span><select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} aria-label="Filter by assignment group"><option>All groups</option>{groupOptions.map((group) => <option key={group}>{group}</option>)}</select></label>
       <label><span>Assignee</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} aria-label="Filter by assignee"><option>All assignees</option>{assigneeOptions.map((assignee) => <option key={assignee}>{assignee}</option>)}<option>Unassigned</option></select></label>
       <label><span>Tag</span><select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filter tickets by tag"><option>All tags</option>{ticketTags.map((tag) => <option key={tag}>{tag}</option>)}</select></label></div></div>}</div><button className={"ticket-star-filter" + (starredOnly ? " active" : "")} aria-pressed={starredOnly} onClick={() => setStarredOnly((value) => !value)}><Star size={14} fill={starredOnly ? "currentColor" : "none"} /> Starred</button>{filtersActive && <button className="clear-filters-button" onClick={clearFilters}><X size={13} />Clear filters</button>}</div></div>
-      {cardSize === 'list' ? <ListView tickets={visible} now={clock} openTicket={setSelectedTicketId} openDescriptionPopup={setDescriptionPopupTicketId} toggleStar={toggleTicketStar} selectedIds={selectedTicketIds} onSelectionChange={setSelectedTicketIds} /> : cardSize === 'small' || cardSize === 'regular' ? <section className="kanban" id="board" aria-label="Kanban task lanes">
+      {cardSize === 'list' ? <ListView tickets={visible} now={clock} openTicket={openTicket} openDescriptionPopup={openTicketSummary} toggleStar={toggleTicketStar} selectedIds={selectedTicketIds} onSelectionChange={setSelectedTicketIds} /> : cardSize === 'small' || cardSize === 'regular' ? <section className="kanban" id="board" aria-label="Kanban task lanes">
         {laneLabels.map((laneLabel, index) => {
           const lane = visible.filter((ticket) => boardBy === 'State' ? ticket.status === laneLabel : boardBy === 'Task type' ? ticket.recordType === laneLabel : (ticket.assignmentGroup || 'No group') === laneLabel)
           const addSeed = boardBy === 'Task type' ? { recordType: laneLabel as RecordType } : boardBy === 'Assignment group' ? { assignmentGroup: laneLabel === 'No group' ? '' : laneLabel } : {}
@@ -1052,20 +1093,20 @@ function App() {
           return <div className={`lane lane-${index % 5}${dragOverLane === laneLabel ? ' drag-over' : ''}`} key={laneLabel} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDragOverLane(laneLabel) }} onDragLeave={() => setDragOverLane('')} onDrop={(event) => { event.preventDefault(); moveToLane(event.dataTransfer.getData('text/plain'), laneLabel); setDragOverLane('') }}>
             <div className="lane-heading"><div className="lane-title"><span className="lane-indicator" /><h2>{laneLabel}</h2><span className="lane-count">{lane.length}</span></div>{canAddHere && <button className="lane-add" onClick={() => openNewForm(addSeed)} aria-label={`Add task to ${laneLabel}`}>＋</button>}</div>
             <div className="lane-cards">
-              {lane.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} index={index} laneCount={laneLabels.length} boardBy={boardBy} now={clock} move={move} remove={remove} addUniversalTask={addUniversalTask} toggleUniversalTask={toggleUniversalTask} toggleTimer={toggleTimer} escalate={escalate} openMatrix={openMatrixForTicket} toggleStar={toggleTicketStar} openTicket={setSelectedTicketId} />)}
+              {lane.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} index={index} laneCount={laneLabels.length} boardBy={boardBy} now={clock} move={move} remove={remove} addUniversalTask={addUniversalTask} toggleUniversalTask={toggleUniversalTask} toggleTimer={toggleTimer} escalate={escalate} openMatrix={openMatrixForTicket} toggleStar={toggleTicketStar} openTicket={openTicket} />)}
               {lane.length === 0 && <div className="empty-lane"><div className="empty-icon">{boardBy === 'State' && laneLabel === 'Resolved' ? <Check size={17} /> : <Ticket size={17} />}</div><span>{visible.length === 0 && filtersActive ? 'No tasks match these filters' : 'Nothing here yet'}</span>{visible.length === 0 && filtersActive ? index === 0 && <button onClick={clearFilters}>Clear filters <X size={13} /></button> : canAddHere && <button onClick={() => openNewForm(addSeed)}>Add a task <ArrowRight size={13} /></button>}</div>}
             </div>
           </div>
         })}
-      </section> : <AdditionalView mode={cardSize} tickets={visible} allTickets={tickets} now={clock} boardBy={boardBy} openTicket={setSelectedTicketId} assessTicket={assessTicket} moveToLane={moveToLane} splitLeft={splitLeft} splitRight={splitRight} onSplitLeftChange={setSplitLeft} onSplitRightChange={setSplitRight} />}
+      </section> : <AdditionalView mode={cardSize} tickets={visible} allTickets={tickets} now={clock} boardBy={boardBy} openTicket={openTicket} assessTicket={assessTicket} moveToLane={moveToLane} splitLeft={splitLeft} splitRight={splitRight} onSplitLeftChange={setSplitLeft} onSplitRightChange={setSplitRight} />}
       <footer className="board-footer"><span>Priority and escalation timings follow the attached matrix. Drag cards between lanes, or use the arrow controls on each card.</span><button onClick={() => openMatrixPanel()}>View escalation guidance <ArrowRight size={14} /></button></footer>
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); setWorkNotes({ id: selectedTicket.id, from: 'record' }) }} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); openWorkNotes(selectedTicket.id, 'record') }} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
-    {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onSaveNotes={(value) => saveTicketNotes(descriptionPopupTicketId, value)} onOpenWorkNotes={() => { setDescriptionPopupTicketId(''); setWorkNotes({ id: descriptionPopupTicketId, from: 'popup' }) }} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
-    {workNotes && tickets.find(t => t.id === workNotes.id) && <Overlay className="work-notes-overlay" onClose={() => setWorkNotes(null)}><WorkNotesPopup ticket={tickets.find(t => t.id === workNotes.id)!} onSaveNotes={(value) => saveTicketNotes(workNotes.id, value)} backLabel={workNotes.from === 'popup' ? 'Back to ticket summary' : 'Back to full ticket'} onBack={() => { setWorkNotes(null); if (workNotes.from === 'popup') setDescriptionPopupTicketId(workNotes.id); else setSelectedTicketId(workNotes.id) }} onClose={() => setWorkNotes(null)} /></Overlay>}
+    {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onSaveNotes={(value) => saveTicketNotes(descriptionPopupTicketId, value)} onOpenWorkNotes={() => { setDescriptionPopupTicketId(''); openWorkNotes(descriptionPopupTicketId, 'popup') }} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); openTicket(descriptionPopupTicketId) }} /></Overlay>}
+    {workNotes && tickets.find(t => t.id === workNotes.id) && <Overlay className="work-notes-overlay" onClose={() => setWorkNotes(null)}><WorkNotesPopup ticket={tickets.find(t => t.id === workNotes.id)!} onSaveNotes={(value) => { recordUse('add-note', workNotes.id); saveTicketNotes(workNotes.id, value) }} backLabel={workNotes.from === 'popup' ? 'Back to ticket summary' : workNotes.from === 'record' ? 'Back to full ticket' : 'Back to Quick actions'} onBack={() => { setWorkNotes(null); if (workNotes.from === 'popup') setDescriptionPopupTicketId(workNotes.id); else if (workNotes.from === 'record') setSelectedTicketId(workNotes.id) }} onClose={() => setWorkNotes(null)} /></Overlay>}
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
