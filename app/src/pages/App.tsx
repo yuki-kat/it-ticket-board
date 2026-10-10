@@ -1474,13 +1474,21 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
     setNotesText(updatedNotes)
     if (onSaveNotes) onSaveNotes(updatedNotes)
 
-    // Open the service
-    if (service === 'Teams') {
-      window.open('https://teams.microsoft.com/', '_blank')
-    } else if (service === 'ZOOM') {
-      window.open('https://zoom.us/', '_blank')
-    } else if (service === 'Webex') {
-      window.open('https://webex.com/', '_blank')
+    // Open the service - use href instead of window.open to avoid sandbox blocks
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
 
     setShowCallMenu(false)
@@ -1765,13 +1773,21 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     const updatedNotes = currentNotes ? `${currentNotes}\n${callEntry}` : callEntry
     onSaveNotes(updatedNotes)
 
-    // Open the service
-    if (service === 'Teams') {
-      window.open('https://teams.microsoft.com/', '_blank')
-    } else if (service === 'ZOOM') {
-      window.open('https://zoom.us/', '_blank')
-    } else if (service === 'Webex') {
-      window.open('https://webex.com/', '_blank')
+    // Open the service - use href instead of window.open to avoid sandbox blocks
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
 
     setShowCallMenu(false)
