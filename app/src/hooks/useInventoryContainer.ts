@@ -4,11 +4,12 @@ import {
   type AssetItem, type AssetStatus, type HealthLevel, type InventoryPaneSettings,
   type InventoryProps, type InventoryViewMode, type InventoryViewSettings, type InventoryWorkspace,
   type InventoryWorkspaceTab, type InventorySplitPaneMode, type StockItem,
+  type AssetAction, type AssetActionForm, applyAssetAction, assetActionError, canApplyAssetAction, emptyActionForm, findAssetByCode,
   ASSET_EXPORT_HEADERS, SAVED_INVENTORY_VIEWS_KEY, STOCK_EXPORT_HEADERS, INVENTORY_VIEW_MODE_KEY,
   INVENTORY_WORKSPACE_KEY, assetCode, assetExportRows, assetHealthLevel,
   defaultPaneSettings, emptyAsset, emptyStock, healthLevels, inStockView, inventorySplitPaneModes,
   inventoryViewModes, isWarrantySoon, loadInventoryWorkspace, mockAction1HealthCheck, newWorkspaceId,
-  normalizeSavedInventoryView, parseTags, statuses, stockExportRows, dateLabel,
+  normalizeSavedInventoryView, parseTags, statuses, stockExportRows,
 } from '../lib/inventory'
 import { exportCsv } from '../lib/exportCsv'
 import { exportXlsx } from '../lib/exportXlsx'
@@ -59,8 +60,22 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
   const [editForm, setEditForm] = useState(emptyAsset)
   const [stockForm, setStockForm] = useState(emptyStock)
   const [formError, setFormError] = useState('')
-  const [action, setAction] = useState<'assign' | 'return' | 'repair' | 'move' | 'retire' | 'lost' | ''>('')
-  const [actionForm, setActionForm] = useState({ person: '', department: 'Field Services', location: '', issuedBy: '', expectedReturn: '', condition: 'Good' as AssetItem['condition'], note: '', returnStatus: 'Available' as 'Available' | 'In Repair' })
+  const [action, setAction] = useState<AssetAction | ''>('')
+  const [actionForm, setActionForm] = useState<AssetActionForm>(emptyActionForm)
+  // Bulk actions on checked rows of the asset list.
+  const [checkedIds, setCheckedIds] = useState<string[]>([])
+  const lastCheckedId = useRef('')
+  const [bulkAction, setBulkAction] = useState<Exclude<AssetAction, 'assign'> | ''>('')
+  // Quick scan: find or check in assets by asset tag or serial, as a barcode scanner types them.
+  const [showScan, setShowScan] = useState(false)
+  const [scanMode, setScanMode] = useState<'find' | 'checkin'>('find')
+  const [scanCode, setScanCode] = useState('')
+  const [scanLocation, setScanLocation] = useState('IT storage')
+  const [scanLog, setScanLog] = useState<{ at: string; code: string; ok: boolean; message: string; assetId?: string }[]>([])
+  // Leaver transfer: move everything one person has to someone else, or back to storage.
+  const [showTransfer, setShowTransfer] = useState(false)
+  const [transferForm, setTransferForm] = useState({ from: '', ids: [] as string[], mode: 'person' as 'person' | 'storage', to: '', issuedBy: '', department: 'Field Services', location: 'IT storage', note: '' })
+  const [inventoryNotice, setInventoryNotice] = useState('')
   const [ticketToLink, setTicketToLink] = useState('')
   const [stockChange, setStockChange] = useState({ amount: '', reason: '' })
   const [stockTagsText, setStockTagsText] = useState('')
@@ -228,25 +243,98 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
   }
   const applyAction = () => {
     if (!selected || !action) return
-    if (action === 'assign' && !actionForm.person.trim()) { setFormError('Enter the person receiving this asset.'); return }
-    if (action === 'assign' && !actionForm.issuedBy.trim()) { setFormError('Enter who issued this asset.'); return }
-    if ((action === 'assign' || action === 'return' || action === 'repair' || action === 'move') && !actionForm.location.trim()) { setFormError('Enter the asset location.'); return }
-    if ((action === 'retire' || action === 'lost') && !actionForm.note.trim()) { setFormError('Add a reason to the history.'); return }
+    const error = assetActionError(action, actionForm)
+    if (error) { setFormError(error); return }
     const at = new Date().toISOString()
-    updateAssets((items) => items.map((asset) => {
-      if (asset.id !== selected.id) return asset
-      let next: AssetItem = { ...asset }
-      let detail = ''
-      if (action === 'assign') { next = { ...next, status: 'Assigned', assignedTo: actionForm.person.trim(), department: actionForm.department, location: actionForm.location.trim(), assignedAt: today, expectedReturnAt: actionForm.expectedReturn, issuedBy: actionForm.issuedBy.trim(), condition: actionForm.condition }; detail = (asset.assignedTo && asset.assignedTo !== next.assignedTo ? 'Reassigned from ' + asset.assignedTo + ' to ' + next.assignedTo : 'Assigned to ' + next.assignedTo) + ' by ' + next.issuedBy + (next.expectedReturnAt ? '; expected return ' + dateLabel(next.expectedReturnAt) : '') }
-      if (action === 'return') { next = { ...next, status: actionForm.returnStatus, assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '', location: actionForm.location.trim(), condition: actionForm.condition }; detail = 'Returned by ' + (asset.assignedTo || 'previous holder') + '; moved to ' + next.location + ' as ' + next.status }
-      if (action === 'repair') { next = { ...next, status: 'In Repair', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '', location: actionForm.location.trim(), condition: 'Damaged' }; detail = 'Sent for repair at ' + next.location }
-      if (action === 'move') { next = { ...next, location: actionForm.location.trim() }; detail = 'Moved from ' + asset.location + ' to ' + next.location }
-      if (action === 'retire') { next = { ...next, status: 'Retired', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '' }; detail = 'Retired: ' + actionForm.note.trim() }
-      if (action === 'lost') { next = { ...next, status: 'Lost', assignedTo: '', assignedAt: '', expectedReturnAt: '', issuedBy: '' }; detail = 'Marked lost: ' + actionForm.note.trim() }
-      if (actionForm.note.trim() && action !== 'retire' && action !== 'lost') detail += '. Note: ' + actionForm.note.trim()
-      return { ...next, history: [...(asset.history || []), { at, action: action === 'assign' ? 'Assigned' : action === 'return' ? 'Returned' : action === 'repair' ? 'Sent for repair' : action === 'move' ? 'Location changed' : action === 'retire' ? 'Retired' : 'Marked lost', detail }] }
-    }))
+    updateAssets((items) => items.map((asset) => asset.id === selected.id ? applyAssetAction(asset, action, actionForm, at, today) : asset))
     setAction('')
+    setFormError('')
+  }
+  // Bulk actions apply only to checked rows that are still visible, so a filter change never acts on hidden assets.
+  const checkedAssets = filteredAssets.filter((asset) => checkedIds.includes(asset.id))
+  const toggleChecked = (id: string, range: boolean) => {
+    const ids = filteredAssets.map((asset) => asset.id)
+    const willCheck = !checkedIds.includes(id)
+    let affected = [id]
+    if (range && lastCheckedId.current && ids.includes(lastCheckedId.current) && ids.includes(id)) {
+      const [from, to] = [ids.indexOf(lastCheckedId.current), ids.indexOf(id)].sort((a, b) => a - b)
+      affected = ids.slice(from, to + 1)
+    }
+    setCheckedIds((current) => willCheck ? [...new Set([...current, ...affected])] : current.filter((item) => !affected.includes(item)))
+    lastCheckedId.current = id
+  }
+  const setAllChecked = (checked: boolean) => {
+    const ids = filteredAssets.map((asset) => asset.id)
+    setCheckedIds((current) => checked ? [...new Set([...current, ...ids])] : current.filter((item) => !ids.includes(item)))
+    lastCheckedId.current = ''
+  }
+  const clearChecked = () => { setCheckedIds([]); lastCheckedId.current = '' }
+  const openBulkAction = (value: Exclude<AssetAction, 'assign'>) => {
+    setBulkAction(value)
+    setFormError('')
+    setActionForm({ ...emptyActionForm(), location: value === 'return' ? 'IT storage' : '' })
+  }
+  const applyBulkAction = () => {
+    if (!bulkAction) return
+    const error = assetActionError(bulkAction, actionForm)
+    if (error) { setFormError(error); return }
+    const targets = checkedAssets.filter((asset) => canApplyAssetAction(asset, bulkAction)).map((asset) => asset.id)
+    if (!targets.length) { setFormError('None of the selected assets can take this action.'); return }
+    const at = new Date().toISOString()
+    // Keep each asset's own condition unless the action sets it (repair marks it Damaged).
+    updateAssets((items) => items.map((asset) => targets.includes(asset.id) && canApplyAssetAction(asset, bulkAction) ? applyAssetAction(asset, bulkAction, { ...actionForm, condition: asset.condition }, at, today, 'bulk action') : asset))
+    const skipped = checkedAssets.length - targets.length
+    const verb = { return: 'Returned', repair: 'Sent', move: 'Moved', retire: 'Retired', lost: 'Marked' }[bulkAction]
+    const tail = { return: '', repair: ' for repair', move: ' to ' + actionForm.location.trim(), retire: '', lost: ' lost' }[bulkAction]
+    setInventoryNotice(`${verb} ${targets.length} asset${targets.length === 1 ? '' : 's'}${tail}.${skipped ? ` Skipped ${skipped} that couldn't take this action.` : ''}`)
+    setBulkAction('')
+    setFormError('')
+    clearChecked()
+  }
+  const openScan = () => { setShowScan(true); setScanCode(''); setFormError('') }
+  const submitScan = () => {
+    const code = scanCode.trim()
+    if (!code) return
+    const found = findAssetByCode(assets, code)
+    const at = new Date().toISOString()
+    const log = (ok: boolean, message: string) => setScanLog((current) => [{ at, code, ok, message, assetId: found?.id }, ...current].slice(0, 8))
+    setScanCode('')
+    if (!found) { log(false, 'No asset has that asset tag or serial number.'); return }
+    if (scanMode === 'find') {
+      setShowScan(false)
+      openAssetRecord(found)
+      return
+    }
+    if (!scanLocation.trim()) { log(false, 'Enter where returned assets go before scanning.'); return }
+    if (found.status !== 'Assigned') { log(false, `${found.id} · ${found.name} is ${found.status.toLowerCase()}, not assigned, so there is nothing to check in.`); return }
+    const form = { ...emptyActionForm(), location: scanLocation, condition: found.condition }
+    // Re-check inside the update so a double scan can't return the same asset twice.
+    updateAssets((items) => items.map((asset) => asset.id === found.id && asset.status === 'Assigned' ? applyAssetAction(asset, 'return', form, at, today, 'quick scan') : asset))
+    log(true, `${found.id} · ${found.name} checked in from ${found.assignedTo || 'previous holder'} to ${scanLocation.trim()}.`)
+  }
+  const transferCandidates = assets.filter((asset) => asset.status === 'Assigned' && asset.assignedTo && asset.assignedTo === transferForm.from)
+  const openTransfer = (from = '') => {
+    const ids = assets.filter((asset) => asset.status === 'Assigned' && asset.assignedTo === from).map((asset) => asset.id)
+    setTransferForm({ from, ids, mode: 'person', to: '', issuedBy: '', department: 'Field Services', location: 'IT storage', note: '' })
+    setFormError('')
+    setShowTransfer(true)
+  }
+  const chooseTransferFrom = (from: string) => setTransferForm((current) => ({ ...current, from, ids: assets.filter((asset) => asset.status === 'Assigned' && asset.assignedTo === from).map((asset) => asset.id) }))
+  const toggleTransferAsset = (id: string) => setTransferForm((current) => ({ ...current, ids: current.ids.includes(id) ? current.ids.filter((item) => item !== id) : [...current.ids, id] }))
+  const applyTransfer = () => {
+    const { from, mode, to } = transferForm
+    const ids = transferCandidates.map((asset) => asset.id).filter((id) => transferForm.ids.includes(id))
+    if (!from) { setFormError('Choose the person who is leaving.'); return }
+    if (!ids.length) { setFormError('Choose at least one asset to transfer.'); return }
+    if (mode === 'person' && to.trim().toLowerCase() === from.toLowerCase()) { setFormError('Choose a different person to receive the assets.'); return }
+    const action: AssetAction = mode === 'person' ? 'assign' : 'return'
+    const form: AssetActionForm = { ...emptyActionForm(), person: to, issuedBy: transferForm.issuedBy, department: transferForm.department, location: transferForm.location, note: transferForm.note }
+    const error = assetActionError(action, form)
+    if (error) { setFormError(error); return }
+    const at = new Date().toISOString()
+    updateAssets((items) => items.map((asset) => ids.includes(asset.id) && asset.status === 'Assigned' && asset.assignedTo === from ? applyAssetAction(asset, action, { ...form, condition: asset.condition, location: mode === 'person' ? asset.location || form.location : form.location }, at, today, 'leaver transfer') : asset))
+    setInventoryNotice(`Moved ${ids.length} asset${ids.length === 1 ? '' : 's'} from ${from} ${mode === 'person' ? 'to ' + to.trim() : 'back to ' + transferForm.location.trim()}.`)
+    setShowTransfer(false)
     setFormError('')
   }
   const addAsset = () => {
@@ -332,6 +420,13 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
     relatedTickets, openAssetRecord, openStockRecord,
     // asset actions (assign/return/repair/move/retire/lost)
     action, setAction, actionForm, setActionForm, openAction, applyAction,
+    // bulk actions on checked list rows
+    checkedIds, checkedAssets, toggleChecked, setAllChecked, clearChecked, bulkAction, setBulkAction, openBulkAction, applyBulkAction,
+    // quick scan
+    showScan, setShowScan, scanMode, setScanMode, scanCode, setScanCode, scanLocation, setScanLocation, scanLog, openScan, submitScan,
+    // leaver transfer
+    showTransfer, setShowTransfer, transferForm, setTransferForm, transferCandidates, openTransfer, chooseTransferFrom, toggleTransferAsset, applyTransfer,
+    inventoryNotice, setInventoryNotice,
     // asset edit
     showEditAsset, setShowEditAsset, editForm, setEditForm, openEdit, saveEdit,
     // add asset / add stock
