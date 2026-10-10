@@ -1,0 +1,48 @@
+/* Quick actions page (#/quick): commands ranked by on-device usage learning. */
+/* align-content: start keeps rows at their natural height: .main-content is at least a full screen tall and would stretch them. */
+.quick-page { display: grid; align-content: start; gap: 18px; max-width: 1180px; margin: 0 auto; padding: 28px 24px 56px; }
+.quick-heading { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.quick-heading h1 { display: flex; align-items: center; gap: 10px; margin: 4px 0 6px; font-size: 30px; line-height: 1.15; color: #12313d; }
+.quick-heading h1 svg { color: #b7791f; }
+.quick-heading p { margin: 0; max-width: 62ch; font-size: 14px; color: #50656e; }
+.quick-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.quick-controls button, .quick-confirm button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 1px solid #c8d9de; border-radius: 8px; background: #fff; color: #264e5f; font-size: 12px; font-weight: 600; cursor: pointer; }
+.quick-controls button:hover:not(:disabled), .quick-confirm button:hover { background: #e9f5f7; }
+.quick-controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+.quick-learned { font-size: 12px; color: #5a7280; font-variant-numeric: tabular-nums; }
+.quick-confirm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: #33525e; }
+.quick-confirm .quick-danger { border-color: #e1b7b1; color: #ad3f33; }
+.quick-confirm .quick-danger:hover { background: #fbeeec; }
+
+.quick-ticket { display: grid; align-content: start; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px 12px; padding: 14px 16px; background: #fff; border: 1px solid #dfe7e9; border-radius: 12px; }
+.quick-ticket label { font-size: 12px; font-weight: 700; color: #33525e; }
+.quick-ticket select { width: 100%; max-width: 560px; min-height: 36px; padding: 0 10px; border: 1px solid #cfdade; border-radius: 8px; background: #fff; color: #12313d; font: inherit; font-size: 13px; }
+.quick-ticket small { grid-column: 2; font-size: 11px; color: #6b8089; }
+.quick-notice { min-height: 18px; margin: -8px 0 0; font-size: 12px; color: #2f7a52; }
+
+.quick-section { display: grid; align-content: start; gap: 10px; }
+.quick-section h2 { margin: 0; font-size: 17px; color: #12313d; }
+.quick-why { margin: -4px 0 2px; font-size: 12px; color: #5a7280; }
+.quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.quick-command { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 14px; text-align: left; background: #fff; border: 1px solid #dfe7e9; border-radius: 12px; color: #12313d; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+.quick-command:hover { border-color: #8db7c4; box-shadow: 0 4px 14px rgb(38 78 95 / 10%); }
+.quick-command:focus-visible { outline: 3px solid #9dbce4; outline-offset: 2px; }
+.quick-grid-next .quick-command { border-color: #e9d3a6; background: #fffaf0; }
+.quick-command-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: #e9f3f5; color: #264e5f; }
+.quick-grid-next .quick-command-icon { background: #fbecd0; color: #8a5a12; }
+.quick-command-text { display: grid; gap: 2px; min-width: 0; }
+.quick-command-text b { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.quick-command-text small { font-size: 11px; color: #5a7280; overflow-wrap: anywhere; }
+
+/* Header button that opens the page. */
+.header-quick-button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border: 1px solid #e3cf9f; border-radius: 9px; background: #fffaf0; color: #7a4f10; font-size: 13px; font-weight: 600; cursor: pointer; }
+.header-quick-button:hover, .header-quick-button.active { background: #fbecd0; }
+.header-quick-button:focus-visible { outline: 3px solid #9dbce4; outline-offset: 2px; }
+
+@media (max-width: 700px) {
+  .quick-page { padding: 18px 16px 40px; }
+  .quick-heading h1 { font-size: 24px; }
+  .quick-ticket { grid-template-columns: 1fr; }
+  .quick-ticket small { grid-column: 1; }
+  .quick-grid { grid-template-columns: 1fr; }
+}
