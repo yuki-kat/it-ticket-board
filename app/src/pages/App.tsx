@@ -1405,6 +1405,7 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
 }
 
 function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
+  const { user } = useAuth()
   const [expandedNotes, setExpandedNotes] = useState(false)
   const [notesText, setNotesText] = useState(ticket.notes || '')
   const [showSavedPopup, setShowSavedPopup] = useState(false)
@@ -1414,6 +1415,10 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const [showPrioritySuggestions, setShowPrioritySuggestions] = useState(false)
   const [cachedPrioritySuggestionsId, setCachedPrioritySuggestionsId] = useState<string | null>(null)
   const { loading: priorityLoading, error: priorityError, result: priorityResult, suggest: suggestPriority } = usePriorityAssist()
+  const [callService, setCallService] = useState('Teams')
+  const [callStatus, setCallStatus] = useState('Successful')
+  const [callNotes, setCallNotes] = useState('')
+  const [showCallLogger, setShowCallLogger] = useState(false)
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
@@ -1442,6 +1447,20 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
       console.error('Priority suggestions failed:', err)
     }
   }
+  const logCallToNotes = () => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const statusLabel = callStatus === 'Successful' ? 'Successful' : `${callStatus}`
+    const callEntry = `[${timestamp}] ${engineerName} - [${callService}] Call ${statusLabel}${callNotes ? ': ' + callNotes : ''}`
+    const updatedNotes = notesText ? `${notesText}\n${callEntry}` : callEntry
+    setNotesText(updatedNotes)
+    if (onSaveNotes) onSaveNotes(updatedNotes)
+    setCallService('Teams')
+    setCallStatus('Successful')
+    setCallNotes('')
+    setShowCallLogger(false)
+    setShowSavedPopup(true)
+  }
   return <>
     <RecordStatusStrip ticket={ticket} now={now} />
     <div className="record-layout-two-col">
@@ -1457,6 +1476,44 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         <section className="record-section">
           <div className="record-section-heading"><h3>Tags</h3></div>
           {ticket.tags?.length ? <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <p>No tags added.</p>}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading">
+            <h3>Call log</h3>
+          </div>
+          {onSaveNotes && !showCallLogger && (
+            <button className="primary-button" onClick={() => setShowCallLogger(true)} style={{ marginBottom: '16px' }}>Log call</button>
+          )}
+          {showCallLogger && (
+            <div style={{ padding: '12px', border: '1px solid #dde6e8', borderRadius: '5px', marginBottom: '16px', backgroundColor: '#f9fbf9' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#4c6067' }}>Service</label>
+                <select value={callService} onChange={(e) => setCallService(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', fontFamily: 'inherit', fontSize: 'inherit', boxSizing: 'border-box' }}>
+                  <option>Teams</option>
+                  <option>ZOOM</option>
+                  <option>Webex</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#4c6067' }}>Status</label>
+                <select value={callStatus} onChange={(e) => setCallStatus(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', fontFamily: 'inherit', fontSize: 'inherit', boxSizing: 'border-box' }}>
+                  <option>Successful</option>
+                  <option>Failed</option>
+                  <option>No Answer</option>
+                  <option>Declined</option>
+                  <option>Connection Issue</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#4c6067' }}>Notes</label>
+                <textarea value={callNotes} onChange={(e) => setCallNotes(e.target.value)} placeholder="Call details or outcome..." rows={3} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="primary-button" onClick={logCallToNotes} style={{ flex: 1 }}>Save call to notes</button>
+                <button style={{ padding: '8px 12px', border: '1px solid #dde6e8', background: '#fff', borderRadius: '5px', cursor: 'pointer', fontSize: 'inherit' }} onClick={() => { setShowCallLogger(false); setCallService('Teams'); setCallStatus('Successful'); setCallNotes('') }}>Cancel</button>
+              </div>
+            </div>
+          )}
         </section>
         <section className="record-section">
           <div className="record-section-heading">
