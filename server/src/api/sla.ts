@@ -195,7 +195,9 @@ router.get('/teams/:teamId/escalation-dashboard', async (req: AuthRequest, res) 
       const matrix = ESCALATION_MATRIX[ticket.priority as keyof typeof ESCALATION_MATRIX];
       if (!matrix) return false;
 
-      const nextTierMs = matrix[(`tier${ticket.current_escalation_tier + 1}` as any) || 'tier3'];
+      const nextTier = Math.min(ticket.current_escalation_tier + 1, 3);
+      const tierKey = `tier${nextTier}` as const;
+      const nextTierMs = matrix[tierKey as keyof typeof matrix];
       return ageMs >= nextTierMs * 60 * 1000 * 0.75; // At risk if 75% to next escalation
     });
 

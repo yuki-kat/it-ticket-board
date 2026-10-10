@@ -391,7 +391,7 @@ router.post('/teams/:teamId/tickets/:ticketId/escalate-advanced', async (req: Au
         nextTier,
         rule.assignment_group_id,
         reason || 'manual',
-        escalated_by_user_id || req.userId,
+        escalated_by_user_id || req.user?.user_id,
         ticket.sla_breached ? 'breached' : 'at_risk',
         ticket.priority,
         ticket.ticket_type,
@@ -494,13 +494,14 @@ router.post('/teams/:teamId/check-auto-escalations', async (req: AuthRequest, re
 
       if (shouldEscalate) {
         const nextTier = Math.min(ticket.current_escalation_tier + 1, 3);
+        const newTier = nextTier;
 
-        if (nextTier > ticket.current_escalation_tier) {
+        if (newTier > ticket.current_escalation_tier) {
           // Get escalation rule
           const ruleResult = await query(
             `SELECT * FROM escalation_matrix_rules
              WHERE team_id = $1 AND ticket_type = $2 AND priority = $3 AND escalation_tier = $4`,
-            [teamId, ticket.ticket_type, ticket.priority, nextTier]
+            [teamId, ticket.ticket_type, ticket.priority, newTier]
           );
 
           if (ruleResult.rows.length > 0) {
@@ -514,7 +515,7 @@ router.post('/teams/:teamId/check-auto-escalations', async (req: AuthRequest, re
                    last_escalation_check = CURRENT_TIMESTAMP,
                    updated_at = CURRENT_TIMESTAMP
                WHERE id = $3`,
-              [nextTier, rule.assignment_group_id, ticket.id]
+              [newTier, rule.assignment_group_id, ticket.id]
             );
 
             // Log escalation
@@ -527,7 +528,7 @@ router.post('/teams/:teamId/check-auto-escalations', async (req: AuthRequest, re
                 ticket.id,
                 teamId,
                 ticket.current_escalation_tier,
-                nextTier,
+                newTier,
                 rule.assignment_group_id,
                 reason,
                 ticket.sla_breached ? 'breached' : 'at_risk',

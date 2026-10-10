@@ -1,7 +1,7 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { query } from '../db/connection.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
-import multer from 'multer';
+import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,14 +10,16 @@ const router = Router();
 router.use(authMiddleware);
 
 // Configure multer for file uploads
+const uploadsDir = path.join(process.cwd(), 'uploads', 'escalation-matrices');
+
 const upload = multer({
   storage: multer.diskStorage({
-    destination: async (req, file, cb) => {
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'escalation-matrices');
-      await fs.mkdir(uploadsDir, { recursive: true });
-      cb(null, uploadsDir);
+    destination: (_req: Request, _file, cb: (error: Error | null, destination: string) => void) => {
+      fs.mkdir(uploadsDir, { recursive: true })
+        .then(() => cb(null, uploadsDir))
+        .catch(err => cb(err, uploadsDir));
     },
-    filename: (req, file, cb) => {
+    filename: (_req: Request, file, cb: (error: Error | null, filename: string) => void) => {
       const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
       const ext = path.extname(file.originalname);
       const name = path.basename(file.originalname, ext);
@@ -25,7 +27,7 @@ const upload = multer({
     },
   }),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req: Request, file, cb: FileFilterCallback) => {
     // Allow common image and document formats
     const allowedMimes = [
       'image/png',
@@ -49,11 +51,16 @@ const upload = multer({
 router.post(
   '/teams/:teamId/escalation-matrix/upload',
   upload.single('file'),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest & { file?: any }, res) => {
     try {
       const { teamId } = req.params;
       if (!req.file) {
         return res.status(400).json({ error: 'No file provided' });
+      }
+
+      const userId = req.user?.user_id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
       }
 
       // Delete existing matrix for this team
@@ -82,7 +89,7 @@ router.post(
           req.file.mimetype,
           req.file.size,
           req.file.path,
-          req.userId,
+          userId,
         ]
       );
 
