@@ -7,9 +7,15 @@ import {
   getEscalationHistoryWithAccess,
   rejectEscalationHistoryModification,
 } from '../utils/escalation-access-control.js';
+import { requireTeamRole } from '../utils/team-access.js';
 
 const router = Router();
 router.use(authMiddleware);
+
+// Team routes: members can read and escalate; team admins change groups and rules.
+// Escalation history keeps its own rule (team admins, compliance officers, the ticket's creator).
+const teamMember = requireTeamRole('member');
+const teamAdmin = requireTeamRole('admin');
 
 // ============ ACCESS CONTROL ============
 
@@ -90,7 +96,7 @@ router.delete('/admin/compliance-officers/:userId', async (req: AuthRequest, res
 // ============ ASSIGNMENT GROUPS ============
 
 // Create assignment group
-router.post('/teams/:teamId/assignment-groups', async (req: AuthRequest, res) => {
+router.post('/teams/:teamId/assignment-groups', teamAdmin, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const {
@@ -136,7 +142,7 @@ router.post('/teams/:teamId/assignment-groups', async (req: AuthRequest, res) =>
 });
 
 // Get all assignment groups for team
-router.get('/teams/:teamId/assignment-groups', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/assignment-groups', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const result = await query(
@@ -159,7 +165,7 @@ router.get('/teams/:teamId/assignment-groups', async (req: AuthRequest, res) => 
 });
 
 // Update assignment group
-router.put('/teams/:teamId/assignment-groups/:groupId', async (req: AuthRequest, res) => {
+router.put('/teams/:teamId/assignment-groups/:groupId', teamAdmin, async (req: AuthRequest, res) => {
   try {
     const { teamId, groupId } = req.params;
     const { name, description, contact_type, contact_address, contact_phone, timezone } = req.body;
@@ -192,7 +198,7 @@ router.put('/teams/:teamId/assignment-groups/:groupId', async (req: AuthRequest,
 // ============ ESCALATION MATRIX RULES ============
 
 // Create escalation matrix rule (ticket type × priority × tier → group)
-router.post('/teams/:teamId/escalation-rules', async (req: AuthRequest, res) => {
+router.post('/teams/:teamId/escalation-rules', teamAdmin, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const {
@@ -239,7 +245,7 @@ router.post('/teams/:teamId/escalation-rules', async (req: AuthRequest, res) => 
 });
 
 // Get escalation rules for team (with group details)
-router.get('/teams/:teamId/escalation-rules', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/escalation-rules', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const { ticket_type, priority } = req.query;
@@ -273,7 +279,7 @@ router.get('/teams/:teamId/escalation-rules', async (req: AuthRequest, res) => {
 });
 
 // Get next escalation tier for a ticket
-router.get('/teams/:teamId/next-escalation/:ticketId', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/next-escalation/:ticketId', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId, ticketId } = req.params;
 
@@ -321,7 +327,7 @@ router.get('/teams/:teamId/next-escalation/:ticketId', async (req: AuthRequest, 
 // ============ ESCALATION EXECUTION ============
 
 // Escalate ticket (manual or automatic)
-router.post('/teams/:teamId/tickets/:ticketId/escalate-advanced', async (req: AuthRequest, res) => {
+router.post('/teams/:teamId/tickets/:ticketId/escalate-advanced', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId, ticketId } = req.params;
     const { reason, escalated_by_user_id } = req.body;
@@ -453,7 +459,7 @@ router.get('/teams/:teamId/tickets/:ticketId/escalation-history', async (req: Au
 });
 
 // Check for tickets that need automatic escalation (background job)
-router.post('/teams/:teamId/check-auto-escalations', async (req: AuthRequest, res) => {
+router.post('/teams/:teamId/check-auto-escalations', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
 

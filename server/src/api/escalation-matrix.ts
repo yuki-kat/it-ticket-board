@@ -5,9 +5,19 @@ import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
+import { isUuid, requireTeamRole } from '../utils/team-access.js';
 
 const router = Router();
 router.use(authMiddleware);
+
+// Reading a team's matrices and channels needs membership; changing them needs a team admin.
+const teamMember = requireTeamRole('member');
+const teamAdmin = requireTeamRole('admin');
+const ticketTeamMember = requireTeamRole('member', async (req) => {
+  if (!isUuid(req.params.id)) return undefined;
+  const result = await query('SELECT team_id FROM tickets WHERE id = $1', [req.params.id]);
+  return result.rows[0]?.team_id;
+});
 
 // Helper function to create default escalation matrix SVG
 function generateDefaultEscalationMatrixSvg(): string {
@@ -261,6 +271,7 @@ const upload = multer({
 // Upload escalation matrix
 router.post(
   '/teams/:teamId/escalation-matrix/upload',
+  teamAdmin,
   upload.single('file'),
   async (req: AuthRequest & { file?: any }, res) => {
     try {
@@ -313,7 +324,7 @@ router.post(
 );
 
 // Get escalation matrix (with auto-initialize defaults)
-router.get('/teams/:teamId/escalation-matrix', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/escalation-matrix', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const userId = req.user?.user_id;
@@ -340,7 +351,7 @@ router.get('/teams/:teamId/escalation-matrix', async (req: AuthRequest, res) => 
 });
 
 // Download escalation matrix file
-router.get('/teams/:teamId/escalation-matrix/download', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/escalation-matrix/download', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const result = await query('SELECT * FROM escalation_matrices WHERE team_id = $1', [teamId]);
@@ -358,7 +369,7 @@ router.get('/teams/:teamId/escalation-matrix/download', async (req: AuthRequest,
 });
 
 // Delete escalation matrix
-router.delete('/teams/:teamId/escalation-matrix', async (req: AuthRequest, res) => {
+router.delete('/teams/:teamId/escalation-matrix', teamAdmin, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
 
@@ -383,7 +394,7 @@ router.delete('/teams/:teamId/escalation-matrix', async (req: AuthRequest, res) 
 });
 
 // Add escalation channel (map tier to user/team)
-router.post('/teams/:teamId/escalation-channels', async (req: AuthRequest, res) => {
+router.post('/teams/:teamId/escalation-channels', teamAdmin, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const { tier, channel_type, channel_identifier, user_id, description } = req.body;
@@ -407,7 +418,7 @@ router.post('/teams/:teamId/escalation-channels', async (req: AuthRequest, res) 
 });
 
 // Get escalation channels for team
-router.get('/teams/:teamId/escalation-channels', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/escalation-channels', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const result = await query(
@@ -425,6 +436,7 @@ router.get('/teams/:teamId/escalation-channels', async (req: AuthRequest, res) =
 // Update escalation channel
 router.put(
   '/teams/:teamId/escalation-channels/:channelId',
+  teamAdmin,
   async (req: AuthRequest, res) => {
     try {
       const { teamId, channelId } = req.params;
@@ -458,6 +470,7 @@ router.put(
 // Delete escalation channel
 router.delete(
   '/teams/:teamId/escalation-channels/:channelId',
+  teamAdmin,
   async (req: AuthRequest, res) => {
     try {
       const { teamId, channelId } = req.params;
@@ -480,7 +493,7 @@ router.delete(
 );
 
 // Notify escalation channel
-router.post('/tickets/:id/notify-escalation', async (req: AuthRequest, res) => {
+router.post('/tickets/:id/notify-escalation', ticketTeamMember, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const { channel, tier, ticketTitle, ticketPriority } = req.body;
@@ -591,6 +604,7 @@ const slaUpload = multer({
 // Upload SLA matrix
 router.post(
   '/teams/:teamId/sla-matrix/upload',
+  teamAdmin,
   slaUpload.single('file'),
   async (req: AuthRequest & { file?: any }, res) => {
     try {
@@ -643,7 +657,7 @@ router.post(
 );
 
 // Get SLA matrix (with auto-initialize defaults)
-router.get('/teams/:teamId/sla-matrix', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/sla-matrix', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const userId = req.user?.user_id;
@@ -670,7 +684,7 @@ router.get('/teams/:teamId/sla-matrix', async (req: AuthRequest, res) => {
 });
 
 // Download SLA matrix file
-router.get('/teams/:teamId/sla-matrix/download', async (req: AuthRequest, res) => {
+router.get('/teams/:teamId/sla-matrix/download', teamMember, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
     const result = await query('SELECT * FROM sla_matrices WHERE team_id = $1', [teamId]);
@@ -688,7 +702,7 @@ router.get('/teams/:teamId/sla-matrix/download', async (req: AuthRequest, res) =
 });
 
 // Delete SLA matrix
-router.delete('/teams/:teamId/sla-matrix', async (req: AuthRequest, res) => {
+router.delete('/teams/:teamId/sla-matrix', teamAdmin, async (req: AuthRequest, res) => {
   try {
     const { teamId } = req.params;
 

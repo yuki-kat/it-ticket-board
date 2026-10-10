@@ -2,6 +2,16 @@ import { expect, test } from '@playwright/test'
 
 // Test the auth flow: signup, login, and localStorage persistence
 test.describe('Authentication', () => {
+  test('sign-in fields are not marked invalid before the user types', async ({ page }) => {
+    const red = 'rgb(201, 76, 70)'
+    await page.goto('/index.html#/signin')
+    await expect(page.locator('input[type="email"]')).not.toHaveCSS('border-top-color', red)
+    await expect(page.locator('input[type="password"]')).not.toHaveCSS('border-top-color', red)
+    await page.fill('input[type="email"]', 'not-an-email')
+    await page.locator('input[type="password"]').click()
+    await expect(page.locator('input[type="email"]')).toHaveCSS('border-top-color', red)
+  })
+
   test('signup persists both token and user to localStorage', async ({ page, context }) => {
     // Clear all cookies and storage before test
     await context.clearCookies()
