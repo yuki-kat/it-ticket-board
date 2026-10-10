@@ -1767,23 +1767,11 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
 
     // Open the service
     if (service === 'Teams') {
-      // Try Teams app first, fall back to web
-      window.open('msteams://', '_blank')
-      setTimeout(() => {
-        window.open('https://teams.microsoft.com/', '_blank')
-      }, 500)
+      window.open('https://teams.microsoft.com/', '_blank')
     } else if (service === 'ZOOM') {
-      // Try Zoom app first, fall back to web
-      window.open('zoommtg://', '_blank')
-      setTimeout(() => {
-        window.open('https://zoom.us/', '_blank')
-      }, 500)
+      window.open('https://zoom.us/', '_blank')
     } else if (service === 'Webex') {
-      // Try Webex app first, fall back to web
-      window.open('webexapp://', '_blank')
-      setTimeout(() => {
-        window.open('https://webex.com/', '_blank')
-      }, 500)
+      window.open('https://webex.com/', '_blank')
     }
 
     setShowCallMenu(false)
