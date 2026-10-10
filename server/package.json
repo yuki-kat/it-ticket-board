@@ -21,7 +21,7 @@
     "nodemailer": "^10.0.9",
     "pg": "^8.23.1",
     "socket.io": "^4.7.2",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
