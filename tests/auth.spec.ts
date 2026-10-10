@@ -24,7 +24,7 @@ test.describe('Authentication', () => {
       })
     })
 
-    await page.goto('/index.html')
+    await page.goto('/index.html#/signin')
 
     // Clear localStorage on the page
     await page.evaluate(() => {
@@ -101,7 +101,7 @@ test.describe('Authentication', () => {
     })
 
     // First signup
-    await page.goto('/index.html')
+    await page.goto('/index.html#/signin')
     await page.evaluate(() => localStorage.clear())
 
     await page.fill('input[type="email"]', uniqueEmail)
@@ -177,7 +177,7 @@ test.describe('Authentication', () => {
     })
 
     // First, create the account
-    await page.goto('/index.html')
+    await page.goto('/index.html#/signin')
     await page.evaluate(() => localStorage.clear())
 
     // Signup with this email first

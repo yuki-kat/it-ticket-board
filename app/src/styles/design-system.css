@@ -245,57 +245,6 @@ textarea:focus-visible {
   color: var(--color-accent-warm);
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-primary: #2a9f9e;
-    --color-primary-light: #3abfbe;
-    --color-primary-dark: #1a6f6e;
-    --color-primary-bg: #0a3f3e;
-
-    --color-accent-warm: #ff9966;
-    --color-accent-red: #ff6b5b;
-    --color-accent-green: #66cc99;
-    --color-accent-amber: #ffb366;
-
-    --color-neutral-white: #1a1f1e;
-    --color-neutral-bg: #0d1110;
-    --color-neutral-light: #1a1f1e;
-    --color-neutral-border: #2a3432;
-    --color-neutral-line: #3a4342;
-
-    --color-text-primary: #e8ebe9;
-    --color-text-secondary: #b0b9b6;
-    --color-text-tertiary: #707977;
-
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme="dark"] {
-  --color-primary: #2a9f9e;
-  --color-primary-light: #3abfbe;
-  --color-primary-dark: #1a6f6e;
-  --color-primary-bg: #0a3f3e;
-
-  --color-accent-warm: #ff9966;
-  --color-accent-red: #ff6b5b;
-  --color-accent-green: #66cc99;
-  --color-accent-amber: #ffb366;
-
-  --color-neutral-white: #1a1f1e;
-  --color-neutral-bg: #0d1110;
-  --color-neutral-light: #1a1f1e;
-  --color-neutral-border: #2a3432;
-  --color-neutral-line: #3a4342;
-
-  --color-text-primary: #e8ebe9;
-  --color-text-secondary: #b0b9b6;
-  --color-text-tertiary: #707977;
-
-  color-scheme: dark;
-}
-
 :root[data-theme="light"] {
   color-scheme: light;
 }

@@ -279,4 +279,127 @@ router.post('/tickets/:id/escalate', async (req: AuthRequest, res) => {
   }
 });
 
+// Pause SLA timer for a ticket
+router.post('/tickets/:id/sla/pause', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const ticketResult = await query(
+      'SELECT sla_paused FROM tickets WHERE id = $1',
+      [id]
+    );
+
+    if (ticketResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    if (ticketResult.rows[0].sla_paused) {
+      return res.status(400).json({ error: 'SLA is already paused' });
+    }
+
+    const result = await query(
+      `UPDATE tickets
+       SET sla_paused = true, sla_paused_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING id, sla_paused, sla_paused_at, sla_paused_total_ms`,
+      [id]
+    );
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Error pausing SLA:', error);
+    res.status(500).json({ error: 'Failed to pause SLA' });
+  }
+});
+
+// Resume SLA timer for a ticket
+router.post('/tickets/:id/sla/resume', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const ticketResult = await query(
+      'SELECT sla_paused, sla_paused_at, sla_paused_total_ms FROM tickets WHERE id = $1',
+      [id]
+    );
+
+    if (ticketResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    const ticket = ticketResult.rows[0];
+    if (!ticket.sla_paused) {
+      return res.status(400).json({ error: 'SLA is not paused' });
+    }
+
+    // Calculate the paused duration and add it to the total
+    const pausedDuration = ticket.sla_paused_at
+      ? new Date().getTime() - new Date(ticket.sla_paused_at).getTime()
+      : 0;
+    const newTotalPausedMs = (ticket.sla_paused_total_ms || 0) + pausedDuration;
+
+    const result = await query(
+      `UPDATE tickets
+       SET sla_paused = false, sla_paused_at = NULL, sla_paused_total_ms = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, sla_paused, sla_paused_total_ms`,
+      [newTotalPausedMs, id]
+    );
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Error resuming SLA:', error);
+    res.status(500).json({ error: 'Failed to resume SLA' });
+  }
+});
+
+// Get effective SLA time (accounting for paused periods)
+router.get('/tickets/:id/sla/effective-time', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const ticketResult = await query(
+      `SELECT created_at, sla_paused, sla_paused_at, sla_paused_total_ms, status
+       FROM tickets WHERE id = $1`,
+      [id]
+    );
+
+    if (ticketResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    const ticket = ticketResult.rows[0];
+    const now = new Date();
+    const createdAt = new Date(ticket.created_at);
+
+    // Calculate total elapsed time
+    let totalElapsed = now.getTime() - createdAt.getTime();
+
+    // Subtract total paused time
+    let totalPausedMs = ticket.sla_paused_total_ms || 0;
+
+    // If currently paused, add the time since it was paused
+    if (ticket.sla_paused && ticket.sla_paused_at) {
+      totalPausedMs += now.getTime() - new Date(ticket.sla_paused_at).getTime();
+    }
+
+    const effectiveMs = totalElapsed - totalPausedMs;
+    const effectiveMinutes = Math.floor(effectiveMs / 1000 / 60);
+    const effectiveHours = Math.floor(effectiveMinutes / 60);
+
+    res.json({
+      ticketId: id,
+      totalElapsedMs: totalElapsed,
+      totalPausedMs,
+      effectiveMs,
+      effectiveMinutes,
+      effectiveHours,
+      isPaused: ticket.sla_paused,
+      status: ticket.status,
+    });
+  } catch (error) {
+    console.error('Error calculating effective SLA time:', error);
+    res.status(500).json({ error: 'Failed to calculate effective SLA time' });
+  }
+});
+
 export default router;

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, Moon, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
+import SignInPage from './SignInPage'
 import SyncBadge from '../components/SyncBadge'
 import { useCloudSync, startSync, stopSync } from '../lib/cloudSync'
 import { useAuth } from '../contexts/AuthContext'
@@ -28,9 +29,10 @@ import SearchPage from './SearchPage'
 import '../styles/search.css'
 import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import GeminiSettings from '../components/GeminiSettings'
-import ThemeSettings from '../components/ThemeSettings'
 import { generateTicketSuggestions } from '../api/gemini'
 import EscalationPage from './EscalationPage'
+import CompactSLATimer from '../components/CompactSLATimer'
+import { onPauseChange, pausedMsFor, syncStatusPause } from '../utils/slaPause'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -136,6 +138,35 @@ function normalizeSavedTicketView(view: SavedView<TicketViewSettings>): SavedVie
 const assessmentLevels: Assessment[] = ['High', 'Medium', 'Low']
 const parseTicketTags = (value: string) => [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))].slice(0, 12)
 
+// SLA time lookup based on severity
+function getSLATimes(severity: Severity): { responseMinutes: number; resolutionHours: number } {
+  const row = severityRows.find(r => r.level === severity)
+  if (!row) return { responseMinutes: 60, resolutionHours: 24 }
+
+  // Parse response time (e.g., "15 minutes", "1 hour", "1 business day")
+  const responseMatch = row.response.match(/(\d+)\s+(\w+)/)
+  let responseMinutes = 60
+  if (responseMatch) {
+    const amount = parseInt(responseMatch[1])
+    const unit = responseMatch[2].toLowerCase()
+    if (unit.includes('minute')) responseMinutes = amount
+    else if (unit.includes('hour')) responseMinutes = amount * 60
+    else if (unit.includes('day')) responseMinutes = amount * 24 * 60
+  }
+
+  // Parse resolution time (e.g., "4 hours", "1 business day", "3 business days")
+  const resolutionMatch = row.resolution.match(/(\d+)\s+(\w+)/)
+  let resolutionHours = 24
+  if (resolutionMatch) {
+    const amount = parseInt(resolutionMatch[1])
+    const unit = resolutionMatch[2].toLowerCase()
+    if (unit.includes('hour')) resolutionHours = amount
+    else if (unit.includes('day')) resolutionHours = amount * 24
+  }
+
+  return { responseMinutes, resolutionHours }
+}
+
 function recordActivity(previous: TicketItem | undefined, ticket: TicketItem): TicketItem {
   const at = new Date().toISOString()
   if (!previous) return { ...ticket, activity: ticket.activity || [] }
@@ -194,7 +225,7 @@ function resolutionTargetMs(severity: Severity) {
 }
 
 function slaTime(ticket: TicketItem, now: number) {
-  const deadline = new Date(ticket.createdAt).getTime() + resolutionTargetMs(ticket.severity)
+  const deadline = new Date(ticket.createdAt).getTime() + resolutionTargetMs(ticket.severity) + pausedMsFor(ticket.id, now)
   const delta = deadline - now
   const minutes = Math.floor(Math.abs(delta) / 60_000)
   const days = Math.floor(minutes / (24 * 60))
@@ -202,6 +233,14 @@ function slaTime(ticket: TicketItem, now: number) {
   const remainingMinutes = minutes % 60
   const duration = days ? `${days}d ${hours}h` : `${hours}h ${remainingMinutes}m`
   return { deadline, label: delta < 0 ? `${duration} over` : `${duration} left`, breached: delta < 0 }
+}
+
+function formatPausedFor(ms: number) {
+  const totalSeconds = Math.round(ms / 1000)
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  return h ? `${h}h ${m}m ${s}s` : m ? `${m}m ${s}s` : `${s}s`
 }
 
 function slaAtRisk(ticket: TicketItem, now: number) {
@@ -212,7 +251,7 @@ function slaAtRisk(ticket: TicketItem, now: number) {
 function escalationDue(ticket: TicketItem, now: number) {
   if (ticket.status === 'Resolved' || ticket.currentTier >= 3) return false
   const nextTier = (ticket.currentTier + 1) as 2 | 3
-  return now - new Date(ticket.createdAt).getTime() >= escalationTargetMs(ticket.severity, nextTier)
+  return now - new Date(ticket.createdAt).getTime() - pausedMsFor(ticket.id, now) >= escalationTargetMs(ticket.severity, nextTier)
 }
 
 function dueTodayOrLate(ticket: TicketItem, now: number) {
@@ -535,24 +574,6 @@ function App() {
   const [showReports, setShowReports] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showGeminiSettings, setShowGeminiSettings] = useState(false)
-  const [showThemeSettings, setShowThemeSettings] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    try {
-      const saved = localStorage.getItem('it-ticket-kanban-theme')
-      return saved === 'dark' ? 'dark' : 'light'
-    } catch {
-      return 'light'
-    }
-  })
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('it-ticket-kanban-theme', newTheme)
-    document.documentElement.setAttribute('data-theme', newTheme)
-  }
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
   const [showToolsMenu, setShowToolsMenu] = useState(false)
   const toolsMenuRef = useRef<HTMLDivElement>(null)
   const [exportFormatPopup, setExportFormatPopup] = useState<'filtered' | 'all' | null>(null)
@@ -606,6 +627,21 @@ function App() {
   useEffect(() => { localStorage.setItem(HOME_WIDGETS_STORAGE_KEY, JSON.stringify(homeWidgets)) }, [homeWidgets])
   useEffect(() => { localStorage.setItem(SAVED_TICKET_VIEWS_KEY, JSON.stringify(savedTicketViews)) }, [savedTicketViews])
   useEffect(() => { const interval = window.setInterval(() => setClock(Date.now()), 30_000); return () => window.clearInterval(interval) }, [])
+  useEffect(() => onPauseChange((change) => {
+    setClock(Date.now())
+    if (!change) return
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const who = change.reason === 'manual' ? user?.name || 'Engineer' : 'System'
+    const held = formatPausedFor(change.pausedForMs)
+    const action = change.reason === 'manual'
+      ? change.paused ? 'SLA timer paused' : `SLA timer resumed (paused for ${held})`
+      : change.reason === 'resolved'
+        ? change.paused ? 'SLA clock stopped - ticket resolved' : `SLA clock resumed - ticket reopened as ${change.status} (stopped for ${held})`
+        : change.paused ? 'SLA timer paused automatically - waiting on user' : `SLA timer resumed automatically - status changed to ${change.status} (paused for ${held})`
+    const entry = `[${timestamp}] ${who} - ${action}`
+    setTickets((current) => current.map((ticket) => ticket.id === change.ticketId ? { ...ticket, notes: ticket.notes ? `${ticket.notes}\n${entry}` : entry } : ticket))
+  }), [user?.name])
+  useEffect(() => { tickets.forEach((ticket) => syncStatusPause(ticket.id, ticket.status)) }, [tickets])
   useEffect(() => { if (page !== 'new') setShowFormOptional(false) }, [page])
   useEffect(() => {
     if (page !== 'new') return
@@ -744,6 +780,7 @@ function App() {
   const toggleTicketStar = (id: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, starred: !ticket.starred } : ticket))
   const saveTicketTags = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, tags: parseTicketTags(value) } : ticket))
   const saveTicketNotes = (id: string, value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, notes: value } : ticket))
+  const setTicketStatus = (id: string, status: Status) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, status } : ticket))
   const selectedAssetId = selectedTicket ? selectedTicket.assetId || assets.find((asset) => asset.linkedTicketIds.includes(selectedTicket.id))?.id || '' : ''
   const standaloneTicket = tickets.find((ticket) => ticket.id === standaloneTicketId)
 
@@ -920,15 +957,14 @@ function App() {
 
   if (standaloneTicketId) return standaloneTicket ? <TicketRecordPage ticket={standaloneTicket} now={clock} /> : <div className="record-page-shell"><div className="record-not-found"><Ticket size={24} /><h1>Ticket not found</h1><p>The requested ticket is not available in this browser.</p><a href={window.location.href.split('#')[0]}>Return to home</a></div></div>
 
-  // Sign-in disabled for demo - direct access enabled
-  // if (page === 'signin') return <SignInPage onSignIn={() => setPage('home')} />
+  // The board opens without signing in; signing in (Tools → Sign in, or #/signin) is needed for server features such as AI.
+  if (page === 'signin') return <SignInPage onSignIn={() => { window.location.hash = '#/home' }} onSkip={() => setPage('home')} />
 
   return <div className={`app-shell view-${cardSize}`}>
     <header className="topbar">
       <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button><button className={page === 'escalation' ? 'active' : ''} aria-current={page === 'escalation' ? 'page' : undefined} onClick={() => goToPage('escalation')}>Escalation</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
-        <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>{theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}</button>
         <div className="header-tools" ref={toolsMenuRef}>
           <button type="button" className="header-tools-trigger" onClick={() => setShowToolsMenu((value) => !value)} aria-expanded={showToolsMenu} aria-controls="header-tools-menu" aria-label="Tools"><Menu size={16} /> <span className="topbar-label">Tools</span> <ChevronDown size={13} /></button>
           {showToolsMenu && <div className="header-tools-menu" id="header-tools-menu" aria-label="Tools">
@@ -955,9 +991,10 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowReports(true) }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
             <span className="header-tools-heading">ACCOUNT</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowThemeSettings(true) }}><Moon size={16} /><span>Appearance<small>Light, dark, or system</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>Gemini AI Settings<small>Configure API key</small></span></button>
-            <button type="button" onClick={() => { setShowToolsMenu(false); logout() }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
+            {user
+              ? <button type="button" onClick={() => { setShowToolsMenu(false); void logout().then(() => setPage('signin')) }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
+              : <button type="button" onClick={() => { setShowToolsMenu(false); setPage('signin') }}><LogIn size={16} /><span>Sign in<small>Needed for AI suggestions</small></span></button>}
           </div>}
         </div>
         {/* Inventory has its own Add asset / Add stock item button beside its heading. The new-task page is the form itself. */}
@@ -1023,14 +1060,13 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
     {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); setSelectedTicketId(descriptionPopupTicketId) }} /></Overlay>}
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
     {showGeminiSettings && <GeminiSettings onClose={() => setShowGeminiSettings(false)} />}
-    {showThemeSettings && <ThemeSettings onClose={() => setShowThemeSettings(false)} />}
 
     {showDeleted && <Overlay onClose={() => setShowDeleted(false)}><section className="matrix-panel deleted-panel" role="dialog" aria-modal="true" aria-labelledby="deleted-title"><div className="panel-header"><div><div className="eyebrow">RECOVERABLE ITEMS</div><h2 id="deleted-title">Deleted tasks</h2></div><button className="close-button" onClick={() => setShowDeleted(false)} aria-label="Close deleted tasks"><X size={19} /></button></div><p className="panel-intro">Removed cards are stored here in this browser. Restore a task to put it back on the board.</p>{deletedTickets.length ? <div className="deleted-list">{deletedTickets.map((ticket) => <article className="deleted-item" key={ticket.id}><div><b>{ticket.id}</b><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span><h3>{ticket.title}</h3><p>{ticket.recordType} · Deleted {new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.deletedAt))}</p><small>Created by {ticket.createdBy || 'Not recorded'}</small></div><button className="restore-button" onClick={() => restore(ticket.id)}><RotateCcw size={14} /> Restore</button></article>)}</div> : <div className="deleted-empty"><Trash2 size={22} /><b>Nothing in Deleted</b><span>Removed tasks will appear here and can be restored.</span></div>}</section></Overlay>}
 
@@ -1174,12 +1210,90 @@ function SettingsPanel({ screenPattern, onScreenPatternChange, view, onViewChang
 }
 
 function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketItem; onClose: () => void; onOpenTicket: () => void }) {
+  const [showCallMenu, setShowCallMenu] = useState(false)
+  const [showMessageMenu, setShowMessageMenu] = useState(false)
+
+  const initiateCall = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const callEntry = `[${timestamp}] - [${service}] Call initiated with ${userInfo}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${callEntry}` : callEntry
+    ticket.notes = updatedNotes
+
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowCallMenu(false)
+  }
+
+  const sendMessage = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const messageEntry = `[${timestamp}] - [${service}] Message sent to ${userInfo}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${messageEntry}` : messageEntry
+    ticket.notes = updatedNotes
+
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowMessageMenu(false)
+  }
+
   return <div className="description-popup">
     <div className="description-popup-header">
       <h3>{ticket.title}</h3>
       <button onClick={onClose} aria-label="Close"><X size={18} /></button>
     </div>
     <div className="description-popup-content">
+      <div className="description-popup-actions" style={{ position: 'relative', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Phone size={14} /> Call</button>
+          {showCallMenu && <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #d9e0e2', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000, minWidth: '160px', marginTop: '4px' }}>
+            <button onClick={() => initiateCall('Teams')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Teams</button>
+            <button onClick={() => initiateCall('ZOOM')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>ZOOM</button>
+            <button onClick={() => initiateCall('Webex')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Webex</button>
+          </div>}
+        </div>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setShowMessageMenu(!showMessageMenu)} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><MessageSquare size={14} /> Message</button>
+          {showMessageMenu && <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #d9e0e2', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000, minWidth: '160px', marginTop: '4px' }}>
+            <button onClick={() => sendMessage('Teams')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Teams</button>
+            <button onClick={() => sendMessage('ZOOM')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>ZOOM</button>
+            <button onClick={() => sendMessage('Webex')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#333', transition: 'background 0.15s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>Webex</button>
+          </div>}
+        </div>
+        <button onClick={() => { const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); const userInfo = ticket.affectedUser || ticket.requester || 'User'; const emailEntry = `[${timestamp}] - Email sent to ${userInfo}`; ticket.notes = ticket.notes ? `${ticket.notes}\n${emailEntry}` : emailEntry; const email = ticket.affectedUserEmail || ''; if (email) { const link = document.createElement('a'); link.href = `mailto:${email}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Mail size={14} /> Email</button>
+        <div style={{ flex: 1 }} />
+        {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}
+      </div>
       <div className="description-section">
         <h5>Short description</h5>
         <p>{ticket.title}</p>
@@ -1362,10 +1476,12 @@ function MyWorkView({ tickets, allTickets, now, openTicket }: { tickets: TicketI
 
 
 /** State, priority and resolution SLA across the top of a ticket record. */
-function RecordStatusStrip({ ticket, now }: { ticket: TicketItem; now: number }) {
+function RecordStatusStrip({ ticket, now, onSetStatus }: { ticket: TicketItem; now: number; onSetStatus?: (status: Status) => void }) {
   const sla = slaTime(ticket, now)
   return <div className="record-status-strip">
-    <div><span>State</span><b>{ticket.status}</b></div>
+    <div><span>State</span>{onSetStatus
+      ? <select className="record-state-select" aria-label="State" value={ticket.status} onChange={(event) => onSetStatus(event.currentTarget.value as Status)}>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>
+      : <b>{ticket.status}</b>}</div>
     <div><span>Priority</span><b>{ticket.severity}</b></div>
     <div><span>Resolution SLA</span><b className={sla.breached && ticket.status !== 'Resolved' ? 'record-breached' : ''}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</b></div>
   </div>
@@ -1388,6 +1504,9 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   return <div className="explore-ticket-summary">
     <RecordStatusStrip ticket={ticket} now={now} />
+    <div style={{ padding: '0 16px' }}>
+      {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
+    </div>
     <div className="record-form-grid">
       <div className="record-field"><span>Type</span><b>{ticket.recordType}</b></div>
       <div className="record-field"><span>Assigned to</span><b>{ticket.assignee || 'Unassigned'}</b></div>
@@ -1400,7 +1519,8 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
   </div>
 }
 
-function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void }) {
+function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes, onSetStatus }: { ticket: TicketItem; now: number; linkedAssetId?: string; onSaveNotes?: (value: string) => void; onSetStatus?: (status: Status) => void }) {
+  const { user } = useAuth()
   const [expandedNotes, setExpandedNotes] = useState(false)
   const [notesText, setNotesText] = useState(ticket.notes || '')
   const [showSavedPopup, setShowSavedPopup] = useState(false)
@@ -1410,6 +1530,10 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const [showPrioritySuggestions, setShowPrioritySuggestions] = useState(false)
   const [cachedPrioritySuggestionsId, setCachedPrioritySuggestionsId] = useState<string | null>(null)
   const { loading: priorityLoading, error: priorityError, result: priorityResult, suggest: suggestPriority } = usePriorityAssist()
+  const [callService, setCallService] = useState('Teams')
+  const [callStatus, setCallStatus] = useState('Successful')
+  const [callNotes, setCallNotes] = useState('')
+  const [showCallLogger, setShowCallLogger] = useState(false)
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
@@ -1438,8 +1562,22 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
       console.error('Priority suggestions failed:', err)
     }
   }
+  const logCallToNotes = () => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const statusLabel = callStatus === 'Successful' ? 'Successful' : `${callStatus}`
+    const callEntry = `[${timestamp}] ${engineerName} - [${callService}] Call ${statusLabel}${callNotes ? ': ' + callNotes : ''}`
+    const updatedNotes = notesText ? `${notesText}\n${callEntry}` : callEntry
+    setNotesText(updatedNotes)
+    if (onSaveNotes) onSaveNotes(updatedNotes)
+    setCallService('Teams')
+    setCallStatus('Successful')
+    setCallNotes('')
+    setShowCallLogger(false)
+    setShowSavedPopup(true)
+  }
   return <>
-    <RecordStatusStrip ticket={ticket} now={now} />
+    <RecordStatusStrip ticket={ticket} now={now} onSetStatus={onSetStatus} />
     <div className="record-layout-two-col">
       <div className="record-main">
         <section className="record-section">
@@ -1453,6 +1591,44 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
         <section className="record-section">
           <div className="record-section-heading"><h3>Tags</h3></div>
           {ticket.tags?.length ? <div className="ticket-detail-tags">{ticket.tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <p>No tags added.</p>}
+        </section>
+        <section className="record-section">
+          <div className="record-section-heading">
+            <h3>Call log</h3>
+          </div>
+          {onSaveNotes && !showCallLogger && (
+            <button className="primary-button" onClick={() => setShowCallLogger(true)} style={{ marginBottom: '16px' }}>Log call</button>
+          )}
+          {showCallLogger && (
+            <div style={{ padding: '12px', border: '1px solid #dde6e8', borderRadius: '5px', marginBottom: '16px', backgroundColor: '#f9fbf9' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#4c6067' }}>Service</label>
+                <select value={callService} onChange={(e) => setCallService(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', fontFamily: 'inherit', fontSize: 'inherit', boxSizing: 'border-box' }}>
+                  <option>Teams</option>
+                  <option>ZOOM</option>
+                  <option>Webex</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#4c6067' }}>Status</label>
+                <select value={callStatus} onChange={(e) => setCallStatus(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', fontFamily: 'inherit', fontSize: 'inherit', boxSizing: 'border-box' }}>
+                  <option>Successful</option>
+                  <option>Failed</option>
+                  <option>No Answer</option>
+                  <option>Declined</option>
+                  <option>Connection Issue</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#4c6067' }}>Notes</label>
+                <textarea value={callNotes} onChange={(e) => setCallNotes(e.target.value)} placeholder="Call details or outcome..." rows={3} style={{ fontFamily: 'inherit', fontSize: 'inherit', padding: '8px', border: '1px solid #dde6e8', borderRadius: '5px', width: '100%', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="primary-button" onClick={logCallToNotes} style={{ flex: 1 }}>Save call to notes</button>
+                <button style={{ padding: '8px 12px', border: '1px solid #dde6e8', background: '#fff', borderRadius: '5px', cursor: 'pointer', fontSize: 'inherit' }} onClick={() => { setShowCallLogger(false); setCallService('Teams'); setCallStatus('Successful'); setCallNotes('') }}>Cancel</button>
+              </div>
+            </div>
+          )}
         </section>
         <section className="record-section">
           <div className="record-section-heading">
@@ -1617,13 +1793,16 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onClose: () => void }) {
   const { user } = useAuth()
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState('')
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [showSearchMenu, setShowSearchMenu] = useState(false)
+  const [showCallMenu, setShowCallMenu] = useState(false)
+  const [showMessageMenu, setShowMessageMenu] = useState(false)
+  const [showEmailMenu, setShowEmailMenu] = useState(false)
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const performSearch = async () => {
     setIsLoadingAI(true)
@@ -1637,7 +1816,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       setSearchResults(solutions)
       setShowSearchResults(true)
     } catch (error) {
-      const fallback = `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}\n\nCould not generate AI recommendations. Make sure Gemini API is configured on the server.`
+      const fallback = `Analysis for: ${ticket.title}\n\nStatus: ${ticket.status}\nSeverity: ${ticket.severity}\n\nCould not generate AI recommendations: ${error instanceof Error ? error.message : 'unknown error'}`
       setSearchResults(fallback)
       setShowSearchResults(true)
     } finally {
@@ -1648,6 +1827,87 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     const searchTerm = `${ticket.title} ${ticket.description || ''}`.trim()
     const encodedQuery = encodeURIComponent(searchTerm)
     window.open(`https://duckduckgo.com/?q=${encodedQuery}`, '_blank')
+  }
+  const initiateCall = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const userEmail = ticket.affectedUserEmail || ''
+
+    // Log the call initiation to notes
+    const callEntry = `[${timestamp}] ${engineerName} - [${service}] Call initiated with ${userInfo}${userEmail ? ' (' + userEmail + ')' : ''}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${callEntry}` : callEntry
+    onSaveNotes(updatedNotes)
+
+    // Open the service - use href instead of window.open to avoid sandbox blocks
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowCallMenu(false)
+  }
+  const sendMessage = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const userEmail = ticket.affectedUserEmail || ''
+
+    const messageEntry = `[${timestamp}] ${engineerName} - [${service}] Message sent to ${userInfo}${userEmail ? ' (' + userEmail + ')' : ''}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${messageEntry}` : messageEntry
+    onSaveNotes(updatedNotes)
+
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowMessageMenu(false)
+  }
+  const sendEmailMessage = () => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const userEmail = ticket.affectedUserEmail || ''
+
+    const emailEntry = `[${timestamp}] ${engineerName} - Email sent to ${userInfo}${userEmail ? ' (' + userEmail + ')' : ''}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${emailEntry}` : emailEntry
+    onSaveNotes(updatedNotes)
+
+    if (userEmail) {
+      const link = document.createElement('a')
+      link.href = `mailto:${userEmail}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowEmailMenu(false)
   }
   const addSearchToNotes = () => {
     const timestamp = new Date().toLocaleString()
@@ -1688,8 +1948,60 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
-    <div className="record-actions">
-      <button className="log-action-btn" onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Search resolution'}</button>
+    <div className="record-actions" style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: '1px solid #0066cc', background: '#0066cc', color: '#fff', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '600', minHeight: '40px' }}><Phone size={16} /> Call user</button>
+        {showCallMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCallMenu(false) }}>
+        <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
+          <button className="ticket-card-popout-close" onClick={() => setShowCallMenu(false)} aria-label="Close call menu">×</button>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Choose platform</h3>
+          <div style={{ fontSize: '12px', color: '#6b7c80', marginBottom: '16px', padding: '0 8px' }}>
+            <p style={{ margin: '0', lineHeight: '1.4' }}>Calling <b>{ticket.affectedUser || ticket.requester || 'user'}</b></p>
+            {ticket.affectedUserEmail && <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9aa3a5' }}>{ticket.affectedUserEmail}</p>}
+          </div>
+          <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('Teams')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Teams</button>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('ZOOM')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>ZOOM</button>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('Webex')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Webex</button>
+          </div>
+        </div>
+      </div>}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => setShowMessageMenu(!showMessageMenu)} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '600', minHeight: '40px' }}><MessageSquare size={16} /> Send message</button>
+        {showMessageMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowMessageMenu(false) }}>
+        <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
+          <button className="ticket-card-popout-close" onClick={() => setShowMessageMenu(false)} aria-label="Close message menu">×</button>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Choose platform</h3>
+          <div style={{ fontSize: '12px', color: '#6b7c80', marginBottom: '16px', padding: '0 8px' }}>
+            <p style={{ margin: '0', lineHeight: '1.4' }}>Message to <b>{ticket.affectedUser || ticket.requester || 'user'}</b></p>
+            {ticket.affectedUserEmail && <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9aa3a5' }}>{ticket.affectedUserEmail}</p>}
+          </div>
+          <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => sendMessage('Teams')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Teams</button>
+            <button className="ticket-card-popout-open" onClick={() => sendMessage('ZOOM')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>ZOOM</button>
+            <button className="ticket-card-popout-open" onClick={() => sendMessage('Webex')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Webex</button>
+          </div>
+        </div>
+      </div>}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => setShowEmailMenu(!showEmailMenu)} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '600', minHeight: '40px' }}><Mail size={16} /> Send email</button>
+        {showEmailMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowEmailMenu(false) }}>
+        <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
+          <button className="ticket-card-popout-close" onClick={() => setShowEmailMenu(false)} aria-label="Close email menu">×</button>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Send email</h3>
+          <div style={{ fontSize: '12px', color: '#6b7c80', marginBottom: '16px', padding: '0 8px' }}>
+            <p style={{ margin: '0', lineHeight: '1.4' }}>Email to <b>{ticket.affectedUser || ticket.requester || 'user'}</b></p>
+            {ticket.affectedUserEmail && <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9aa3a5' }}>{ticket.affectedUserEmail}</p>}
+          </div>
+          <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => sendEmailMessage()} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Send email</button>
+          </div>
+        </div>
+      </div>}
+      </div>
+      <button onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: 500, minHeight: '36px', minWidth: 'fit-content', whiteSpace: 'nowrap' }}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Find resolution'}</button>
       {showSearchMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSearchMenu(false) }}>
         <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '300px' }}>
           <button className="ticket-card-popout-close" onClick={() => setShowSearchMenu(false)} aria-label="Close search menu">×</button>
@@ -1702,7 +2014,10 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       </div>}
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
-    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
+    <div style={{ padding: '0 16px' }}>
+      {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
+    </div>
+    <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} onSetStatus={onSetStatus} />
   </section>
 }
 
@@ -1754,7 +2069,6 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
   return <section className="list-view" id="board" aria-label="List of task records">
     <div className="list-view-heading"><div><b>All task records</b><span>Click a checkbox, then Shift-click another to select a range</span></div><div className="list-view-summary"><span>{selectedIds.length ? `${selectedIds.length} selected · ` : ''}{filteredTickets.length === tickets.length ? `${tickets.length} records` : `${filteredTickets.length} of ${tickets.length} records`}</span>{selectedIds.length > 0 && <button onClick={() => onSelectionChange([])}><X size={12} />Clear selection</button>}{filtersActive && <button onClick={clearListFilters}><X size={12} />Clear column filters</button>}</div></div>
     <div className="list-scroll"><table className="task-table"><thead><tr><th className="selection-column"><input type="checkbox" checked={allVisibleSelected} aria-label="Select all visible tickets" onChange={(event) => onSelectionChange(event.target.checked ? [...new Set([...selectedIds, ...visibleIds])] : selectedIds.filter((id) => !visibleIds.includes(id)))} /></th><th><HeaderFilter label="Number" value={filters.number} onChange={(value) => setFilter('number', value)} placeholder="Ticket number…" /></th><th><HeaderFilter label="Short description" value={filters.description} onChange={(value) => setFilter('description', value)} placeholder="Description contains…" /></th><th><HeaderFilter label="Department" value={filters.department} onChange={(value) => setFilter('department', value)} options={departments} /></th><th><HeaderFilter label="Assignment group" value={filters.assignmentGroup} onChange={(value) => setFilter('assignmentGroup', value)} options={assignmentGroupOptions} /></th><th><HeaderFilter label="Assigned to" value={filters.assignee} onChange={(value) => setFilter('assignee', value)} options={assigneeOptions} /></th><th><HeaderFilter label="Priority" value={filters.priority} onChange={(value) => setFilter('priority', value)} options={['P1', 'P2', 'P3', 'P4']} /></th><th><HeaderFilter label="State" value={filters.state} onChange={(value) => setFilter('state', value)} options={statuses} /></th><th><HeaderFilter label="Created" value={filters.created} onChange={(value) => setFilter('created', value)} placeholder="Date contains…" /></th><th><HeaderFilter label="Resolution SLA" value={filters.sla} onChange={(value) => setFilter('sla', value)} placeholder="SLA contains…" /></th></tr></thead><tbody>{filteredTickets.length ? filteredTickets.map((ticket) => {
-      const sla = slaTime(ticket, now)
       const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ticket.createdAt)) : 'Not recorded'
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
@@ -1766,7 +2080,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
         <td><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span></td>
         <td><span className={`status-pill status-${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</span></td>
         <td className="list-date">{created}</td>
-        <td><span className={`list-sla ${sla.breached && ticket.status !== 'Resolved' ? 'breached' : ''}`}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</span></td>
+        <td>{(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}</td>
       </tr>
     }) : <tr><td colSpan={10} className="list-empty">No task records match the current filters.</td></tr>}</tbody></table></div>
   </section>
@@ -1808,7 +2122,7 @@ function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addU
       </div>
     </div>
     <div className="card-actions">
-      <div className="card-utility-actions"><button onClick={() => { setShowDetails(true); setShowFollowUps(true) }}><ListChecks size={13} />{ticket.universalTasks.length ? 'Follow-up tasks' : 'Add follow-up'}</button><a className="resolution-search" href={resolutionSearchUrl(ticket.title)} target="_blank" rel="noopener noreferrer" aria-label={`Search the web for a resolution to ${ticket.title}`} title="Search the public web using this ticket title"><Search size={13} />Search resolution</a><button onClick={() => setShowAiGuidance(!showAiGuidance)} className="ai-guidance-btn" title="Ask AI for guidance on this ticket"><BrainCircuit size={13} />Ask AI</button></div>
+      <div className="card-utility-actions"><button onClick={() => { setShowDetails(true); setShowFollowUps(true) }}><ListChecks size={13} />{ticket.universalTasks.length ? 'Follow-up tasks' : 'Add follow-up'}</button><button className="resolution-search" onClick={() => window.open(resolutionSearchUrl(ticket.title), '_blank')} aria-label={`Search the web for a resolution to ${ticket.title}`} title="Search the public web using this ticket title"><Search size={13} />Find resolution</button><button onClick={() => setShowAiGuidance(!showAiGuidance)} className="ai-guidance-btn" title="Ask AI for guidance on this ticket"><BrainCircuit size={13} />Ask AI</button></div>
       <div className="card-secondary-actions"><div className={`time-log ${ticket.timerStartedAt ? 'running' : ''}`}><span>Logged {loggedLabel(elapsedLogged)}</span><button disabled={ticket.status === 'Resolved'} onClick={() => toggleTimer(ticket.id)} title={ticket.timerStartedAt ? 'Stop and save time' : 'Start a timer'}>{ticket.timerStartedAt ? 'Stop' : 'Start'}</button></div>{nextContact && ticket.status !== 'Resolved' && <button className="escalate-action" onClick={() => escalate(ticket)} title={`Escalate to ${nextContact.role} (placeholder contact)`} aria-label={`Escalate ${ticket.id} to Tier ${ticket.currentTier + 1}`}><ShieldAlert size={13} /> Escalate</button>}
         <span className="card-move-actions">{index > 0 && <button onClick={() => move(ticket, -1)} aria-label={`Move to previous ${laneName}`} title={`Move to previous ${laneName}`}><ArrowLeft size={13} /></button>}{index < laneCount - 1 && <button onClick={() => move(ticket, 1)} aria-label={`Move to next ${laneName}`} title={`Move to next ${laneName}`}><ArrowRight size={13} /></button>}</span></div>
     </div>

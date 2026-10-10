@@ -93,6 +93,18 @@ DO $$ BEGIN
     ALTER TABLE tickets ADD COLUMN escalation_locked BOOLEAN DEFAULT FALSE;
   EXCEPTION WHEN duplicate_column THEN NULL;
   END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_paused BOOLEAN DEFAULT FALSE;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_paused_at TIMESTAMP;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_paused_total_ms BIGINT DEFAULT 0;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
 END $$;
 
 -- Work notes
@@ -253,6 +265,19 @@ CREATE TABLE IF NOT EXISTS escalation_matrices (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- SLA matrices (uploaded by organizations - reference documents)
+CREATE TABLE IF NOT EXISTS sla_matrices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID NOT NULL UNIQUE REFERENCES teams(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  file_type VARCHAR(50) NOT NULL, -- image/png, image/jpeg, application/pdf, etc.
+  file_size INT NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  uploaded_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Escalation history and audit trail
 CREATE TABLE IF NOT EXISTS escalation_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -325,6 +350,7 @@ CREATE INDEX IF NOT EXISTS idx_escalation_history_sla_impact ON escalation_histo
 
 -- Legacy channel indexes
 CREATE INDEX IF NOT EXISTS idx_escalation_matrices_team_id ON escalation_matrices(team_id);
+CREATE INDEX IF NOT EXISTS idx_sla_matrices_team_id ON sla_matrices(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_team_id ON escalation_channels(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_tier ON escalation_channels(team_id, tier);
 

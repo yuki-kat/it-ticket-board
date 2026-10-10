@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { RotateCcw, Sparkles } from 'lucide-react'
-import { API_BASE } from '../api/base'
+import { API_BASE, authHeader } from '../api/base'
 
 // "Suggest fix" in the ticket record panel. Gemini is called through the backend's /api/suggest-fix
 // (server/src/api/suggest-fix.ts), so the API key never reaches the browser. It needs a reachable backend:
@@ -22,7 +22,7 @@ export function AiSuggestFix({ ticket }: { ticket: SuggestFixTicket }) {
     try {
       const response = await fetch(`${API_BASE}/suggest-fix`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ title: ticket.title, description: ticket.description, recordType: ticket.recordType, severity: ticket.severity, assignmentGroup: ticket.assignmentGroup, tags: ticket.tags }),
       })
       const data = await response.json().catch(() => null)

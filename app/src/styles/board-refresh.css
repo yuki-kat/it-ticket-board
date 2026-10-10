@@ -3643,6 +3643,7 @@ textarea:focus-visible {
 .ticket-split-options > button:hover { background:#edf6f8; }
 @media (max-width:900px) { .ticket-browser-tabs { align-items:stretch; flex-direction:column; gap:7px; }.ticket-browser-tab-scroll { width:100%; }.ticket-browser-tabs .saved-view-controls { justify-content:flex-end; margin-bottom:7px; } }
 @media (max-width:650px) { .ticket-split-options { align-items:stretch; }.ticket-split-options strong { width:100%; }.ticket-split-options label { flex:1 1 150px; align-items:flex-start; flex-direction:column; }.ticket-split-options select { width:100%; }.ticket-split-options > button { align-self:flex-end; } }
+.record-actions { display: flex; gap: 8px; align-items: center; margin: 0 0 18px; flex-wrap: wrap; }
 .ticket-tags-editor { margin: 0 0 18px; padding: 12px 14px; border: 1px solid #dbe5e8; border-radius: 8px; background: #fff; }
 .ticket-tags-editor label { display: flex; align-items: baseline; gap: 7px; margin-bottom: 7px; color: #385b69; font-size: 11px; font-weight: 700; }
 .ticket-tags-editor label small { color: #8b9ea7; font-size: 10px; font-weight: 400; }

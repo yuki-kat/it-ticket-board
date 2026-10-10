@@ -73,7 +73,6 @@
 .home-chart-grid > .extended-insight-card .extended-insight-metric strong { font-size: 32px; }
 .home-chart-grid > .extended-insight-card .extended-insight-note { display: none; }
 
-
 /* New task form. With plain 1fr columns a long option in "Linked asset" made the grid wider than the panel,
    so the panel scrolled sideways and cut fields off; these columns can shrink. Labels and their "*" or
    "Optional" also stay on one line instead of stacking. */
@@ -106,7 +105,6 @@
 .inventory-controls { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .inventory-controls::-webkit-scrollbar { display: none; }
 
-/* Insight card subtitle text: slightly darker for readability. */
 .home-chart-heading p { color: #5a7280; }
 
 /* Ticket card: description on the right side. */
@@ -116,14 +114,6 @@
 .ticket-description-section { display: flex; flex-direction: column; height: 100%; }
 .ticket-description-section h5 { margin: 0 0 8px 0; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #5a7280; }
 .ticket-description-section p { margin: 0; font-size: 13px; line-height: 1.5; color: #0d1924; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ticket-description-section h5 { color: #a0aec0; }
-  :root:not([data-theme="light"]) .ticket-description-section p { color: #f3f4f6; }
-}
-
-:root[data-theme="dark"] .ticket-description-section h5 { color: #a0aec0; }
-:root[data-theme="dark"] .ticket-description-section p { color: #f3f4f6; }
 
 /* Summary strip: Show more/less metrics toggle. */
 .summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -151,26 +141,6 @@
 .search-add-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; margin-top: 8px; border: none; border-radius: 5px; background: #d0f0e3; color: #186f4b; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
 .search-add-btn:hover { background: #bde8d7; }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ticket-search-results { background: #1a2332; border-color: #334155; }
-  :root:not([data-theme="light"]) .search-results-header { border-bottom-color: #334155; }
-  :root:not([data-theme="light"]) .search-results-header h5 { color: #a0aec0; }
-  :root:not([data-theme="light"]) .search-results-header button { color: #a0aec0; }
-  :root:not([data-theme="light"]) .search-results-header button:hover { color: #f3f4f6; }
-  :root:not([data-theme="light"]) .search-results-content p { color: #cbd5e1; }
-  :root:not([data-theme="light"]) .search-add-btn { background: #064e3b; color: #86efac; }
-  :root:not([data-theme="light"]) .search-add-btn:hover { background: #065f46; }
-}
-
-:root[data-theme="dark"] .ticket-search-results { background: #1a2332; border-color: #334155; }
-:root[data-theme="dark"] .search-results-header { border-bottom-color: #334155; }
-:root[data-theme="dark"] .search-results-header h5 { color: #a0aec0; }
-:root[data-theme="dark"] .search-results-header button { color: #a0aec0; }
-:root[data-theme="dark"] .search-results-header button:hover { color: #f3f4f6; }
-:root[data-theme="dark"] .search-results-content p { color: #cbd5e1; }
-:root[data-theme="dark"] .search-add-btn { background: #064e3b; color: #86efac; }
-:root[data-theme="dark"] .search-add-btn:hover { background: #065f46; }
-
 /* AI Guidance button and panel for tickets. */
 .ai-guidance-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
 
@@ -178,111 +148,7 @@
 .ai-guidance-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .ai-guidance-header h5 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #5a7280; }
 
-/* Dark mode overrides - use html[data-theme="dark"] to properly target the root element */
-html[data-theme="dark"] {
-  --color-neutral-bg: #0d1110;
-  color-scheme: dark;
-}
 
-html[data-theme="dark"] body,
-html[data-theme="dark"] .app-shell {
-  background-color: #0d1110 !important;
-  color: #e8ebe9 !important;
-}
-
-html[data-theme="dark"] .topbar {
-  background-color: #1a1f1e !important;
-  border-bottom-color: #2a3432 !important;
-}
-
-html[data-theme="dark"] .matrix-panel,
-html[data-theme="dark"] .form-panel,
-html[data-theme="dark"] .modal-content {
-  background-color: #1a1f1e !important;
-  color: #e8ebe9 !important;
-  border-color: #2a3432 !important;
-}
-
-html[data-theme="dark"] .lane {
-  background-color: #0f2020 !important;
-  border-color: #2a3432 !important;
-  color: #e8ebe9 !important;
-}
-
-html[data-theme="dark"] .ticket-card {
-  background-color: #1a1f1e !important;
-  color: #e8ebe9 !important;
-  border-color: #2a3432 !important;
-}
-
-html[data-theme="dark"] input,
-html[data-theme="dark"] select,
-html[data-theme="dark"] textarea,
-html[data-theme="dark"] .field input,
-html[data-theme="dark"] .field select,
-html[data-theme="dark"] .field textarea {
-  background-color: #1a1f1e !important;
-  color: #e8ebe9 !important;
-  border-color: #2a3432 !important;
-}
-
-html[data-theme="dark"] input::placeholder,
-html[data-theme="dark"] textarea::placeholder {
-  color: #707977 !important;
-}
-
-html[data-theme="dark"] p,
-html[data-theme="dark"] .text-secondary,
-html[data-theme="dark"] .panel-intro {
-  color: #b0b9b6 !important;
-}
-
-html[data-theme="dark"] .primary-button {
-  background-color: #2a9f9e !important;
-  color: white !important;
-  border-color: #2a9f9e !important;
-}
-
-html[data-theme="dark"] .primary-button:hover {
-  background-color: #3abfbe !important;
-}
-
-html[data-theme="dark"] .matrix-button {
-  background-color: #1a1f1e !important;
-  color: #e8ebe9 !important;
-  border-color: #2a3432 !important;
-}
-
-html[data-theme="dark"] .matrix-button:hover {
-  background-color: #252a29 !important;
-}
-
-html[data-theme="dark"] .summary-strip {
-  background: #1a1f1e !important;
-  border-color: #2a3432 !important;
-}
-
-html[data-theme="dark"] .overlay {
-  background: rgba(0, 0, 0, 0.7) !important;
-}
-
-html[data-theme="dark"] .modal-dialog {
-  background: rgba(13, 17, 16, 0.95) !important;
-}
-
-html[data-theme="dark"] h1,
-html[data-theme="dark"] h2,
-html[data-theme="dark"] h3,
-html[data-theme="dark"] h4,
-html[data-theme="dark"] h5,
-html[data-theme="dark"] h6 {
-  color: #e8ebe9 !important;
-}
-
-html[data-theme="dark"] a {
-  color: #2a9f9e !important;
-}
-
-html[data-theme="dark"] a:hover {
-  color: #3abfbe !important;
-}
+/* Ticket panel: the State box in the status strip is an editable dropdown. */
+.record-status-strip .record-state-select { width: 100%; max-width: 100%; height: 32px; padding: 0 8px; border: 1px solid #cfdde2; border-radius: 6px; background: #fff; color: #294c5b; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.record-status-strip .record-state-select:focus-visible { outline: 2px solid #2f7f8a; outline-offset: 1px; }
