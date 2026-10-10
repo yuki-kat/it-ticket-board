@@ -1419,6 +1419,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
   const [callStatus, setCallStatus] = useState('Successful')
   const [callNotes, setCallNotes] = useState('')
   const [showCallLogger, setShowCallLogger] = useState(false)
+  const [showCallMenu, setShowCallMenu] = useState(false)
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const due = ticket.dueAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.dueAt)) : 'Not set'
   const logged = loggedLabel(loggedSecondsNow(ticket, now))
@@ -1461,8 +1462,49 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes }: { tick
     setShowCallLogger(false)
     setShowSavedPopup(true)
   }
+  const initiateCall = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const userEmail = ticket.affectedUserEmail || ''
+
+    // Log the call initiation to notes
+    const callEntry = `[${timestamp}] ${engineerName} - [${service}] Call initiated with ${userInfo}${userEmail ? ' (' + userEmail + ')' : ''}`
+    const updatedNotes = notesText ? `${notesText}\n${callEntry}` : callEntry
+    setNotesText(updatedNotes)
+    if (onSaveNotes) onSaveNotes(updatedNotes)
+
+    // Open the service
+    if (service === 'Teams') {
+      window.open('https://teams.microsoft.com/', '_blank')
+    } else if (service === 'ZOOM') {
+      window.open('https://zoom.us/', '_blank')
+    } else if (service === 'Webex') {
+      window.open('https://webex.com/', '_blank')
+    }
+
+    setShowCallMenu(false)
+  }
   return <>
     <RecordStatusStrip ticket={ticket} now={now} />
+    <div className="record-detail-actions" style={{ display: 'flex', gap: '8px', padding: '0 16px 16px 16px', position: 'relative' }}>
+      <button className="log-action-btn" onClick={() => setShowCallMenu(!showCallMenu)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={16} /> Call user</button>
+      {showCallMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCallMenu(false) }}>
+        <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
+          <button className="ticket-card-popout-close" onClick={() => setShowCallMenu(false)} aria-label="Close call menu">×</button>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Choose platform</h3>
+          <div style={{ fontSize: '12px', color: '#6b7c80', marginBottom: '16px', padding: '0 8px' }}>
+            <p style={{ margin: '0', lineHeight: '1.4' }}>Calling <b>{ticket.affectedUser || ticket.requester || 'user'}</b></p>
+            {ticket.affectedUserEmail && <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9aa3a5' }}>{ticket.affectedUserEmail}</p>}
+          </div>
+          <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('Teams')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Teams</button>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('ZOOM')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>ZOOM</button>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('Webex')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Webex</button>
+          </div>
+        </div>
+      </div>}
+    </div>
     <div className="record-layout-two-col">
       <div className="record-main">
         <section className="record-section">
