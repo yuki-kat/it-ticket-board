@@ -1175,12 +1175,49 @@ function SettingsPanel({ screenPattern, onScreenPatternChange, view, onViewChang
 }
 
 function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketItem; onClose: () => void; onOpenTicket: () => void }) {
+  const [showCallMenu, setShowCallMenu] = useState(false)
+
+  const initiateCall = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const callEntry = `[${timestamp}] - [${service}] Call initiated with ${userInfo}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${callEntry}` : callEntry
+    ticket.notes = updatedNotes
+
+    const serviceUrls: { [key: string]: string } = {
+      'Teams': 'https://teams.microsoft.com/',
+      'ZOOM': 'https://zoom.us/',
+      'Webex': 'https://webex.com/'
+    }
+    const url = serviceUrls[service]
+    if (url) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    setShowCallMenu(false)
+  }
+
   return <div className="description-popup">
     <div className="description-popup-header">
       <h3>{ticket.title}</h3>
       <button onClick={onClose} aria-label="Close"><X size={18} /></button>
     </div>
     <div className="description-popup-content">
+      <div className="description-popup-actions">
+        <button onClick={() => setShowCallMenu(!showCallMenu)} style={{ border: '1px solid #d9e0e2', background: '#fff', color: '#627881', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: 500, minHeight: '36px', minWidth: 'fit-content', whiteSpace: 'nowrap' }}><Phone size={16} /> Call user</button>
+        {showCallMenu && <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #d9e0e2', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1000, minWidth: '200px', marginTop: '8px' }}>
+          <button onClick={() => initiateCall('Teams')} style={{ width: '100%', padding: '12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#333', borderBottom: '1px solid #f0f0f0' }}>Teams</button>
+          <button onClick={() => initiateCall('ZOOM')} style={{ width: '100%', padding: '12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#333', borderBottom: '1px solid #f0f0f0' }}>ZOOM</button>
+          <button onClick={() => initiateCall('Webex')} style={{ width: '100%', padding: '12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#333' }}>Webex</button>
+        </div>}
+      </div>
       <div className="description-section">
         <h5>Short description</h5>
         <p>{ticket.title}</p>
