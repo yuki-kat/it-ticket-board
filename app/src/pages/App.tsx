@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, Moon, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Download, Layers, ListChecks, LogOut, Mail, Menu, Moon, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Sun, Ticket, Trash2, Workflow, X } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
@@ -1685,6 +1685,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   const [searchResults, setSearchResults] = useState('')
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [showSearchMenu, setShowSearchMenu] = useState(false)
+  const [showCallMenu, setShowCallMenu] = useState(false)
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
   const performSearch = async () => {
     setIsLoadingAI(true)
@@ -1709,6 +1710,29 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     const searchTerm = `${ticket.title} ${ticket.description || ''}`.trim()
     const encodedQuery = encodeURIComponent(searchTerm)
     window.open(`https://duckduckgo.com/?q=${encodedQuery}`, '_blank')
+  }
+  const initiateCall = (service: 'Teams' | 'ZOOM' | 'Webex') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const engineerName = user?.name || 'Engineer'
+    const userInfo = ticket.affectedUser || ticket.requester || 'User'
+    const userEmail = ticket.affectedUserEmail || ''
+
+    // Log the call initiation to notes
+    const callEntry = `[${timestamp}] ${engineerName} - [${service}] Call initiated with ${userInfo}${userEmail ? ' (' + userEmail + ')' : ''}`
+    const currentNotes = ticket.notes || ''
+    const updatedNotes = currentNotes ? `${currentNotes}\n${callEntry}` : callEntry
+    onSaveNotes(updatedNotes)
+
+    // Open the service
+    if (service === 'Teams') {
+      window.open('https://teams.microsoft.com/', '_blank')
+    } else if (service === 'ZOOM') {
+      window.open('https://zoom.us/', '_blank')
+    } else if (service === 'Webex') {
+      window.open('https://webex.com/', '_blank')
+    }
+
+    setShowCallMenu(false)
   }
   const addSearchToNotes = () => {
     const timestamp = new Date().toLocaleString()
@@ -1750,6 +1774,22 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
     <div className="record-actions">
+      <button className="log-action-btn" onClick={() => setShowCallMenu(!showCallMenu)}><Phone size={16} /> Call user</button>
+      {showCallMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCallMenu(false) }}>
+        <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '280px' }}>
+          <button className="ticket-card-popout-close" onClick={() => setShowCallMenu(false)} aria-label="Close call menu">×</button>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Choose platform</h3>
+          <div style={{ fontSize: '12px', color: '#6b7c80', marginBottom: '16px', padding: '0 8px' }}>
+            <p style={{ margin: '0', lineHeight: '1.4' }}>Calling <b>{ticket.affectedUser || ticket.requester || 'user'}</b></p>
+            {ticket.affectedUserEmail && <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9aa3a5' }}>{ticket.affectedUserEmail}</p>}
+          </div>
+          <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('Teams')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Teams</button>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('ZOOM')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>ZOOM</button>
+            <button className="ticket-card-popout-open" onClick={() => initiateCall('Webex')} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Webex</button>
+          </div>
+        </div>
+      </div>}
       <button className="log-action-btn" onClick={() => setShowSearchMenu(!showSearchMenu)} disabled={isLoadingAI}><Search size={16} /> {isLoadingAI ? 'Analyzing...' : 'Search resolution'}</button>
       {showSearchMenu && <div className="ticket-card-popout" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSearchMenu(false) }}>
         <div className="ticket-card-popout-dialog" style={{ width: 'auto', minWidth: '300px' }}>
