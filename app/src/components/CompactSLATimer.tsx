@@ -33,17 +33,15 @@ export default function CompactSLATimer({
   compact = true,
 }: CompactSLATimerProps) {
   const [now, setNow] = useState(() => Date.now())
-  const [pause, setPause] = useState<PauseState>(() => readPause(ticketId))
+  const [, setPauseVersion] = useState(0)
+  const pause: PauseState = readPause(ticketId)
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    setPause(readPause(ticketId))
-    return onPauseChange(() => setPause(readPause(ticketId)))
-  }, [ticketId])
+  useEffect(() => onPauseChange(() => setPauseVersion((version) => version + 1)), [])
 
   const isPaused = pause.pausedAt !== null
   const pausedMs = pause.pausedMs + (isPaused ? now - (pause.pausedAt as number) : 0)
