@@ -137,6 +137,35 @@ function normalizeSavedTicketView(view: SavedView<TicketViewSettings>): SavedVie
 const assessmentLevels: Assessment[] = ['High', 'Medium', 'Low']
 const parseTicketTags = (value: string) => [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))].slice(0, 12)
 
+// SLA time lookup based on severity
+function getSLATimes(severity: Severity): { responseMinutes: number; resolutionHours: number } {
+  const row = severityRows.find(r => r.level === severity)
+  if (!row) return { responseMinutes: 60, resolutionHours: 24 }
+
+  // Parse response time (e.g., "15 minutes", "1 hour", "1 business day")
+  const responseMatch = row.response.match(/(\d+)\s+(\w+)/)
+  let responseMinutes = 60
+  if (responseMatch) {
+    const amount = parseInt(responseMatch[1])
+    const unit = responseMatch[2].toLowerCase()
+    if (unit.includes('minute')) responseMinutes = amount
+    else if (unit.includes('hour')) responseMinutes = amount * 60
+    else if (unit.includes('day')) responseMinutes = amount * 24 * 60
+  }
+
+  // Parse resolution time (e.g., "4 hours", "1 business day", "3 business days")
+  const resolutionMatch = row.resolution.match(/(\d+)\s+(\w+)/)
+  let resolutionHours = 24
+  if (resolutionMatch) {
+    const amount = parseInt(resolutionMatch[1])
+    const unit = resolutionMatch[2].toLowerCase()
+    if (unit.includes('hour')) resolutionHours = amount
+    else if (unit.includes('day')) resolutionHours = amount * 24
+  }
+
+  return { responseMinutes, resolutionHours }
+}
+
 function recordActivity(previous: TicketItem | undefined, ticket: TicketItem): TicketItem {
   const at = new Date().toISOString()
   if (!previous) return { ...ticket, activity: ticket.activity || [] }
@@ -1257,7 +1286,7 @@ function DescriptionPopup({ ticket, onClose, onOpenTicket }: { ticket: TicketIte
         </div>
         <button onClick={() => { const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); const userInfo = ticket.affectedUser || ticket.requester || 'User'; const emailEntry = `[${timestamp}] - Email sent to ${userInfo}`; ticket.notes = ticket.notes ? `${ticket.notes}\n${emailEntry}` : emailEntry; const email = ticket.affectedUserEmail || ''; if (email) { const link = document.createElement('a'); link.href = `mailto:${email}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Mail size={14} /> Email</button>
         <div style={{ flex: 1 }} />
-        <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={true} />
+        {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}
       </div>
       <div className="description-section">
         <h5>Short description</h5>
@@ -1468,7 +1497,7 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
   return <div className="explore-ticket-summary">
     <RecordStatusStrip ticket={ticket} now={now} />
     <div style={{ padding: '0 16px' }}>
-      <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={false} />
+      {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
     </div>
     <div className="record-form-grid">
       <div className="record-field"><span>Type</span><b>{ticket.recordType}</b></div>
@@ -2028,7 +2057,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
     <div style={{ padding: '0 16px' }}>
-      <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={false} />
+      {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
     </div>
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
   </section>
@@ -2093,7 +2122,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
         <td><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span></td>
         <td><span className={`status-pill status-${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</span></td>
         <td className="list-date">{created}</td>
-        <td><CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={true} /></td>
+        <td>{(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}</td>
       </tr>
     }) : <tr><td colSpan={10} className="list-empty">No task records match the current filters.</td></tr>}</tbody></table></div>
   </section>
