@@ -24,7 +24,7 @@
 
 /* Ticket list columns. The checkbox column is the first column, so every width below is one
    column further along than in the older rules (which gave "Number" the description's width). */
-.task-table { min-width: 1275px; }
+.task-table { min-width: 1325px; }
 .task-table th:nth-child(1) { width: 38px; }
 .task-table th:nth-child(2) { width: 122px; }
 .task-table th:nth-child(3) { width: 250px; }
@@ -34,7 +34,7 @@
 .task-table th:nth-child(7) { width: 80px; }
 .task-table th:nth-child(8) { width: 125px; }
 .task-table th:nth-child(9) { width: 110px; }
-.task-table th:nth-child(10) { width: 110px; }
+.task-table th:nth-child(10) { width: 160px; } /* fits an overdue timer such as -12d 09h 35m 02s */
 
 /* The date chip on the Tickets page stays on one line. */
 .date-chip { white-space: nowrap; }

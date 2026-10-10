@@ -8,3 +8,64 @@
 .report-overlay, .settings-overlay { z-index: 200; align-items: center; justify-content: center; padding: 24px; background: rgb(15 31 39 / 72%); }
 .report-overlay > .report-panel { width: min(940px, 92vw); height: auto; max-height: 90vh; overflow-y: auto; margin: 0; }
 .settings-overlay > .settings-panel { width: min(820px, 92vw); height: auto; max-height: 90vh; overflow-y: auto; margin: 0; }
+
+/* Ticket details popup (click a short description in the list). It had no styles at all, so it showed as bare text in a corner. */
+.overlay.description-popup-overlay { align-items: center; justify-content: center; padding: 24px; }
+.description-popup { width: min(560px, 100%); max-height: 88vh; overflow-y: auto; background: #fff; border: 1px solid #d9e0e2; border-radius: 14px; box-shadow: 0 24px 60px rgb(15 31 39 / 28%); color: #1f3a45; }
+.description-popup-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; border-bottom: 1px solid #e6ecee; }
+.description-popup-header h3 { margin: 0; font-size: 18px; line-height: 1.3; color: #12313d; overflow-wrap: anywhere; }
+.description-popup-header button { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid #d9e0e2; border-radius: 8px; background: #fff; color: #315a69; cursor: pointer; }
+.description-popup-header button:hover { background: #e9f5f7; }
+.description-popup-content { padding: 14px 22px 20px; }
+.description-popup-actions + .description-section { border-top: 0; }
+.description-section { padding: 12px 0; border-top: 1px solid #eef2f3; }
+.description-section h5 { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5a7280; }
+.description-section p { margin: 0; font-size: 14px; line-height: 1.55; color: #1f3a45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.description-actions { display: flex; justify-content: flex-end; padding-top: 14px; border-top: 1px solid #eef2f3; }
+.description-open-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #264e5f; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+.description-open-btn:hover { background: #1d3f4d; }
+.description-popup-header button:focus-visible, .description-open-btn:focus-visible { outline: 3px solid #9dbce4; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .overlay.description-popup-overlay { align-items: flex-start; padding: 60px 12px 12px; }
+  .description-popup-header, .description-popup-content { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Work notes popup: a large, readable view of a ticket's notes for escalation handovers. */
+.overlay.work-notes-overlay { align-items: center; justify-content: center; padding: 24px; }
+.work-notes-popup { display: flex; flex-direction: column; width: min(860px, 100%); max-height: 90vh; overflow: hidden; background: #fff; border: 1px solid #d9e0e2; border-radius: 14px; box-shadow: 0 24px 60px rgb(15 31 39 / 28%); color: #1f3a45; }
+.work-notes-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 24px 12px; }
+.work-notes-header h2 { margin: 4px 0 0; font-size: 20px; line-height: 1.3; color: #12313d; overflow-wrap: anywhere; }
+.work-notes-close { flex: none; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid #d9e0e2; border-radius: 8px; background: #fff; color: #315a69; cursor: pointer; }
+.work-notes-close:hover { background: #e9f5f7; }
+.work-notes-facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0; padding: 10px 24px 14px; border-bottom: 1px solid #e6ecee; }
+.work-notes-facts div { min-width: 0; }
+.work-notes-facts dt { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6b8089; }
+.work-notes-facts dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: #1f3a45; }
+.work-notes-body { flex: 1 1 auto; min-height: 140px; margin: 16px 24px 0; padding: 16px 18px; overflow-y: auto; background: #f6f9fa; border: 1px solid #e1e8ea; border-radius: 10px; font: inherit; font-size: 16px; line-height: 1.65; color: #12313d; white-space: pre-wrap; overflow-wrap: anywhere; }
+.work-notes-body:focus-visible { outline: 3px solid #9dbce4; outline-offset: 2px; }
+.work-notes-empty { margin: 16px 24px 0; padding: 28px 18px; text-align: center; background: #f6f9fa; border: 1px dashed #cfdade; border-radius: 10px; font-size: 14px; color: #5a7280; }
+.work-notes-add { display: grid; gap: 6px; padding: 14px 24px 0; }
+.work-notes-add label { font-size: 12px; font-weight: 700; color: #33525e; }
+.work-notes-add textarea { width: 100%; min-height: 76px; padding: 10px 12px; border: 1px solid #cfdade; border-radius: 8px; font: inherit; font-size: 14px; line-height: 1.5; color: #12313d; background: #fff; resize: vertical; }
+.work-notes-add textarea:focus { outline: 3px solid #9dbce4; outline-offset: 1px; border-color: #7aa6b5; }
+.work-notes-add small { font-size: 11px; color: #6b8089; }
+.work-notes-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 24px 20px; }
+.work-notes-footer .text-button { display: inline-flex; align-items: center; gap: 6px; }
+.work-notes-status { flex: 1 1 160px; min-width: 0; font-size: 12px; color: #2f7a52; }
+.work-notes-copy { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid #c8d9de; border-radius: 8px; background: #fff; color: #264e5f; font-size: 13px; font-weight: 600; cursor: pointer; }
+.work-notes-copy:hover { background: #e9f5f7; }
+.work-notes-footer .primary-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.work-notes-close:focus-visible, .work-notes-copy:focus-visible { outline: 3px solid #9dbce4; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .overlay.work-notes-overlay { align-items: flex-start; padding: 60px 10px 10px; }
+  .work-notes-popup { max-height: calc(100dvh - 70px); }
+  .work-notes-header, .work-notes-facts, .work-notes-add, .work-notes-footer { padding-left: 16px; padding-right: 16px; }
+  .work-notes-body, .work-notes-empty { margin-left: 16px; margin-right: 16px; font-size: 15px; }
+  .work-notes-status { order: 5; flex-basis: 100%; }
+}
+
+/* Work notes buttons in the ticket summary popup and the full ticket panel. */
+.description-actions { gap: 8px; }
+.description-notes-btn, .record-notes-button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid #c8d9de; border-radius: 8px; background: #fff; color: #264e5f; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.description-notes-btn:hover, .record-notes-button:hover { background: #e9f5f7; }
+.description-notes-btn:focus-visible, .record-notes-button:focus-visible { outline: 3px solid #9dbce4; outline-offset: 2px; }
