@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { apiFetch, responseError } from '../api/base'
 import { Upload, Download, Trash2, AlertCircle, Check } from 'lucide-react'
 
 interface Matrix {
@@ -15,6 +16,7 @@ interface MatrixUploadManagerProps {
   type: 'escalation' | 'sla'
   title: string
   description: string
+  canEdit?: boolean
 }
 
 export default function MatrixUploadManager({
@@ -22,7 +24,9 @@ export default function MatrixUploadManager({
   type,
   title,
   description,
+  canEdit = true,
 }: MatrixUploadManagerProps) {
+  const replaceInput = useRef<HTMLInputElement>(null)
   const [matrix, setMatrix] = useState<Matrix | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -38,7 +42,7 @@ export default function MatrixUploadManager({
   const loadMatrix = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/teams/${teamId}/${endpoint}`, {
+      const response = await apiFetch(`/teams/${teamId}/${endpoint}`, {
         headers: { 'Content-Type': 'application/json' },
       })
       if (response.ok) {
@@ -65,7 +69,7 @@ export default function MatrixUploadManager({
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch(`/api/teams/${teamId}/${endpoint}/upload`, {
+      const response = await apiFetch(`/teams/${teamId}/${endpoint}/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -91,7 +95,7 @@ export default function MatrixUploadManager({
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/teams/${teamId}/${endpoint}`, {
+      const response = await apiFetch(`/teams/${teamId}/${endpoint}`, {
         method: 'DELETE',
       })
 
@@ -110,9 +114,19 @@ export default function MatrixUploadManager({
   const handleDownload = async () => {
     if (!matrix) return
     try {
-      window.location.href = `/api/teams/${teamId}/${endpoint}/download`
+      // A plain link can't carry the sign-in token, so fetch the file and save it from memory.
+      const response = await apiFetch(`/teams/${teamId}/${endpoint}/download`)
+      if (!response.ok) throw new Error(await responseError(response))
+      const url = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = url
+      link.download = matrix.file_name || `${type}-matrix`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (err) {
-      setError('Failed to download file')
+      setError(`Failed to download file: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 
@@ -143,7 +157,9 @@ export default function MatrixUploadManager({
         </div>
       )}
 
-      {!matrix ? (
+      {!matrix && !canEdit ? (
+        <p className="text-sm text-gray-600">No {type} matrix uploaded yet. A team admin can add one.</p>
+      ) : !matrix ? (
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
           <label className="cursor-pointer">
             <div className="flex flex-col items-center gap-2">
@@ -185,34 +201,42 @@ export default function MatrixUploadManager({
                 >
                   <Download size={18} />
                 </button>
+                {canEdit && (
                 <button
                   onClick={handleDelete}
                   disabled={loading}
                   className="p-2 hover:bg-red-100 text-red-600 rounded transition-colors"
                   title="Delete"
+                  aria-label="Delete"
                 >
                   <Trash2 size={18} />
                 </button>
+                )}
               </div>
             </div>
           </div>
 
-          <label className="block">
-            <button
-              type="button"
-              disabled={uploading || loading}
-              className="w-full py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {uploading ? 'Uploading...' : `Replace ${type} matrix`}
-            </button>
-            <input
-              type="file"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              className="hidden"
-              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt"
-            />
-          </label>
+          {canEdit && (
+            <div>
+              {/* A button inside a <label> does not open the file picker, so open it from the button. */}
+              <button
+                type="button"
+                onClick={() => replaceInput.current?.click()}
+                disabled={uploading || loading}
+                className="w-full py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                {uploading ? 'Uploading...' : `Replace ${type} matrix`}
+              </button>
+              <input
+                ref={replaceInput}
+                type="file"
+                onChange={handleFileUpload}
+                disabled={uploading}
+                className="hidden"
+                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

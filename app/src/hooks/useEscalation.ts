@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { apiFetch, responseError } from '../api/base'
 
 export interface AssignmentGroup {
   id: string
@@ -61,8 +62,8 @@ export function useEscalation(teamId: string) {
     try {
       setLoading(true)
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/assignment-groups`)
-      if (!response.ok) throw new Error(await response.text())
+      const response = await apiFetch(`/teams/${teamId}/assignment-groups`)
+      if (!response.ok) throw new Error(await responseError(response))
       const data = await response.json()
       setGroups(Array.isArray(data) ? data : [])
     } catch (err) {
@@ -77,8 +78,8 @@ export function useEscalation(teamId: string) {
     try {
       setLoading(true)
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/escalation-rules`)
-      if (!response.ok) throw new Error(await response.text())
+      const response = await apiFetch(`/teams/${teamId}/escalation-rules`)
+      if (!response.ok) throw new Error(await responseError(response))
       const data = await response.json()
       setRules(Array.isArray(data) ? data : [])
     } catch (err) {
@@ -92,12 +93,12 @@ export function useEscalation(teamId: string) {
   const createGroup = useCallback(async (groupData: Omit<AssignmentGroup, 'id' | 'member_count' | 'on_call_count'>) => {
     try {
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/assignment-groups`, {
+      const response = await apiFetch(`/teams/${teamId}/assignment-groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(groupData),
       })
-      if (!response.ok) throw new Error(await response.text())
+      if (!response.ok) throw new Error(await responseError(response))
       await loadGroups()
     } catch (err) {
       setError(`Failed to create group: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -109,12 +110,12 @@ export function useEscalation(teamId: string) {
   const updateGroup = useCallback(async (id: string, groupData: Omit<AssignmentGroup, 'id' | 'member_count' | 'on_call_count'>) => {
     try {
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/assignment-groups/${id}`, {
+      const response = await apiFetch(`/teams/${teamId}/assignment-groups/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(groupData),
       })
-      if (!response.ok) throw new Error(await response.text())
+      if (!response.ok) throw new Error(await responseError(response))
       await loadGroups()
     } catch (err) {
       setError(`Failed to update group: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -126,10 +127,10 @@ export function useEscalation(teamId: string) {
   const deleteGroup = useCallback(async (id: string) => {
     try {
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/assignment-groups/${id}`, {
+      const response = await apiFetch(`/teams/${teamId}/assignment-groups/${id}`, {
         method: 'DELETE',
       })
-      if (!response.ok) throw new Error(await response.text())
+      if (!response.ok) throw new Error(await responseError(response))
       await loadGroups()
     } catch (err) {
       setError(`Failed to delete group: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -141,12 +142,12 @@ export function useEscalation(teamId: string) {
   const createRule = useCallback(async (ruleData: Omit<EscalationRule, 'id' | 'group_name'>) => {
     try {
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/escalation-rules`, {
+      const response = await apiFetch(`/teams/${teamId}/escalation-rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ruleData),
       })
-      if (!response.ok) throw new Error(await response.text())
+      if (!response.ok) throw new Error(await responseError(response))
       await loadRules()
     } catch (err) {
       setError(`Failed to create rule: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -158,12 +159,12 @@ export function useEscalation(teamId: string) {
   const updateRule = useCallback(async (id: string, ruleData: Omit<EscalationRule, 'id' | 'group_name'>) => {
     try {
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/escalation-rules/${id}`, {
+      const response = await apiFetch(`/teams/${teamId}/escalation-rules/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ruleData),
       })
-      if (!response.ok) throw new Error(await response.text())
+      if (!response.ok) throw new Error(await responseError(response))
       await loadRules()
     } catch (err) {
       setError(`Failed to update rule: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -175,10 +176,10 @@ export function useEscalation(teamId: string) {
   const deleteRule = useCallback(async (id: string) => {
     try {
       setError('')
-      const response = await fetch(`/api/teams/${teamId}/escalation-rules/${id}`, {
+      const response = await apiFetch(`/teams/${teamId}/escalation-rules/${id}`, {
         method: 'DELETE',
       })
-      if (!response.ok) throw new Error(await response.text())
+      if (!response.ok) throw new Error(await responseError(response))
       await loadRules()
     } catch (err) {
       setError(`Failed to delete rule: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -190,8 +191,8 @@ export function useEscalation(teamId: string) {
   const loadTicketHistory = useCallback(async (ticketId: string) => {
     try {
       setError('')
-      const response = await fetch(
-        `/api/teams/${teamId}/tickets/${ticketId}/escalation-history`,
+      const response = await apiFetch(
+        `/teams/${teamId}/tickets/${ticketId}/escalation-history`,
         { headers: { 'Content-Type': 'application/json' } }
       )
       if (response.status === 403) {

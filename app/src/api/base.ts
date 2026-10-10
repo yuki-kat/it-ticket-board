@@ -12,3 +12,17 @@ export function authHeader(): Record<string, string> {
     return {};
   }
 }
+
+// Backend request with the sign-in token. Pass paths without the /api prefix, e.g. '/teams'.
+export function apiFetch(path: string, init: RequestInit = {}) {
+  return fetch(`${API_BASE}${path}`, { ...init, headers: { ...authHeader(), ...(init.headers as Record<string, string> | undefined) } });
+}
+
+export async function responseError(response: Response): Promise<string> {
+  const text = await response.text().catch(() => '');
+  try {
+    return (JSON.parse(text) as { error?: string }).error || text || `Request failed (${response.status})`;
+  } catch {
+    return text || `Request failed (${response.status})`;
+  }
+}
