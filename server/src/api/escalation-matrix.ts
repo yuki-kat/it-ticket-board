@@ -330,4 +330,155 @@ This ticket has been escalated and requires immediate attention.
   }
 });
 
+// Configure multer for SLA matrix uploads
+const slaUploadsDir = path.join(process.cwd(), 'uploads', 'sla-matrices');
+
+const slaUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req: Request, _file, cb: (error: Error | null, destination: string) => void) => {
+      fs.mkdir(slaUploadsDir, { recursive: true })
+        .then(() => cb(null, slaUploadsDir))
+        .catch(err => cb(err, slaUploadsDir));
+    },
+    filename: (_req: Request, file, cb: (error: Error | null, filename: string) => void) => {
+      const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
+      const ext = path.extname(file.originalname);
+      const name = path.basename(file.originalname, ext);
+      cb(null, `${name}-${uniqueSuffix}${ext}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (_req: Request, file, cb: FileFilterCallback) => {
+    const allowedMimes = [
+      'image/png',
+      'image/jpeg',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type not allowed: ${file.mimetype}`));
+    }
+  },
+});
+
+// Upload SLA matrix
+router.post(
+  '/teams/:teamId/sla-matrix/upload',
+  slaUpload.single('file'),
+  async (req: AuthRequest & { file?: any }, res) => {
+    try {
+      const { teamId } = req.params;
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file provided' });
+      }
+
+      const userId = req.user?.user_id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      // Delete existing matrix for this team
+      const existingResult = await query(
+        'SELECT file_path FROM sla_matrices WHERE team_id = $1',
+        [teamId]
+      );
+      if (existingResult.rows.length > 0) {
+        try {
+          await fs.unlink(existingResult.rows[0].file_path);
+        } catch (e) {
+          console.error('Failed to delete old SLA matrix file:', e);
+        }
+      }
+
+      // Save new matrix reference
+      const result = await query(
+        `INSERT INTO sla_matrices (team_id, file_name, file_type, file_size, file_path, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (team_id) DO UPDATE SET
+           file_name = $2, file_type = $3, file_size = $4, file_path = $5, updated_at = CURRENT_TIMESTAMP
+         RETURNING *`,
+        [
+          teamId,
+          req.file.originalname,
+          req.file.mimetype,
+          req.file.size,
+          req.file.path,
+          userId,
+        ]
+      );
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error uploading SLA matrix:', error);
+      res.status(500).json({ error: 'Failed to upload SLA matrix' });
+    }
+  }
+);
+
+// Get SLA matrix
+router.get('/teams/:teamId/sla-matrix', async (req: AuthRequest, res) => {
+  try {
+    const { teamId } = req.params;
+    const result = await query('SELECT * FROM sla_matrices WHERE team_id = $1', [teamId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No SLA matrix uploaded' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching SLA matrix:', error);
+    res.status(500).json({ error: 'Failed to fetch SLA matrix' });
+  }
+});
+
+// Download SLA matrix file
+router.get('/teams/:teamId/sla-matrix/download', async (req: AuthRequest, res) => {
+  try {
+    const { teamId } = req.params;
+    const result = await query('SELECT * FROM sla_matrices WHERE team_id = $1', [teamId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No SLA matrix found' });
+    }
+
+    const matrix = result.rows[0];
+    res.download(matrix.file_path, matrix.file_name);
+  } catch (error) {
+    console.error('Error downloading SLA matrix:', error);
+    res.status(500).json({ error: 'Failed to download SLA matrix' });
+  }
+});
+
+// Delete SLA matrix
+router.delete('/teams/:teamId/sla-matrix', async (req: AuthRequest, res) => {
+  try {
+    const { teamId } = req.params;
+
+    const result = await query(
+      'DELETE FROM sla_matrices WHERE team_id = $1 RETURNING file_path',
+      [teamId]
+    );
+
+    if (result.rows.length > 0) {
+      try {
+        await fs.unlink(result.rows[0].file_path);
+      } catch (e) {
+        console.error('Failed to delete file:', e);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting SLA matrix:', error);
+    res.status(500).json({ error: 'Failed to delete SLA matrix' });
+  }
+});
+
 export default router;

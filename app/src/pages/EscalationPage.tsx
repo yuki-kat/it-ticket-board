@@ -3,8 +3,9 @@ import { Settings2, X } from 'lucide-react'
 import { useEscalation } from '../hooks/useEscalation'
 import AssignmentGroupManager from '../components/AssignmentGroupManager'
 import EscalationMatrixBuilder from '../components/EscalationMatrixBuilder'
+import MatrixUploadManager from '../components/MatrixUploadManager'
 
-type Tab = 'groups' | 'rules' | 'thresholds'
+type Tab = 'groups' | 'rules' | 'thresholds' | 'documents'
 
 interface EscalationPageProps {
   teamId: string
@@ -53,6 +54,7 @@ export default function EscalationPage({ teamId, onClose }: EscalationPageProps)
           { id: 'groups', label: 'Assignment Groups' },
           { id: 'rules', label: 'Escalation Rules' },
           { id: 'thresholds', label: 'Time Thresholds' },
+          { id: 'documents', label: 'Reference Documents' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -108,6 +110,23 @@ export default function EscalationPage({ teamId, onClose }: EscalationPageProps)
           <div className="p-6 text-center text-gray-600">
             <p>Time threshold configuration coming soon</p>
             <p className="text-sm text-gray-500">Configure minutes before escalation from each tier</p>
+          </div>
+        )}
+
+        {activeTab === 'documents' && (
+          <div className="p-6 space-y-6">
+            <MatrixUploadManager
+              teamId={teamId}
+              type="escalation"
+              title="Escalation Matrix"
+              description="Upload your escalation matrix as a reference document (PDF, image, or document). This serves as a visual guide for your team."
+            />
+            <MatrixUploadManager
+              teamId={teamId}
+              type="sla"
+              title="SLA Matrix"
+              description="Upload your SLA matrix as a reference document (PDF, image, or document). This serves as a visual guide for response and resolution times."
+            />
           </div>
         )}
       </div>
