@@ -18,7 +18,13 @@ The user wants to confirm outward-facing steps (pushing a new branch, opening a 
 - "merge it" on an open PR: merge (after CI is green) and confirm the deploys.
 - Anything else: say what you're about to do and ask first.
 
-Never merge red CI, never skip or disable a test to get green, and never bypass a branch rule. If GitHub says the PR needs a review, the user approves or merges it themselves in GitHub.
+Never merge red CI, and never skip or disable a test to get green.
+
+`main` has a ruleset that requires 1 approval, and the user can't approve their own PRs, so their PRs show as blocked. The user can bypass the ruleset as repo admin, and so can this session, because it acts as the user. Bypassing needs the user's say-so **for each PR**: "ship it" and "merge it" don't cover it. When `merge.sh` exits 3, stop and offer two options:
+- the user merges it in GitHub and ticks the "bypass rules" box;
+- the user replies "bypass", and you rerun `merge.sh` with `--bypass`.
+
+A PR from a collaborator is different: it needs the user's real review, so never offer to bypass on it.
 
 ## Before opening the PR
 
@@ -52,13 +58,13 @@ If it fails, read the failing test from the Actions run and reproduce it locally
 **3. Merge**, only when CI passed and the user agreed:
 
 ```bash
-bash .claude/skills/ship-pr/scripts/merge.sh <pr-number> <head-sha>   # prints: Merged #<n> as <sha>
+bash .claude/skills/ship-pr/scripts/merge.sh <pr-number> <head-sha> [--bypass]   # prints: Merged #<n> as <sha>
 ```
 
 It refuses in these cases, and tells you why:
 - the head moved since CI ran;
 - there is a merge conflict;
-- branch rules block it (exit 3: the user needs to approve or merge it themselves).
+- branch rules block it (exit 3). Ask the user, as described under "What the user has agreed to". Add `--bypass` only after they reply "bypass" for this PR.
 
 The repo uses merge commits.
 
