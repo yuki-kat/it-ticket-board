@@ -1767,11 +1767,29 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
 
     // Open the service
     if (service === 'Teams') {
-      window.open('https://teams.microsoft.com/', '_blank')
+      // Try Teams app deep link first, fall back to web
+      const teamsAppUrl = userEmail ? `msteams://l/call/0/${encodeURIComponent(userEmail)}` : 'msteams://'
+      window.location.href = teamsAppUrl
+      // Fallback to web after 1 second if app didn't open
+      setTimeout(() => {
+        window.open('https://teams.microsoft.com/', '_blank')
+      }, 1000)
     } else if (service === 'ZOOM') {
-      window.open('https://zoom.us/', '_blank')
+      // Try Zoom app deep link first, fall back to web
+      const zoomAppUrl = userEmail ? `zoommtg://zoom.us/?confno=${encodeURIComponent(userEmail)}` : 'zoommtg://'
+      window.location.href = zoomAppUrl
+      // Fallback to web after 1 second if app didn't open
+      setTimeout(() => {
+        window.open('https://zoom.us/', '_blank')
+      }, 1000)
     } else if (service === 'Webex') {
-      window.open('https://webex.com/', '_blank')
+      // Try Webex app deep link first, fall back to web
+      const webexAppUrl = userEmail ? `webexapp://dial/${encodeURIComponent(userEmail)}` : 'webexapp://'
+      window.location.href = webexAppUrl
+      // Fallback to web after 1 second if app didn't open
+      setTimeout(() => {
+        window.open('https://webex.com/', '_blank')
+      }, 1000)
     }
 
     setShowCallMenu(false)
