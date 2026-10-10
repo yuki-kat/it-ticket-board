@@ -178,10 +178,24 @@
 .ai-guidance-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .ai-guidance-header h5 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #5a7280; }
 
-/* Dark mode overrides - use html[data-theme="dark"] to properly target the root element */
+/* Dark mode overrides - handle both explicit data-theme and system preference */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-neutral-bg: #0d1110;
+  }
+}
+
 html[data-theme="dark"] {
   --color-neutral-bg: #0d1110;
   color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body,
+  :root:not([data-theme="light"]) .app-shell {
+    background-color: #0d1110 !important;
+    color: #e8ebe9 !important;
+  }
 }
 
 html[data-theme="dark"] body,
@@ -215,6 +229,24 @@ html[data-theme="dark"] .ticket-card {
   border-color: #2a3432 !important;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input,
+  :root:not([data-theme="light"]) select,
+  :root:not([data-theme="light"]) textarea,
+  :root:not([data-theme="light"]) .field input,
+  :root:not([data-theme="light"]) .field select,
+  :root:not([data-theme="light"]) .field textarea {
+    background-color: #1a1f1e !important;
+    color: #e8ebe9 !important;
+    border-color: #2a3432 !important;
+  }
+
+  :root:not([data-theme="light"]) input::placeholder,
+  :root:not([data-theme="light"]) textarea::placeholder {
+    color: #707977 !important;
+  }
+}
+
 html[data-theme="dark"] input,
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea,
@@ -229,6 +261,64 @@ html[data-theme="dark"] .field textarea {
 html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder {
   color: #707977 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) p,
+  :root:not([data-theme="light"]) .text-secondary,
+  :root:not([data-theme="light"]) .panel-intro {
+    color: #b0b9b6 !important;
+  }
+
+  :root:not([data-theme="light"]) .primary-button {
+    background-color: #2a9f9e !important;
+    color: white !important;
+    border-color: #2a9f9e !important;
+  }
+
+  :root:not([data-theme="light"]) .primary-button:hover {
+    background-color: #3abfbe !important;
+  }
+
+  :root:not([data-theme="light"]) .matrix-button {
+    background-color: #1a1f1e !important;
+    color: #e8ebe9 !important;
+    border-color: #2a3432 !important;
+  }
+
+  :root:not([data-theme="light"]) .matrix-button:hover {
+    background-color: #252a29 !important;
+  }
+
+  :root:not([data-theme="light"]) .summary-strip {
+    background: #1a1f1e !important;
+    border-color: #2a3432 !important;
+  }
+
+  :root:not([data-theme="light"]) .overlay {
+    background: rgba(0, 0, 0, 0.7) !important;
+  }
+
+  :root:not([data-theme="light"]) .modal-dialog {
+    background: rgba(13, 17, 16, 0.95) !important;
+  }
+
+  :root:not([data-theme="light"]) h1,
+  :root:not([data-theme="light"]) h2,
+  :root:not([data-theme="light"]) h3,
+  :root:not([data-theme="light"]) h4,
+  :root:not([data-theme="light"]) h5,
+  :root:not([data-theme="light"]) h6 {
+    color: #e8ebe9 !important;
+  }
+
+  :root:not([data-theme="light"]) a {
+    color: #2a9f9e !important;
+  }
+
+  :root:not([data-theme="light"]) a:hover {
+    color: #3abfbe !important;
+  }
 }
 
 html[data-theme="dark"] p,
