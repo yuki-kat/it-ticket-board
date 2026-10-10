@@ -23,28 +23,6 @@
   --color-text-tertiary: #8a9b9f;  /* Tertiary/muted text */
   color-scheme: light;
 
-  /* Tailwind Color System Variables - Light Mode */
-  --border: 214 31% 91%;             /* #e2e6e4 */
-  --input: 214 31% 100%;             /* #ffffff */
-  --ring: 200 100% 50%;              /* #0ea5e9 (sky-500) */
-  --background: 0 0% 100%;           /* #ffffff */
-  --foreground: 213 8% 10%;          /* #1a2b2f */
-  --primary: 170 82% 39%;            /* #1a7f7e */
-  --primary-foreground: 0 0% 100%;   /* #ffffff */
-  --secondary: 215 13% 34%;          /* #5a6b6f */
-  --secondary-foreground: 0 0% 100%; /* #ffffff */
-  --destructive: 0 84% 60%;          /* #c94c46 */
-  --destructive-foreground: 0 0% 100%; /* #ffffff */
-  --muted: 214 10% 45%;              /* #8a9b9f */
-  --muted-foreground: 215 10% 60%;   /* #8a9b9f */
-  --accent: 9 69% 55%;               /* #d97757 */
-  --accent-foreground: 0 0% 100%;    /* #ffffff */
-  --popover: 0 0% 100%;              /* #ffffff */
-  --popover-foreground: 213 8% 10%;  /* #1a2b2f */
-  --card: 0 0% 100%;                 /* #ffffff */
-  --card-foreground: 213 8% 10%;     /* #1a2b2f */
-  --radius: 6px;
-
   /* Typography */
   --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   --font-family-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
@@ -290,27 +268,6 @@ textarea:focus-visible {
     --color-text-secondary: #b0b9b6;
     --color-text-tertiary: #707977;
 
-    /* Tailwind Color System Variables - Dark Mode */
-    --border: 215 27% 17%;             /* #2a3432 */
-    --input: 215 20% 12%;              /* #1a1f1e */
-    --ring: 200 100% 50%;              /* #0ea5e9 (sky-500) */
-    --background: 213 8% 5%;           /* #0d1110 */
-    --foreground: 213 8% 92%;          /* #e8ebe9 */
-    --primary: 170 80% 50%;            /* #2a9f9e */
-    --primary-foreground: 213 8% 5%;   /* #0d1110 */
-    --secondary: 215 15% 68%;          /* #b0b9b6 */
-    --secondary-foreground: 213 8% 5%; /* #0d1110 */
-    --destructive: 0 84% 70%;          /* #ff6b5b */
-    --destructive-foreground: 213 8% 5%; /* #0d1110 */
-    --muted: 215 15% 44%;              /* #707977 */
-    --muted-foreground: 215 15% 68%;   /* #b0b9b6 */
-    --accent: 9 100% 60%;              /* #ff9966 */
-    --accent-foreground: 213 8% 5%;    /* #0d1110 */
-    --popover: 215 20% 12%;            /* #1a1f1e */
-    --popover-foreground: 213 8% 92%;  /* #e8ebe9 */
-    --card: 215 20% 12%;               /* #1a1f1e */
-    --card-foreground: 213 8% 92%;     /* #e8ebe9 */
-
     color-scheme: dark;
   }
 }
@@ -335,27 +292,6 @@ textarea:focus-visible {
   --color-text-primary: #e8ebe9;
   --color-text-secondary: #b0b9b6;
   --color-text-tertiary: #707977;
-
-  /* Tailwind Color System Variables - Dark Mode */
-  --border: 215 27% 17%;             /* #2a3432 */
-  --input: 215 20% 12%;              /* #1a1f1e */
-  --ring: 200 100% 50%;              /* #0ea5e9 (sky-500) */
-  --background: 213 8% 5%;           /* #0d1110 */
-  --foreground: 213 8% 92%;          /* #e8ebe9 */
-  --primary: 170 80% 50%;            /* #2a9f9e */
-  --primary-foreground: 213 8% 5%;   /* #0d1110 */
-  --secondary: 215 15% 68%;          /* #b0b9b6 */
-  --secondary-foreground: 213 8% 5%; /* #0d1110 */
-  --destructive: 0 84% 70%;          /* #ff6b5b */
-  --destructive-foreground: 213 8% 5%; /* #0d1110 */
-  --muted: 215 15% 44%;              /* #707977 */
-  --muted-foreground: 215 15% 68%;   /* #b0b9b6 */
-  --accent: 9 100% 60%;              /* #ff9966 */
-  --accent-foreground: 213 8% 5%;    /* #0d1110 */
-  --popover: 215 20% 12%;            /* #1a1f1e */
-  --popover-foreground: 213 8% 92%;  /* #e8ebe9 */
-  --card: 215 20% 12%;               /* #1a1f1e */
-  --card-foreground: 213 8% 92%;     /* #e8ebe9 */
 
   color-scheme: dark;
 }
