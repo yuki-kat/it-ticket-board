@@ -68,12 +68,32 @@ CREATE TABLE IF NOT EXISTS tickets (
 );
 
 -- Add missing columns if they don't exist (for existing databases)
-ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS sla_breached BOOLEAN DEFAULT FALSE;
-ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS sla_breached_at TIMESTAMP;
-ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS current_escalation_tier INT DEFAULT 1;
-ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS current_assignment_group_id UUID REFERENCES assignment_groups(id);
-ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS last_escalation_check TIMESTAMP;
-ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS escalation_locked BOOLEAN DEFAULT FALSE;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_breached BOOLEAN DEFAULT FALSE;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN sla_breached_at TIMESTAMP;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN current_escalation_tier INT DEFAULT 1;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN current_assignment_group_id UUID;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN last_escalation_check TIMESTAMP;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE tickets ADD COLUMN escalation_locked BOOLEAN DEFAULT FALSE;
+  EXCEPTION WHEN duplicate_column THEN NULL;
+  END;
+END $$;
 
 -- Work notes
 CREATE TABLE IF NOT EXISTS work_notes (
@@ -307,3 +327,14 @@ CREATE INDEX IF NOT EXISTS idx_escalation_history_sla_impact ON escalation_histo
 CREATE INDEX IF NOT EXISTS idx_escalation_matrices_team_id ON escalation_matrices(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_team_id ON escalation_channels(team_id);
 CREATE INDEX IF NOT EXISTS idx_escalation_channels_tier ON escalation_channels(team_id, tier);
+
+-- Add foreign key constraint for current_assignment_group_id if it doesn't exist
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name='tickets' AND constraint_name='tickets_current_assignment_group_id_fkey'
+  ) THEN
+    ALTER TABLE tickets ADD CONSTRAINT tickets_current_assignment_group_id_fkey
+      FOREIGN KEY (current_assignment_group_id) REFERENCES assignment_groups(id);
+  END IF;
+END $$;
