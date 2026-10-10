@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db/connection.js';
+import { getClient, query } from '../db/connection.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import {
   canViewEscalationHistory,
@@ -347,6 +347,84 @@ router.delete('/teams/:teamId/escalation-rules/:ruleId', teamAdmin, async (req: 
   }
 });
 
+// ============ TIME THRESHOLDS ============
+// Minutes after a ticket opens (SLA pauses excluded) before auto-escalation moves it from tier 1 to 2 and 2 to 3.
+
+const THRESHOLD_TYPES = ['incident', 'service_request', 'change', 'problem'];
+const THRESHOLD_PRIORITIES = ['critical', 'high', 'medium', 'low'];
+const MAX_THRESHOLD_MINUTES = 60 * 24 * 365;
+
+router.get('/teams/:teamId/escalation-thresholds', teamMember, async (req: AuthRequest, res) => {
+  try {
+    const result = await query(
+      `SELECT ticket_type, priority, tier_1_minutes, tier_2_minutes, updated_at
+         FROM escalation_time_thresholds WHERE team_id = $1 ORDER BY ticket_type, priority`,
+      [req.params.teamId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching escalation thresholds:', error);
+    res.status(500).json({ error: 'Failed to fetch time thresholds' });
+  }
+});
+
+// Replaces the thresholds for the rows sent; a row with both values empty removes that combination.
+router.put('/teams/:teamId/escalation-thresholds', teamAdmin, async (req: AuthRequest, res) => {
+  const rows = Array.isArray(req.body?.thresholds) ? req.body.thresholds : null;
+  if (!rows || rows.length === 0 || rows.length > THRESHOLD_TYPES.length * THRESHOLD_PRIORITIES.length) {
+    return res.status(400).json({ error: 'Send a list of thresholds to save' });
+  }
+  const minutes = (value: unknown) => value === null || value === undefined || value === '' ? null : Number(value);
+  const parsed = [];
+  for (const row of rows) {
+    const tier1 = minutes(row?.tier_1_minutes);
+    const tier2 = minutes(row?.tier_2_minutes);
+    if (!THRESHOLD_TYPES.includes(row?.ticket_type) || !THRESHOLD_PRIORITIES.includes(row?.priority)) {
+      return res.status(400).json({ error: 'Unknown ticket type or priority' });
+    }
+    for (const value of [tier1, tier2]) {
+      if (value !== null && (!Number.isInteger(value) || value < 0 || value > MAX_THRESHOLD_MINUTES)) {
+        return res.status(400).json({ error: 'Times must be whole minutes between 0 and 525600' });
+      }
+    }
+    if (tier1 !== null && tier2 !== null && tier2 <= tier1) {
+      return res.status(400).json({ error: `${row.priority}: tier 2 → 3 must be later than tier 1 → 2 (both count from when the ticket opened)` });
+    }
+    parsed.push({ type: row.ticket_type, priority: row.priority, tier1, tier2 });
+  }
+
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    for (const row of parsed) {
+      if (row.tier1 === null && row.tier2 === null) {
+        await client.query('DELETE FROM escalation_time_thresholds WHERE team_id = $1 AND ticket_type = $2 AND priority = $3', [req.params.teamId, row.type, row.priority]);
+      } else {
+        await client.query(
+          `INSERT INTO escalation_time_thresholds (team_id, ticket_type, priority, tier_1_minutes, tier_2_minutes)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (team_id, ticket_type, priority) DO UPDATE SET
+             tier_1_minutes = $4, tier_2_minutes = $5, updated_at = CURRENT_TIMESTAMP`,
+          [req.params.teamId, row.type, row.priority, row.tier1, row.tier2]
+        );
+      }
+    }
+    await client.query('COMMIT');
+    const result = await query(
+      `SELECT ticket_type, priority, tier_1_minutes, tier_2_minutes, updated_at
+         FROM escalation_time_thresholds WHERE team_id = $1 ORDER BY ticket_type, priority`,
+      [req.params.teamId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Error saving escalation thresholds:', error);
+    res.status(500).json({ error: 'Failed to save time thresholds' });
+  } finally {
+    client.release();
+  }
+});
+
 // Get next escalation tier for a ticket
 router.get('/teams/:teamId/next-escalation/:ticketId', teamMember, async (req: AuthRequest, res) => {
   try {
@@ -540,29 +618,31 @@ router.post('/teams/:teamId/check-auto-escalations', teamMember, async (req: Aut
          AND t.ticket_type = tst.ticket_type AND t.priority = tst.priority
        WHERE t.team_id = $1 AND t.status IN ('open', 'in_progress')
          AND t.escalation_locked = FALSE
-         AND t.last_escalation_check < NOW() - INTERVAL '5 minutes'`,
+         AND COALESCE(t.sla_paused, FALSE) = FALSE
+         AND (t.last_escalation_check IS NULL OR t.last_escalation_check < NOW() - INTERVAL '5 minutes')`,
       [teamId]
     );
 
     const escalatedTickets = [];
 
     for (const ticket of ticketsResult.rows) {
-      if (!ticket.tier_1_minutes) continue; // No escalation configured
+      if (ticket.tier_1_minutes == null && ticket.tier_2_minutes == null) continue; // No thresholds for this type and priority
 
+      // Time paused for the SLA (e.g. waiting on the user) does not count towards escalation.
       const ageMinutes = Math.floor(
-        (new Date().getTime() - new Date(ticket.created_at).getTime()) / 60000
+        (new Date().getTime() - new Date(ticket.created_at).getTime() - Number(ticket.sla_paused_total_ms || 0)) / 60000
       );
 
       let shouldEscalate = false;
       let reason = '';
 
-      if (ticket.current_escalation_tier === 1 && ageMinutes >= ticket.tier_1_minutes) {
+      if (ticket.current_escalation_tier === 1 && ticket.tier_1_minutes != null && ageMinutes >= ticket.tier_1_minutes) {
         shouldEscalate = true;
         reason = `auto_escalate_after_${ticket.tier_1_minutes}min`;
-      } else if (ticket.current_escalation_tier === 2 && ageMinutes >= ticket.tier_2_minutes) {
+      } else if (ticket.current_escalation_tier === 2 && ticket.tier_2_minutes != null && ageMinutes >= ticket.tier_2_minutes) {
         shouldEscalate = true;
         reason = `auto_escalate_after_${ticket.tier_2_minutes}min`;
-      } else if (ticket.current_escalation_tier === 3 && ageMinutes >= ticket.tier_3_minutes) {
+      } else if (ticket.current_escalation_tier === 3 && ticket.tier_3_minutes != null && ageMinutes >= ticket.tier_3_minutes) {
         shouldEscalate = true;
         reason = `auto_escalate_after_${ticket.tier_3_minutes}min`;
       }
