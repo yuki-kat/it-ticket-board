@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { TicketPopout, usePopoutBehaviour } from './HomePopouts'
+import CompactSLATimer from './CompactSLATimer'
 import '../styles/home-insights.css'
 import '../styles/home-arrange.css'
 
@@ -142,7 +143,7 @@ function RecentCard({ ctx }: CardProps) {
   const recent = [...ctx.tickets].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5)
   return <article className="home-chart-card home-recent-card">
     <div className="home-chart-heading"><div><h3>{CARD_INFO.recent.title}</h3><p>{CARD_INFO.recent.subtitle(ctx)}</p></div><button onClick={() => ctx.showTickets('all')}>See all <ArrowRight size={14} /></button></div>
-    <div className="home-recent-list">{recent.length ? recent.map((ticket) => <button key={ticket.id} onClick={() => ctx.openTicket(ticket.id)}><span className={`home-recent-priority ${sevClass(ticket.severity)}`} /> <span className="home-recent-copy"><b>{ticket.title}</b><small>{ticket.id} · {ticket.status}</small></span><ArrowRight size={14} /></button>) : <p>No tickets yet. Create a task to start tracking work.</p>}</div>
+    <div className="home-recent-list">{recent.length ? recent.map((ticket) => <div key={ticket.id} className="home-recent-item"><button onClick={() => ctx.openTicket(ticket.id)} style={{ width: '100%', textAlign: 'left' }}><span className={`home-recent-priority ${sevClass(ticket.severity)}`} /> <span className="home-recent-copy"><b>{ticket.title}</b><small>{ticket.id} · {ticket.status}</small></span><ArrowRight size={14} /></button><div style={{ fontSize: '12px', marginTop: '4px', paddingLeft: '20px' }}><CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={true} /></div></div>) : <p>No tickets yet. Create a task to start tracking work.</p>}</div>
   </article>
 }
 

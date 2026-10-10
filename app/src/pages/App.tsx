@@ -31,6 +31,7 @@ import GeminiSettings from '../components/GeminiSettings'
 import ThemeSettings from '../components/ThemeSettings'
 import { generateTicketSuggestions } from '../api/gemini'
 import EscalationPage from './EscalationPage'
+import CompactSLATimer from '../components/CompactSLATimer'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
 type Severity = 'P1 – Critical' | 'P2 – High' | 'P3 – Medium' | 'P4 – Low'
@@ -1388,6 +1389,9 @@ function ExploreTicketSummary({ ticket, now }: { ticket: TicketItem; now: number
   const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   return <div className="explore-ticket-summary">
     <RecordStatusStrip ticket={ticket} now={now} />
+    <div style={{ padding: '0 16px' }}>
+      <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={false} />
+    </div>
     <div className="record-form-grid">
       <div className="record-field"><span>Type</span><b>{ticket.recordType}</b></div>
       <div className="record-field"><span>Assigned to</span><b>{ticket.assignee || 'Unassigned'}</b></div>
@@ -1702,6 +1706,9 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       </div>}
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
+    <div style={{ padding: '0 16px' }}>
+      <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={false} />
+    </div>
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} />
   </section>
 }
@@ -1754,7 +1761,6 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
   return <section className="list-view" id="board" aria-label="List of task records">
     <div className="list-view-heading"><div><b>All task records</b><span>Click a checkbox, then Shift-click another to select a range</span></div><div className="list-view-summary"><span>{selectedIds.length ? `${selectedIds.length} selected · ` : ''}{filteredTickets.length === tickets.length ? `${tickets.length} records` : `${filteredTickets.length} of ${tickets.length} records`}</span>{selectedIds.length > 0 && <button onClick={() => onSelectionChange([])}><X size={12} />Clear selection</button>}{filtersActive && <button onClick={clearListFilters}><X size={12} />Clear column filters</button>}</div></div>
     <div className="list-scroll"><table className="task-table"><thead><tr><th className="selection-column"><input type="checkbox" checked={allVisibleSelected} aria-label="Select all visible tickets" onChange={(event) => onSelectionChange(event.target.checked ? [...new Set([...selectedIds, ...visibleIds])] : selectedIds.filter((id) => !visibleIds.includes(id)))} /></th><th><HeaderFilter label="Number" value={filters.number} onChange={(value) => setFilter('number', value)} placeholder="Ticket number…" /></th><th><HeaderFilter label="Short description" value={filters.description} onChange={(value) => setFilter('description', value)} placeholder="Description contains…" /></th><th><HeaderFilter label="Department" value={filters.department} onChange={(value) => setFilter('department', value)} options={departments} /></th><th><HeaderFilter label="Assignment group" value={filters.assignmentGroup} onChange={(value) => setFilter('assignmentGroup', value)} options={assignmentGroupOptions} /></th><th><HeaderFilter label="Assigned to" value={filters.assignee} onChange={(value) => setFilter('assignee', value)} options={assigneeOptions} /></th><th><HeaderFilter label="Priority" value={filters.priority} onChange={(value) => setFilter('priority', value)} options={['P1', 'P2', 'P3', 'P4']} /></th><th><HeaderFilter label="State" value={filters.state} onChange={(value) => setFilter('state', value)} options={statuses} /></th><th><HeaderFilter label="Created" value={filters.created} onChange={(value) => setFilter('created', value)} placeholder="Date contains…" /></th><th><HeaderFilter label="Resolution SLA" value={filters.sla} onChange={(value) => setFilter('sla', value)} placeholder="SLA contains…" /></th></tr></thead><tbody>{filteredTickets.length ? filteredTickets.map((ticket) => {
-      const sla = slaTime(ticket, now)
       const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ticket.createdAt)) : 'Not recorded'
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
@@ -1766,7 +1772,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
         <td><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span></td>
         <td><span className={`status-pill status-${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</span></td>
         <td className="list-date">{created}</td>
-        <td><span className={`list-sla ${sla.breached && ticket.status !== 'Resolved' ? 'breached' : ''}`}>{ticket.status === 'Resolved' ? 'Resolved' : sla.label}</span></td>
+        <td><CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} compact={true} /></td>
       </tr>
     }) : <tr><td colSpan={10} className="list-empty">No task records match the current filters.</td></tr>}</tbody></table></div>
   </section>
