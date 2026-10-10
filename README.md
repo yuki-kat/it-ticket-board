@@ -75,6 +75,7 @@ npm ci
 cp .env.example .env      # then set DATABASE_URL, JWT_SECRET and GEMINI_API_KEY
 npm run migrate           # creates or updates the tables; safe to run again
 npm run dev               # http://localhost:3001
+npm run build && npm test # API tests; point DATABASE_URL at a disposable, migrated database first
 ```
 
 ## Hosting (Render)
