@@ -67,6 +67,14 @@ CREATE TABLE IF NOT EXISTS tickets (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Add missing columns if they don't exist (for existing databases)
+ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS sla_breached BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS sla_breached_at TIMESTAMP;
+ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS current_escalation_tier INT DEFAULT 1;
+ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS current_assignment_group_id UUID REFERENCES assignment_groups(id);
+ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS last_escalation_check TIMESTAMP;
+ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS escalation_locked BOOLEAN DEFAULT FALSE;
+
 -- Work notes
 CREATE TABLE IF NOT EXISTS work_notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
