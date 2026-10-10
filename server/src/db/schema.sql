@@ -107,6 +107,17 @@ DO $$ BEGIN
   END;
 END $$;
 
+-- Columns that were added to the CREATE TABLE statements after the hosted database was created. CREATE TABLE IF
+-- NOT EXISTS never adds them to an existing table, so add any that are missing (no-op on newer databases).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_system_admin BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_compliance_officer BOOLEAN DEFAULT FALSE;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ticket_type VARCHAR(50);
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS assigned_group_id UUID;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sla_template_id UUID;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS first_response_at TIMESTAMP;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS escalated_to_tier_2_at TIMESTAMP;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS escalated_to_tier_3_at TIMESTAMP;
+
 -- Work notes
 CREATE TABLE IF NOT EXISTS work_notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
