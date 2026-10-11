@@ -28,6 +28,7 @@ import { exportXlsx } from '../lib/exportXlsx'
 import SearchPage from './SearchPage'
 import QuickActionsPage, { type QuickCommand } from './QuickActionsPage'
 import { recordUse } from '../lib/usage'
+import { currentTeam, segmentMs, shortDuration, teamLabel, teamSegments, timePerTeam, trackTeamChange, type TeamSegment } from '../lib/teamTime'
 import '../styles/search.css'
 import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import GeminiSettings from '../components/GeminiSettings'
@@ -79,6 +80,7 @@ type TicketItem = {
   urgency?: Assessment
   resolvedAt?: string
   activity?: TicketActivity[]
+  teamHistory?: TeamSegment[]
 }
 type DeletedTicket = TicketItem & { deletedAt: string }
 
@@ -229,6 +231,9 @@ function resolutionTargetMs(severity: Severity) {
   return 120 * 60 * 60_000
 }
 
+// Default team (OLA) target: half the customer resolution SLA, so at least two teams fit inside it.
+const teamTargetMs = (severity: Severity) => resolutionTargetMs(severity) / 2
+
 function slaTime(ticket: TicketItem, now: number) {
   const deadline = new Date(ticket.createdAt).getTime() + resolutionTargetMs(ticket.severity) + pausedMsFor(ticket.id, now)
   const delta = deadline - now
@@ -375,6 +380,14 @@ function parseIncomingEmail(text: string) {
   }
 }
 
+// Escalated tickets now with a specialist team first sat with the Service Desk for a quarter of their age.
+function withSampleHandoff(ticket: TicketItem, now: number): TicketItem {
+  if (ticket.status !== 'Escalated' || ticket.assignmentGroup === 'Service Desk') return ticket
+  const created = Date.parse(ticket.createdAt)
+  const handedOn = new Date(created + (now - created) / 4).toISOString()
+  return { ...ticket, teamHistory: [{ group: 'Service Desk', from: ticket.createdAt, to: handedOn }, { group: ticket.assignmentGroup, from: handedOn }] }
+}
+
 function makeSampleTickets(): TicketItem[] {
   const now = Date.now()
   const due = (minutes: number) => new Date(now + minutes * 60_000).toISOString()
@@ -446,7 +459,7 @@ function makeSampleTickets(): TicketItem[] {
     create('OPS-164', 'Incident', 'Third-party service down', 'Platform Engineering', 'Infrastructure', 'Avery Chen', 'P1 – Critical', 'Escalated', 50, 'Payment gateway API returning 503 errors.', 'Monitoring third-party status page; retrying failed transactions.', [], 900, 2),
     create('OPS-165', 'Work Order', 'Install antivirus updates', 'Security', 'Field Services', 'Riley Brooks', 'P3 – Medium', 'In Progress', 180, 'Deploy latest antivirus definitions to all workstations.', 'Rolled out to 80 of 120 machines.'),
     create('OPS-166', 'Incident', 'Configuration drift detected', 'Infrastructure', 'Infrastructure', 'Morgan Diaz', 'P2 – High', 'New', 420, 'Production servers have drifted from standard configuration.', 'Documenting changes and planning remediation.'),
-  ]
+  ].map((ticket) => withSampleHandoff(ticket, now))
 }
 
 function loadTickets(): TicketItem[] {
@@ -500,7 +513,8 @@ function App() {
   const updateStock = (update: (items: StockItem[]) => StockItem[]) => setStockState(update)
   const setTickets = (update: (current: TicketItem[]) => TicketItem[]) => setTicketState((current) => {
     const previous = new Map(current.map((ticket) => [ticket.id, ticket]))
-    return update(current).map((ticket) => recordActivity(previous.get(ticket.id), ticket))
+    const at = new Date().toISOString()
+    return update(current).map((ticket) => trackTeamChange(previous.get(ticket.id), recordActivity(previous.get(ticket.id), ticket), at))
   })
   const assessTicket = (id: string, field: 'impact' | 'urgency', value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, [field]: assessmentLevels.includes(value as Assessment) ? value as Assessment : undefined } : ticket))
   const [deletedTickets, setDeletedTickets] = useState<DeletedTicket[]>(() => {
@@ -957,6 +971,8 @@ function App() {
   const openWorkNotes = (id: string, from: 'popup' | 'record' | 'quick') => { recordUse('work-notes', id); setWorkNotes({ id, from }) }
   const openReports = () => { recordUse('reports'); setShowReports(true) }
   const openImport = () => { recordUse('import-email'); setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }
+  // Handing a ticket to another team keeps the customer's SLA running; trackTeamChange starts the new team's clock.
+  const reassignTicket = (id: string, group: string) => { recordUse('reassign', id); setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, assignmentGroup: group } : ticket)) }
   const linkTicketToAsset = (ticketId: string, assetId: string) => setTickets((current) => current.map((ticket) => ticket.id === ticketId ? { ...ticket, assetId } : ticket))
   const createTicketForAsset = (asset: AssetItem) => openNewForm({ assetId: asset.id, title: asset.name + ' issue', requester: asset.assignedTo, affectedUser: asset.assignedTo, department: asset.department })
   const openAssetFromTicket = (id: string) => { setSelectedTicketId(''); setInventoryFocusId(id); setInventoryFocusRevision((value) => value + 1); setPage('inventory'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -1103,7 +1119,7 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); openWorkNotes(selectedTicket.id, 'record') }} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); openWorkNotes(selectedTicket.id, 'record') }} onReassign={(group) => reassignTicket(selectedTicket.id, group)} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
     {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onSaveNotes={(value) => saveTicketNotes(descriptionPopupTicketId, value)} onOpenWorkNotes={() => { setDescriptionPopupTicketId(''); openWorkNotes(descriptionPopupTicketId, 'popup') }} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); openTicket(descriptionPopupTicketId) }} /></Overlay>}
     {workNotes && tickets.find(t => t.id === workNotes.id) && <Overlay className="work-notes-overlay" onClose={() => setWorkNotes(null)}><WorkNotesPopup ticket={tickets.find(t => t.id === workNotes.id)!} onSaveNotes={(value) => { recordUse('add-note', workNotes.id); saveTicketNotes(workNotes.id, value) }} backLabel={workNotes.from === 'popup' ? 'Back to ticket summary' : workNotes.from === 'record' ? 'Back to full ticket' : 'Back to Quick actions'} onBack={() => { setWorkNotes(null); if (workNotes.from === 'popup') setDescriptionPopupTicketId(workNotes.id); else if (workNotes.from === 'record') setSelectedTicketId(workNotes.id) }} onClose={() => setWorkNotes(null)} /></Overlay>}
@@ -1416,6 +1432,45 @@ function WorkNotesPopup({ ticket, onSaveNotes, onBack, backLabel, onClose }: { t
   </section>
 }
 
+// One line under the SLA timer in list rows: how long the current team has had the ticket against its team target.
+function TeamClock({ ticket, now }: { ticket: TicketItem; now: number }) {
+  if (ticket.status === 'Resolved') return null
+  const { group, ms } = currentTeam(ticket, now)
+  const target = teamTargetMs(ticket.severity)
+  const tone = ms > target ? ' over' : ms > target * 0.75 ? ' near' : ''
+  return <small className={'team-clock' + tone} title={`With ${teamLabel(group)} for ${shortDuration(ms)}. Team target ${shortDuration(target)} (half the resolution SLA).`}>With team {shortDuration(ms)}</small>
+}
+
+const handoffTime = (iso: string) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+
+// Full ticket panel: the current team's clock, every handoff so far, and reassigning to another team.
+function TeamHandoffs({ ticket, now, onReassign }: { ticket: TicketItem; now: number; onReassign: (group: string) => void }) {
+  const segments = teamSegments(ticket)
+  const { group, ms, handoffs } = currentTeam(ticket, now)
+  const target = teamTargetMs(ticket.severity)
+  const resolved = ticket.status === 'Resolved'
+  const tone = ms > target ? 'over' : ms > target * 0.75 ? 'near' : ''
+  const groups = assignmentGroups.includes(ticket.assignmentGroup) || !ticket.assignmentGroup ? assignmentGroups : [ticket.assignmentGroup, ...assignmentGroups]
+  return <section className="team-handoffs" aria-labelledby={`team-time-${ticket.id}`}>
+    <div className="team-handoffs-head">
+      <h4 id={`team-time-${ticket.id}`}>Time with team</h4>
+      <span>{handoffs === 0 ? 'No handoffs yet' : handoffs === 1 ? '1 handoff' : `${handoffs} handoffs`}</span>
+    </div>
+    <p className="team-now"><b>{teamLabel(group)}</b> {resolved ? 'held it until it was resolved,' : 'has had it for'} <b className={'team-now-time ' + tone}>{shortDuration(ms)}</b>. Team target {shortDuration(target)}, half the {ticket.severity.split(' – ')[0]} resolution SLA. The customer's SLA timer keeps running across handoffs.</p>
+    <div className="team-bar" role="img" aria-label={`${Math.round(ms / target * 100)}% of the team target used`}><i className={tone} style={{ width: Math.min(100, ms / target * 100) + '%' }} /></div>
+    <div className="team-history-scroll"><table className="team-history">
+      <thead><tr><th>Team</th><th>Received</th><th>Handed on</th><th>Time</th></tr></thead>
+      <tbody>{segments.map((segment, index) => <tr key={index} className={segment.to ? '' : 'current'}><th>{teamLabel(segment.group)}</th><td>{handoffTime(segment.from)}</td><td>{segment.to ? handoffTime(segment.to) : resolved ? 'Resolved' : 'Now'}</td><td>{shortDuration(segmentMs(segment, ticket, now))}</td></tr>)}</tbody>
+    </table></div>
+    {!resolved && <label className="team-reassign">Reassign to
+      <select value={ticket.assignmentGroup} onChange={(event) => onReassign(event.target.value)}>
+        {!ticket.assignmentGroup && <option value="">Unassigned</option>}
+        {groups.map((name) => <option key={name} value={name}>{name}</option>)}
+      </select>
+    </label>}
+  </section>
+}
+
 function ReportsPanel({ tickets, now, onClose }: { tickets: TicketItem[]; now: number; onClose: () => void }) {
   const [period, setPeriod] = useState<'7' | '30' | '90' | 'all'>('30')
   const start = period === 'all' ? -Infinity : now - Number(period) * 24 * 60 * 60_000
@@ -1450,11 +1505,16 @@ function ReportsPanel({ tickets, now, onClose }: { tickets: TicketItem[]; now: n
   const assignees = [...new Set(tickets.map((ticket) => ticket.assignee.trim() || 'Unassigned'))].map((name) => ({ name, open: open.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name).length, overdue: open.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name && slaTime(ticket, now).breached).length, created: created.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name).length, resolved: resolved.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name).length })).sort((a, b) => b.open - a.open || a.name.localeCompare(b.name))
   const periodLabel = period === 'all' ? 'all time' : 'the last ' + period + ' days'
 
+  // Where the time went: each team's stays on tickets created in this period (see lib/teamTime.ts).
+  const teamRows = timePerTeam(created, now, (ticket) => teamTargetMs(ticket.severity))
+  const handedOn = created.filter((ticket) => teamSegments(ticket).length > 1)
+  const mostHandoffs = handedOn.reduce<TicketItem | undefined>((best, ticket) => !best || teamSegments(ticket).length > teamSegments(best).length ? ticket : best, undefined)
   return <section className="report-panel" role="dialog" aria-modal="true" aria-labelledby="reports-title">
     <header className="report-header"><div><div className="eyebrow">SERVICE DESK ANALYTICS</div><h2 id="reports-title">Reports</h2></div><div className="report-header-actions"><label>Period <select value={period} onChange={(event) => setPeriod(event.target.value as typeof period)}><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All time</option></select></label><button className="close-button" onClick={onClose} aria-label="Close reports"><X size={19} /></button></div></header>
     <p className="report-intro">Created and resolved figures cover {periodLabel}. Closed tickets without a completion timestamp are counted as closed, but omitted from resolution-time and SLA measures. Times use the selected 24-hour calendar schedule.</p>
     <div className="report-kpis"><div><strong>{closed.length}</strong><span>Closed now</span><small>{tickets.length} total tickets</small></div><div><strong>{resolved.length ? Math.round(within.length / resolved.length * 100) + '%' : '—'}</strong><span>Resolved within SLA</span><small>{within.length} of {resolved.length} measured</small></div><div><strong>{durationLabel(median)}</strong><span>Median time to resolve</span><small>{resolved.length} timed resolutions</small></div><div><strong>{created.length}</strong><span>Created</span><small>In {periodLabel}</small></div></div>
     <section className="report-section"><div className="report-section-heading"><h3>SLA by priority</h3><p>Only tickets with a recorded resolution time contribute to the SLA rate.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Priority</th><th>Resolved</th><th>Within SLA</th><th>Median to resolve</th><th>Target</th><th>Open now</th></tr></thead><tbody>{byPriority.map((item) => <tr key={item.key}><th><span className={'report-priority ' + item.key.toLowerCase()}>{item.label}</span></th><td>{item.count}</td><td>{item.count ? Math.round(item.success / item.count * 100) + '%' : '—'}</td><td>{durationLabel(item.middle)}</td><td>{item.target}</td><td>{item.open}</td></tr>)}</tbody></table></div></section>
+    <section className="report-section"><div className="report-section-heading"><h3>Time per team</h3><p>How long each team held tickets created in this period. {handedOn.length ? `${handedOn.length} ${handedOn.length === 1 ? 'ticket was' : 'tickets were'} handed between teams${mostHandoffs ? `; ${mostHandoffs.id} passed through ${teamSegments(mostHandoffs).length} teams` : ''}.` : 'No ticket has changed team yet.'} Team target: half the resolution SLA.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Team</th><th>Tickets</th><th>Total time</th><th>Average stay</th><th>Over team target</th><th>Handed on</th></tr></thead><tbody>{teamRows.length ? teamRows.map((row) => <tr key={row.group}><th>{row.group}</th><td>{row.tickets}</td><td>{shortDuration(row.ms)}</td><td>{shortDuration(row.ms / Math.max(1, row.tickets))}</td><td>{row.overTarget}</td><td>{row.handedOn}</td></tr>) : <tr><td colSpan={6}>No tickets in this period.</td></tr>}</tbody></table></div></section>
     <section className="report-section"><div className="report-section-heading"><h3>Ticket activity by week</h3><p>Created and resolved tickets over the last eight calendar weeks.</p></div><div className="report-week-chart" role="img" aria-label="Weekly created and resolved ticket counts">{weeks.map((week) => <div className="report-week" key={week.label}><div className="report-week-bars"><i className="created" title={week.created + ' created'} style={{ height: Math.max(2, week.created / maxWeek * 100) + '%' }} /><i className="resolved" title={week.resolved + ' resolved'} style={{ height: Math.max(2, week.resolved / maxWeek * 100) + '%' }} /></div><span>{week.label}</span></div>)}</div><div className="report-legend"><span><i className="created" /> Created</span><span><i className="resolved" /> Resolved</span></div></section>
     <div className="report-breakdown-grid"><section className="report-section"><div className="report-section-heading"><h3>By assignment group</h3><p>Current open load and period activity.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Group</th><th>Open</th><th>Past SLA</th><th>Created</th><th>Resolved</th></tr></thead><tbody>{groups.map((group) => <tr key={group.name}><th>{group.name}</th><td>{group.open}</td><td>{group.overdue}</td><td>{group.created}</td><td>{group.resolved}</td></tr>)}</tbody></table></div></section><section className="report-section"><div className="report-section-heading"><h3>By assignee</h3><p>Current open load and period activity.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Assignee</th><th>Open</th><th>Past SLA</th><th>Created</th><th>Resolved</th></tr></thead><tbody>{assignees.map((person) => <tr key={person.name}><th>{person.name}</th><td>{person.open}</td><td>{person.overdue}</td><td>{person.created}</td><td>{person.resolved}</td></tr>)}</tbody></table></div></section></div>
   </section>
@@ -1896,7 +1956,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes, onSetSta
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onOpenWorkNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onOpenWorkNotes: () => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onOpenWorkNotes, onReassign, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onOpenWorkNotes: () => void; onReassign: (group: string) => void; onClose: () => void }) {
   const { user } = useAuth()
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -2120,6 +2180,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
     <div style={{ padding: '0 16px' }}>
       {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
+      <TeamHandoffs ticket={ticket} now={now} onReassign={onReassign} />
     </div>
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} onSetStatus={onSetStatus} />
   </section>
@@ -2184,7 +2245,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
         <td><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span></td>
         <td><span className={`status-pill status-${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</span></td>
         <td className="list-date">{created}</td>
-        <td>{(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}</td>
+        <td>{(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}<TeamClock ticket={ticket} now={now} /></td>
       </tr>
     }) : <tr><td colSpan={10} className="list-empty">No task records match the current filters.</td></tr>}</tbody></table></div>
   </section>
