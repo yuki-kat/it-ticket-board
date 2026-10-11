@@ -16,6 +16,8 @@ import geminiRoutes from './api/gemini.js';
 import checkGeminiRoutes from './api/check-gemini.js';
 import suggestFixRoutes from './api/suggest-fix.js';
 import teamRoutes from './api/teams.js';
+import aiProviderRoutes from './api/ai-providers.js';
+import kbRoutes from './api/kb.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +40,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api', checkGeminiRoutes);
 app.use('/api', geminiRoutes);
 app.use('/api', suggestFixRoutes);
+app.use('/api', aiProviderRoutes);
+app.use('/api', kbRoutes);
 app.use('/api', teamRoutes);
 app.use('/api', ticketRoutes);
 app.use('/api', queueRoutes);

@@ -33,6 +33,8 @@ services:
       CORS_ORIGIN: ${PUBLIC_URL:-http://localhost:8080}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODELS: ${GEMINI_MODELS:-}
+      AI_KEYS_SECRET: ${AI_KEYS_SECRET:-}
+      AI_ALLOW_PRIVATE_ENDPOINTS: ${AI_ALLOW_PRIVATE_ENDPOINTS:-false}
       LOG_LEVEL: info
 
   web:

@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
-import { answerText, GeminiError, generateContent } from '../utils/gemini.js';
+import { AiError } from '../utils/aiError.js';
+import { generateText, parseJsonObject } from '../utils/aiProviders.js';
 
-// "Suggest fix": asks Gemini for likely causes and troubleshooting steps for one ticket.
+// "Suggest fix": asks the active AI provider for likely causes and troubleshooting steps for one ticket.
 // Ported from the former Vercel function (app/api/suggest-fix.ts); the key stays on the server.
 const router = Router();
 router.use(authMiddleware);
@@ -13,7 +14,8 @@ const text = (value: unknown) => (typeof value === 'string' ? value.trim().slice
 
 const systemInstruction = `You are a senior IT service desk engineer. Given one ticket, suggest how the assigned technician could resolve it.
 Be practical and specific to the ticket; do not invent facts about the environment. Keep each item to one sentence.
-Give 2-4 likely causes, 3-6 ordered troubleshooting steps, and when to escalate.`;
+Give 2-4 likely causes, 3-6 ordered troubleshooting steps, and when to escalate.
+Reply with JSON only, in this shape: {"likelyCauses": string[], "steps": string[], "escalateIf": string}`;
 
 const responseSchema = {
   type: 'OBJECT',
@@ -41,14 +43,10 @@ router.post('/suggest-fix', async (req: AuthRequest, res: Response) => {
   ].join('\n');
 
   try {
-    const { data } = await generateContent({
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents: [{ parts: [{ text: ticket }] }],
-      generationConfig: { responseMimeType: 'application/json', responseSchema, maxOutputTokens: 2048 },
-    });
-    const suggestion = JSON.parse(answerText(data) || '{}');
+    const answer = await generateText({ system: systemInstruction, messages: [{ role: 'user', text: ticket }], json: true, geminiSchema: responseSchema, maxTokens: 2048 });
+    const suggestion = parseJsonObject(answer.text);
     if (!Array.isArray(suggestion.steps) || !suggestion.steps.length) {
-      return res.status(502).json({ error: 'Gemini did not return any troubleshooting steps.' });
+      return res.status(502).json({ error: 'The AI did not return any troubleshooting steps.' });
     }
     return res.json({
       likelyCauses: Array.isArray(suggestion.likelyCauses) ? suggestion.likelyCauses : [],
@@ -56,9 +54,9 @@ router.post('/suggest-fix', async (req: AuthRequest, res: Response) => {
       escalateIf: typeof suggestion.escalateIf === 'string' ? suggestion.escalateIf : '',
     });
   } catch (error) {
-    if (error instanceof GeminiError) return res.status(error.status).json({ error: error.message });
+    if (error instanceof AiError) return res.status(error.status).json({ error: error.message });
     console.error('suggest-fix failed', error);
-    return res.status(502).json({ error: 'Could not get a suggestion from Gemini.' });
+    return res.status(502).json({ error: 'Could not get a suggestion from the AI.' });
   }
 });
 
