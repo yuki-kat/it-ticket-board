@@ -33,7 +33,9 @@ An **IT service desk board** for tickets, SLAs, escalation and asset inventory. 
 
 - **📋 Ticket views**: Kanban, list, split, calendar, analytics and more, with saved views, tabs and a State dropdown on every ticket
 - **⏱️ Live SLA timers**: count down to the second and show overdue time. Pausing and resuming is logged to the work notes. The clock pauses automatically while a ticket is *Waiting on User* and stops at *Resolved*, following the same pattern as ServiceNow's "On Hold – Awaiting Caller"
-- **🤖 Find resolution**: AI-suggested fixes from Google Gemini (hosted site, after signing in)
+- **🤖 Find resolution**: AI-suggested fixes (hosted site, after signing in)
+- **📚 Knowledge base**: articles your team writes or drafts from resolved tickets with AI, and **Ask the KB** answers that cite the articles they used
+- **🔑 Bring your own AI**: admins add their own key for Google Gemini, OpenAI, Azure OpenAI, Anthropic Claude or any OpenAI-compatible server (Ollama, OpenRouter…) in Tools → AI providers. Keys are encrypted on the server and never sent to the browser
 - **📞 Call user**: start a Teams, Zoom or Webex call from a ticket and log how it went to the work notes
 - **⚡ Quick actions**: a page that learns which commands you use most (on your device only) and suggests what you usually do next, so common steps are one click away
 - **📝 Work notes for escalation**: a large view of a ticket's notes with its priority, state, tier and owner, a box for timestamped notes, and **Copy all** to paste the handover into an email or Teams
@@ -139,6 +141,8 @@ The site is public, and anyone can create an account.
 | `JWT_SECRET` | **Required.** Signs sign-in tokens. Use a long random string (`openssl rand -base64 48`). With `NODE_ENV=production`, the server refuses to start if it's missing or left at a placeholder. Outside production it falls back to a development value that is public in this repo. |
 | `GEMINI_API_KEY` | Needed for **Find resolution**. Get one from Google AI Studio. |
 | `GEMINI_MODELS` | Optional. A comma-separated list of models to try in order. See `server/.env.example` for the defaults. |
+| `AI_KEYS_SECRET` | Needed to save keys in **Tools → AI providers**. Keys are encrypted with it (`openssl rand -base64 48`). If it changes, saved keys must be entered again. |
+| `AI_ALLOW_PRIVATE_ENDPOINTS` | Optional, self-hosting only. `true` lets a provider live on your own network or use plain http (for example Ollama). Leave it off on a public server. |
 
 ## Accounts and admins
 
@@ -201,8 +205,9 @@ File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets
 - **Escalation** (`pages/EscalationPage.tsx`, `components/TeamMembers.tsx`, `AssignmentGroupManager.tsx`, `EscalationMatrixBuilder.tsx`, `ThresholdsManager.tsx`, `MatrixUploadManager.tsx`): teams, members, groups, rules, thresholds and documents.
 - **Home and Explore** (`HomePopouts.tsx`, `HomeInsights.tsx`, `ExplorePage.tsx`): dashboard cards, insights and queue drill-down.
 - **Inventory** (`pages/InventoryPage.tsx`, `InventoryView.tsx`): assets and stock.
-- **Page addresses** (`lib/route.ts`): `#/home`, `#/tickets`, `#/inventory`, `#/search`, `#/explore/…`, `#/escalation` and `#/signin`. Back, Forward, refresh and bookmarks all work.
-- **Backend** (`server/src/api/`): `auth`, `teams`, `escalation-matrix` (uploads are stored in Postgres, up to 10 MB each), `escalation-advanced` (groups, rules, thresholds), and the Gemini proxy (`utils/gemini.ts`, which falls back across models and retries rate limits).
+- **Knowledge base** (`pages/KnowledgePage.tsx`, `lib/kb.ts`): articles kept in the browser like tickets; AI calls go through `api/ai.ts`.
+- **Page addresses** (`lib/route.ts`): `#/home`, `#/tickets`, `#/inventory`, `#/kb`, `#/search`, `#/explore/…`, `#/escalation` and `#/signin`. Back, Forward, refresh and bookmarks all work.
+- **Backend** (`server/src/api/`): `auth`, `teams`, `escalation-matrix` (uploads are stored in Postgres, up to 10 MB each), `escalation-advanced` (groups, rules, thresholds), and AI: `ai-providers` (admin-managed providers, keys encrypted by `utils/secretBox.ts`), `kb` (draft and ask), and the older `gemini` and `suggest-fix` routes. All of them call `utils/aiProviders.ts`, which picks the default provider (or `GEMINI_API_KEY`) and blocks custom URLs that point at private networks.
 
 ## Automated tests
 
