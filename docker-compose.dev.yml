@@ -1,0 +1,23 @@
+# Local development database for `npm run dev` in server/ (matches DATABASE_URL in server/.env.example).
+#   docker compose -f docker-compose.dev.yml up -d
+# To run the whole app (database, API and board) in Docker instead, use docker-compose.yml.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ticket_user
+      POSTGRES_PASSWORD: ticket_pass
+      POSTGRES_DB: ticket_board
+    ports:
+      # This machine only: the development password is not meant to be reachable from the network.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticket_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
