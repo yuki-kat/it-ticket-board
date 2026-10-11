@@ -118,5 +118,6 @@
   .kb-page .kb-reader-actions .kb-danger { margin-left: 0; }
 }
 
-/* The nav has no room for a sixth link on phones; the Knowledge base is in the Tools menu there. */
-@media (max-width: 560px) { .primary-nav .nav-kb { display: none; } }
+/* Below 1024px the nav already runs into the header buttons (on main too), so the KB link is left out there;
+   Tools → Knowledge base opens the page at every width. */
+@media (max-width: 1023px) { .primary-nav .nav-kb { display: none; } }

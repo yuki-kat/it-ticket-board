@@ -91,7 +91,6 @@ export function sampleArticles(now = new Date()): KbArticle[] {
       cause: 'The VPN client saved the previous password and retries it in the background.',
       steps: ['Unlock the account in the directory if it is locked.', 'Open the VPN client and clear the saved credentials.', 'Sign in again with the new password.', 'If MFA prompts do not arrive, re-register the user’s MFA method.'],
       tags: ['vpn', 'password', 'remote'],
-      sourceTicketId: 'OPS-102',
     }),
     article('KB-0002', 33, {
       title: 'Clear a stuck print queue on a shared printer',
@@ -100,7 +99,6 @@ export function sampleArticles(now = new Date()): KbArticle[] {
       cause: 'A corrupt or very large job holds the spooler on the print server.',
       steps: ['Open Services on the print server.', 'Stop the Print Spooler service.', 'Delete the files in C:\\Windows\\System32\\spool\\PRINTERS.', 'Start the Print Spooler service.', 'Ask the user to send a test page.'],
       tags: ['printing', 'spooler', 'windows'],
-      sourceTicketId: 'OPS-112',
     }),
     article('KB-0003', 27, {
       title: 'Grant access to a shared drive folder',
@@ -109,7 +107,6 @@ export function sampleArticles(now = new Date()): KbArticle[] {
       cause: 'The user is not in the folder’s security group, or was added after their last sign-in.',
       steps: ['Confirm the request with the folder owner.', 'Find the folder’s security group in the folder properties (Security tab).', 'Add the user to that group.', 'Ask the user to sign out and back in so the new group membership applies.'],
       tags: ['access', 'shared drive', 'permissions'],
-      sourceTicketId: 'OPS-105',
     }),
     article('KB-0004', 21, {
       title: 'Laptop camera not detected in Teams or Zoom',
@@ -118,7 +115,6 @@ export function sampleArticles(now = new Date()): KbArticle[] {
       cause: 'The camera privacy switch or the OS camera permission is off, or the device was disabled after an update.',
       steps: ['Check for a physical privacy shutter or a function key that turns the camera off.', 'Open Settings › Privacy › Camera and allow desktop apps to use the camera.', 'In Device Manager, enable the camera if it is disabled, then restart.', 'If it is still missing, raise a hardware repair.'],
       tags: ['camera', 'teams', 'zoom', 'hardware'],
-      sourceTicketId: 'OPS-107',
     }),
     article('KB-0005', 12, {
       title: 'New starter cannot open email on day one',
@@ -127,7 +123,6 @@ export function sampleArticles(now = new Date()): KbArticle[] {
       cause: 'The email licence was assigned less than an hour ago, or not at all.',
       steps: ['Check the user has an email licence assigned.', 'If it was just assigned, wait up to an hour for the mailbox to be created.', 'Sign in to webmail first to confirm the mailbox works.', 'Then set up Outlook on the laptop.'],
       tags: ['email', 'onboarding', 'licensing'],
-      sourceTicketId: 'OPS-110',
     }),
     article('KB-0006', 2, {
       title: 'Repeated account lockouts from an old mobile device',
@@ -138,7 +133,6 @@ export function sampleArticles(now = new Date()): KbArticle[] {
       tags: ['lockout', 'mobile', 'password'],
       status: 'Draft',
       author: 'Aiko Tanaka',
-      sourceTicketId: 'OPS-113',
     }),
   ]
 }

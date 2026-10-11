@@ -27,6 +27,7 @@ function fakeReply(body) {
   if (system.includes('using only the knowledge base articles')) {
     return 'Here you go: {"answer": "Restart the spooler [KB-0001]. See also [KB-9999].", "citations": ["KB-0001", "KB-9999"], "covered": true}'
   }
+  if (body.messages?.at(-1)?.content?.includes('{"reply"')) return '{"reply": "OK"}'
   return 'OK'
 }
 
@@ -124,6 +125,8 @@ test('admins manage providers; keys are encrypted and never sent back; every AI 
   assert.equal(last.url, '/v1/chat/completions')
   assert.equal(last.headers.authorization, `Bearer ${API_KEY}`)
   assert.ok(last.body.max_tokens >= 64 && last.body.max_completion_tokens === undefined)
+  assert.equal(last.body.temperature, 0.2, 'compatible servers get the temperature')
+  assert.equal(last.body.response_format, undefined, 'compatible servers are not sent OpenAI JSON mode')
 
   // Editing without a key keeps the saved one.
   const renamed = await api.call('PUT', `/api/ai/providers/${provider.id}`, providerForm({ label: 'Renamed', apiKey: '' }), admin)

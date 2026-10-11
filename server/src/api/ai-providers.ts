@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { getClient, query } from '../db/connection.js';
 import { AiError } from '../utils/aiError.js';
-import { activeProvider, checkEndpoint, generateText, KIND_LABELS, PROVIDER_KINDS, privateEndpointsAllowed, rowToConfig, type ProviderKind } from '../utils/aiProviders.js';
+import { activeProvider, checkEndpoint, generateText, KIND_LABELS, parseJsonObject, PROVIDER_KINDS, privateEndpointsAllowed, rowToConfig, type ProviderKind } from '../utils/aiProviders.js';
 import { canEncrypt, seal } from '../utils/secretBox.js';
 
 // Tools → AI providers. Any signed-in user can see which provider is active (no secrets); only system admins can
@@ -158,14 +158,22 @@ router.delete('/ai/providers/:id', requireSystemAdmin, async (req: AuthRequest, 
   }
 });
 
-// Sends a one-word prompt so the admin knows the key, model and URL work before relying on them.
+// Sends a small request shaped like the real ones (system prompt, JSON reply, temperature) so the admin knows the
+// key, model and URL work for the KB features before relying on them.
 router.post('/ai/providers/:id/test', requireSystemAdmin, async (req: AuthRequest, res: Response) => {
   if (!UUID.test(req.params.id)) return res.status(404).json({ error: 'Provider not found.' });
   try {
     const current = await query('SELECT id, kind, label, model, base_url, key_ciphertext FROM ai_providers WHERE id = $1', [req.params.id]);
     if (!current.rows.length) return res.status(404).json({ error: 'Provider not found.' });
-    const answer = await generateText({ messages: [{ role: 'user', text: 'Reply with the single word OK.' }], maxTokens: 64 }, rowToConfig(current.rows[0]));
-    res.json({ ok: true, model: answer.model, reply: answer.text.slice(0, 80) });
+    const answer = await generateText({
+      system: 'You are checking that an API connection works.',
+      messages: [{ role: 'user', text: 'Reply with JSON only, exactly: {"reply": "OK"}' }],
+      json: true,
+      temperature: 0.2,
+      maxTokens: 64,
+    }, rowToConfig(current.rows[0]));
+    const reply = parseJsonObject(answer.text).reply;
+    res.json({ ok: true, model: answer.model, reply: typeof reply === 'string' ? reply.slice(0, 80) : answer.text.slice(0, 80) });
   } catch (error) {
     fail(res, error, 'test ai provider failed');
   }

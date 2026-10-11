@@ -194,7 +194,8 @@ async function callChatCompletions(config: ProviderConfig, request: AiRequest): 
     ...request.messages.map((message) => ({ role: message.role, content: message.text })),
   ]
   const body: Record<string, unknown> = { model: config.model, messages }
-  if (request.temperature !== undefined) body.temperature = request.temperature
+  // OpenAI's reasoning models reject any temperature but the default, so it is only sent to compatible servers.
+  if (request.temperature !== undefined && config.kind === 'openai_compatible') body.temperature = request.temperature
   // OpenAI and Azure want max_completion_tokens (newer models reject max_tokens); Ollama-style servers expect max_tokens.
   if (config.kind === 'openai_compatible') body.max_tokens = outputTokens(request)
   else body.max_completion_tokens = outputTokens(request)

@@ -205,7 +205,7 @@ export default function KnowledgePage({ tickets, openTicket }: { tickets: KbTick
         <label>Resolved ticket<select value={draftTicketId} onChange={(event) => setDraftTicketId(event.target.value)}><option value="">{resolvedTickets.length ? 'Choose a ticket…' : 'No resolved tickets yet'}</option>{resolvedTickets.map((ticket) => <option key={ticket.id} value={ticket.id}>{ticket.id} · {ticket.title}</option>)}</select></label>
         <button type="button" className="kb-primary" onClick={runDraft} disabled={drafting || !draftTicketId}>{drafting ? <><Loader2 size={15} className="kb-spin" /> Drafting…</> : 'Draft article'}</button>
       </div>
-      <p className="kb-muted">Sends the ticket’s text and work notes to {providerName ?? 'the AI provider set up on your server'}. The draft leaves out names and contact details, but check before publishing.</p>
+      <p className="kb-muted">Sends the ticket’s text and work notes to {providerName ?? 'the AI provider set up on your server'}. The AI is asked to leave out names and contact details; check before publishing.</p>
       {draftError && <p className="kb-error" role="alert">{draftError}</p>}
     </section>}
 
