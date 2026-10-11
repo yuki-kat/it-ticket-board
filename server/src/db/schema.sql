@@ -397,3 +397,20 @@ DO $$ BEGIN
       FOREIGN KEY (sla_template_id) REFERENCES sla_templates(id);
   END IF;
 END $$;
+
+-- AI providers a system admin adds in Tools → AI providers (bring your own key). key_ciphertext is AES-256-GCM
+-- encrypted with AI_KEYS_SECRET; only key_last4 is ever sent to the browser. At most one row is the default.
+CREATE TABLE IF NOT EXISTS ai_providers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind VARCHAR(32) NOT NULL, -- gemini, openai, azure_openai, anthropic, openai_compatible
+  label VARCHAR(120) NOT NULL,
+  model VARCHAR(200) NOT NULL,
+  base_url TEXT,
+  key_ciphertext TEXT,
+  key_last4 VARCHAR(8),
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ai_providers_one_default ON ai_providers (is_default) WHERE is_default;

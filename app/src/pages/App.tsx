@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Copy, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, NotebookPen, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X, Zap } from 'lucide-react'
+import { Activity, BookOpen, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Copy, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, NotebookPen, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X, Zap } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
@@ -32,7 +32,8 @@ import LegalHoldPanel, { LegalHoldBadge } from '../components/LegalHoldPanel'
 import { holdPlacedDetail, holdReleasedDetail, type LegalHold, type LegalHoldRelease } from '../lib/legalHold'
 import '../styles/search.css'
 import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
-import GeminiSettings from '../components/GeminiSettings'
+import AiProvidersSettings from '../components/AiProvidersSettings'
+import KnowledgePage from './KnowledgePage'
 import { generateTicketSuggestions } from '../api/gemini'
 import EscalationPage from './EscalationPage'
 import CompactSLATimer from '../components/CompactSLATimer'
@@ -992,6 +993,7 @@ function App() {
     { id: 'go:inventory', label: 'Inventory', group: 'Go to', icon: <Layers size={16} />, needsTicket: false, run: () => goToPage('inventory') },
     { id: 'go:escalation', label: 'Escalation', group: 'Go to', icon: <ShieldAlert size={16} />, needsTicket: false, run: () => goToPage('escalation') },
     { id: 'go:explore', label: 'Explore tickets', group: 'Go to', icon: <Workflow size={16} />, needsTicket: false, run: openExplore },
+    { id: 'go:kb', label: 'Knowledge base', group: 'Go to', icon: <BookOpen size={16} />, needsTicket: false, run: () => goToPage('kb') },
     ...QUICK_FILTERS.map(([filter, label]): QuickCommand => ({ id: `filter:${filter}`, label: `Show ${label}`, group: 'Ticket list', icon: <ListChecks size={16} />, needsTicket: false, run: () => showTickets(filter, true) })),
     { id: 'new-task', label: 'New task', group: 'Create', icon: <Plus size={16} />, needsTicket: false, run: () => openNewForm() },
     { id: 'import-email', label: 'Ticket from email', group: 'Create', icon: <Mail size={16} />, needsTicket: false, run: openImport },
@@ -1013,7 +1015,7 @@ function App() {
 
   return <div className={`app-shell view-${cardSize}`}>
     <header className="topbar">
-      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button><button className={page === 'escalation' ? 'active' : ''} aria-current={page === 'escalation' ? 'page' : undefined} onClick={() => goToPage('escalation')}>Escalation</button></nav></div>
+      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button><button className={page === 'escalation' ? 'active' : ''} aria-current={page === 'escalation' ? 'page' : undefined} onClick={() => goToPage('escalation')}>Escalation</button><button className={`nav-kb${page === 'kb' ? ' active' : ''}`} aria-current={page === 'kb' ? 'page' : undefined} onClick={() => goToPage('kb')} title="Knowledge base">KB</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
         <button type="button" className={`header-quick-button${page === 'quick' ? ' active' : ''}`} onClick={() => goToPage('quick')} aria-current={page === 'quick' ? 'page' : undefined} title="Your most-used commands"><Zap size={15} /> <span className="topbar-label">Quick actions</span></button>
@@ -1043,7 +1045,7 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); openReports() }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
             <span className="header-tools-heading">ACCOUNT</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>Gemini AI Settings<small>Configure API key</small></span></button>
+            <button type="button" onClick={() => { setShowToolsMenu(false); goToPage('kb') }}><BookOpen size={16} /><span>Knowledge base<small>Articles and Ask the KB</small></span></button><button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>AI providers<small>Gemini, OpenAI, Claude or your own</small></span></button>
             {user
               ? <button type="button" onClick={() => { setShowToolsMenu(false); void logout().then(() => setPage('signin')) }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
               : <button type="button" onClick={() => { setShowToolsMenu(false); setPage('signin') }}><LogIn size={16} /><span>Sign in<small>Needed for AI suggestions</small></span></button>}
@@ -1053,12 +1055,12 @@ function App() {
         {page !== 'inventory' && page !== 'new' && <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> <span className="topbar-label">New task</span></button>}
       </div>
     </header>
-    <QuickPageNav page={(page === 'explore' || page === 'new' || page === 'escalation' || page === 'quick') ? 'home' : page} onChange={goToPage} />
+    <QuickPageNav page={(page === 'explore' || page === 'new' || page === 'escalation' || page === 'quick' || page === 'kb') ? 'home' : page} onChange={goToPage} />
     <DebugPanel />
     {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={openTicket} searchTicket={openRelatedTicket} openReports={() => openReports()} openSettings={() => setShowSettings(true)} widgets={homeWidgets} openExplore={openExplore} /> : page === 'explore' ? <ExplorePage queues={exploreQueuesFor(tickets, clock)} tickets={tickets} queue={exploreQueue} ticketId={exploreTicketId}
       onSelectQueue={(queue) => { setExploreQueue(queue); setExploreTicketId(undefined) }} onSelectTicket={setExploreTicketId}
       onOpenQueue={(queue) => showTickets(EXPLORE_FILTERS[queue], true)} onOpenAll={() => showTickets('all', true)} onOpenRecord={setSelectedTicketId} onHome={() => goToPage('home')}
-      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'search' ? <SearchPage tickets={tickets} openTicket={openTicket} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={openTicket} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : page === 'escalation' ? <EscalationPage onClose={() => goToPage('home')} onSignIn={() => goToPage('signin')} /> : page === 'quick' ? <QuickActionsPage commands={quickCommands} tickets={tickets} starterIds={QUICK_STARTERS} now={clock} /> : <main className="main-content">
+      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'search' ? <SearchPage tickets={tickets} openTicket={openTicket} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={openTicket} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : page === 'escalation' ? <EscalationPage onClose={() => goToPage('home')} onSignIn={() => goToPage('signin')} /> : page === 'quick' ? <QuickActionsPage commands={quickCommands} tickets={tickets} starterIds={QUICK_STARTERS} now={clock} /> : page === 'kb' ? <KnowledgePage tickets={tickets} openTicket={openTicket} /> : <main className="main-content">
       <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
       <div className="prototype-note"><span className="prototype-dot" /><b>Sync: live</b><span>Email intake: mock · 0 new</span><span>{tickets.length} cards on the board, {open.length} open. SLA clocks count calendar time.</span><button onClick={() => setShowModel(true)}>How this maps <ArrowRight size={13} /></button></div>
       <section className="summary-strip" aria-label="Task summary">
@@ -1119,7 +1121,7 @@ function App() {
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
-    {showGeminiSettings && <GeminiSettings onClose={() => setShowGeminiSettings(false)} />}
+    {showGeminiSettings && <AiProvidersSettings onClose={() => setShowGeminiSettings(false)} />}
 
     {showDeleted && <Overlay onClose={() => setShowDeleted(false)}><section className="matrix-panel deleted-panel" role="dialog" aria-modal="true" aria-labelledby="deleted-title"><div className="panel-header"><div><div className="eyebrow">RECOVERABLE ITEMS</div><h2 id="deleted-title">Deleted tasks</h2></div><button className="close-button" onClick={() => setShowDeleted(false)} aria-label="Close deleted tasks"><X size={19} /></button></div><p className="panel-intro">Removed cards are stored here in this browser. Restore a task to put it back on the board.</p>{deletedTickets.length ? <div className="deleted-list">{deletedTickets.map((ticket) => <article className="deleted-item" key={ticket.id}><div><b>{ticket.id}</b><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span><h3>{ticket.title}</h3><p>{ticket.recordType} · Deleted {new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.deletedAt))}</p><small>Created by {ticket.createdBy || 'Not recorded'}</small></div><button className="restore-button" onClick={() => restore(ticket.id)}><RotateCcw size={14} /> Restore</button></article>)}</div> : <div className="deleted-empty"><Trash2 size={22} /><b>Nothing in Deleted</b><span>Removed tasks will appear here and can be restored.</span></div>}</section></Overlay>}
 
