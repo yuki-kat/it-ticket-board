@@ -8,7 +8,7 @@ An **IT service desk board** for tickets, SLAs, escalation and asset inventory. 
 - **As one file, offline.** Double-click `index.html`. No install, no server, and your data stays in your browser.
 - **Hosted, with accounts.** The hosted site adds sign-in, shared team escalation settings and AI-suggested fixes, backed by a small Node + Postgres server.
 
-**Try it:** download [`index.html`](index.html) and open it, or use the [hosted site](https://it-ticket-board-frontend.onrender.com) (free hosting, so the first visit can take about a minute to wake up). Both start with sample tickets and assets.
+**Try it:** open the **[live demo](https://yuki-kat.github.io/it-ticket-board/)**. It starts with sample tickets and assets, and your changes stay in your browser. You can also download [`index.html`](index.html) and open it, or use the [hosted site with sign-in](https://it-ticket-board-frontend.onrender.com) (free hosting, so the first visit can take about a minute to wake up).
 
 <table>
   <tr>
@@ -35,6 +35,7 @@ An **IT service desk board** for tickets, SLAs, escalation and asset inventory. 
 - **⏱️ Live SLA timers**: count down to the second and show overdue time. Pausing and resuming is logged to the work notes. The clock pauses automatically while a ticket is *Waiting on User* and stops at *Resolved*, following the same pattern as ServiceNow's "On Hold – Awaiting Caller"
 - **🤖 Find resolution**: AI-suggested fixes from Google Gemini (hosted site, after signing in)
 - **📞 Call user**: start a Teams, Zoom or Webex call from a ticket and log how it went to the work notes
+- **⚡ Quick actions**: a page that learns which commands you use most (on your device only) and suggests what you usually do next, so common steps are one click away
 - **📝 Work notes for escalation**: a large view of a ticket's notes with its priority, state, tier and owner, a box for timestamped notes, and **Copy all** to paste the handover into an email or Teams
 - **🏠 Operations dashboard**: KPI cards, insights, and an Explore page for drilling into queues
 - **🚨 Escalation**: teams with admin and member roles, assignment groups, escalation rules, time thresholds per priority, and uploaded reference documents (escalation and SLA matrices)
