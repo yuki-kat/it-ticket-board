@@ -1,34 +1,53 @@
-version: '3.8'
+# Hosted mode on your own machine or server: Postgres, the Express API and the board on one address.
+#   cp .env.example .env        # then fill in POSTGRES_PASSWORD and JWT_SECRET
+#   docker compose up -d --build
+#   open http://localhost:8080   (sign in from Tools → Sign in)
+name: ops-kanban
 
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ticket_user
-      POSTGRES_PASSWORD: ticket_pass
       POSTGRES_DB: ticket_board
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ticket_board
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ticket_user"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ticket_board -d ticket_board"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    # No ports: only the api service can reach the database.
 
-  redis:
-    image: redis:7-alpine
+  api:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://ticket_board:${POSTGRES_PASSWORD}@db:5432/ticket_board
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (openssl rand -base64 48)}
+      CORS_ORIGIN: ${PUBLIC_URL:-http://localhost:8080}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODELS: ${GEMINI_MODELS:-}
+      LOG_LEVEL: info
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
     ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      # 127.0.0.1 keeps the board on this machine. Set WEB_BIND=0.0.0.0 to reach it from your network,
+      # ideally behind a reverse proxy that adds HTTPS.
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:80"
     volumes:
-      - redis_data:/data
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
-  postgres_data:
-  redis_data:
+  db-data:

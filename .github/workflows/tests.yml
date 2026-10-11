@@ -88,3 +88,26 @@ jobs:
         run: npm run migrate
       - name: API tests
         run: npm test
+
+  # Builds the Docker setup (docker-compose.yml) and checks the board, API and database answer through nginx.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Throwaway settings
+        run: printf 'POSTGRES_PASSWORD=%s\nJWT_SECRET=%s\n' "$(openssl rand -hex 24)" "$(openssl rand -base64 48 | tr -d '\n')" > .env
+      - name: Build and start
+        run: docker compose up -d --build --wait --wait-timeout 240
+      - name: Smoke test through nginx
+        run: |
+          curl -fsS http://127.0.0.1:8080/health
+          curl -fsS http://127.0.0.1:8080/ -o page.html && grep -q '<title>IT Ticket Board' page.html
+          curl -fsS -X POST http://127.0.0.1:8080/api/auth/signup -H 'Content-Type: application/json' \
+            -d '{"email":"ci@test.local","password":"Passw0rd!long","name":"CI"}' -o signup.json && grep -q '"token"' signup.json
+          echo "Board, API and database answer through nginx."
+      - name: Service logs
+        if: failure()
+        run: docker compose logs
+      - name: Stop and remove
+        if: always()
+        run: docker compose down -v

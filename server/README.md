@@ -1,6 +1,6 @@
 # IT Ticket Board Backend
 
-Express.js + PostgreSQL + Redis backend for the IT Ticket Board.
+Express.js + PostgreSQL backend for the IT Ticket Board.
 
 ## Quick Start
 
@@ -16,10 +16,12 @@ cd server
 npm install
 ```
 
-2. **Start services**
+2. **Start a development database**
 ```bash
-docker-compose up -d
+docker compose -f ../docker-compose.dev.yml up -d
 ```
+
+To run the whole app (database, API and board) in Docker instead, see **Run with Docker** in the main README.
 
 3. **Create .env file**
 ```bash

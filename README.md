@@ -59,6 +59,27 @@ Open it from the file system rather than a local web server. Saved data belongs 
 
 Open **https://it-ticket-board-frontend.onrender.com** and sign in (see [Accounts and admins](#accounts-and-admins)). The backend runs on Render's free plan, which sleeps after 15 minutes without traffic, so the first request after a quiet spell can take about a minute.
 
+
+### Self-host with Docker
+
+Runs the database, the API and the board on one address, on your own machine or server.
+
+```bash
+cp .env.example .env          # fill in POSTGRES_PASSWORD and JWT_SECRET (commands are in the file)
+docker compose up -d --build  # first run takes a few minutes
+```
+
+Open **http://localhost:8080**, then **Tools → Sign in → Sign up** to create an account. To make that account a system admin:
+
+```bash
+docker compose exec db psql -U ticket_board -d ticket_board -c "UPDATE users SET is_system_admin = TRUE WHERE email = 'you@example.com';"
+```
+
+- **Stop:** `docker compose down` (your data stays in a Docker volume). `docker compose down -v` deletes it.
+- **Update:** `git pull`, then `docker compose up -d --build`.
+- **Reach it from other devices:** set `WEB_BIND=0.0.0.0` in `.env`. Put a reverse proxy with HTTPS in front first, because the board itself serves plain HTTP.
+- The database is not published outside Docker. For a development database for `npm run dev`, use `docker compose -f docker-compose.dev.yml up -d` (see `server/README.md`).
+
 ---
 
 ## How it is put together
