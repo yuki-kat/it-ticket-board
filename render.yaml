@@ -24,6 +24,8 @@ services:
         value: https://it-ticket-board-frontend.onrender.com
       - key: GEMINI_API_KEY
         sync: false
+      - key: AI_KEYS_SECRET
+        sync: false
 
   - type: web
     name: it-ticket-board-frontend
