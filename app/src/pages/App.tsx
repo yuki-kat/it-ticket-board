@@ -35,6 +35,7 @@ import '../styles/search.css'
 import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import AiProvidersSettings from '../components/AiProvidersSettings'
 import KnowledgePage from './KnowledgePage'
+import { loadArticles, rankArticles, type KbArticle } from '../lib/kb'
 import { generateTicketSuggestions } from '../api/gemini'
 import EscalationPage from './EscalationPage'
 import CompactSLATimer from '../components/CompactSLATimer'
@@ -1975,11 +1976,27 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   const [searchResults, setSearchResults] = useState('')
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [showSearchMenu, setShowSearchMenu] = useState(false)
+  const [kbMatches, setKbMatches] = useState<KbArticle[] | null>(null)
   const [showCallMenu, setShowCallMenu] = useState(false)
   const [showMessageMenu, setShowMessageMenu] = useState(false)
   const [showEmailMenu, setShowEmailMenu] = useState(false)
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
+  // Find resolution → Search knowledge base: ranks published articles by the ticket's words, in this browser, no AI.
+  const searchKnowledgeBase = () => {
+    const published = loadArticles().filter((article) => article.status === 'Published')
+    const hits = rankArticles(published, [ticket.title, ticket.description, (ticket.tags || []).join(' ')].join(' '))
+    // A long description shares a word or two with almost any article; keep only matches close to the best one.
+    const cutoff = Math.max(2, (hits[0]?.score ?? 0) * 0.4)
+    setKbMatches(hits.filter((hit) => hit.score >= cutoff).slice(0, 3).map((hit) => hit.article))
+    setShowSearchResults(false)
+  }
+  const addArticleToNotes = (article: KbArticle) => {
+    const entry = `[${new Date().toLocaleString()}] ${user?.name || 'User'} - Following ${article.id} "${article.title}":\n${article.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`
+    onSaveNotes(ticket.notes ? `${ticket.notes}\n${entry}` : entry)
+    setKbMatches(null)
+  }
   const performSearch = async () => {
+    setKbMatches(null)
     setIsLoadingAI(true)
     try {
       const solutions = await generateTicketSuggestions(
@@ -2184,6 +2201,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
           <button className="ticket-card-popout-close" onClick={() => setShowSearchMenu(false)} aria-label="Close search menu">×</button>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Search options</h3>
           <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => { searchKnowledgeBase(); setShowSearchMenu(false); }} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Search knowledge base</button>
             <button className="ticket-card-popout-open" onClick={() => { performSearch(); setShowSearchMenu(false); }} disabled={isLoadingAI} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>{isLoadingAI ? 'Analyzing...' : 'Search AI'}</button>
             <button className="ticket-card-popout-open" onClick={() => { performTextSearch(); setShowSearchMenu(false); }} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Search web</button>
           </div>
@@ -2191,6 +2209,16 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       </div>}
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
+    {kbMatches && <div className="ticket-search-results ticket-kb-results" role="region" aria-label="Knowledge base matches"><div className="search-results-header"><h5>Knowledge base matches</h5><button onClick={() => setKbMatches(null)} aria-label="Close knowledge base matches"><X size={16} /></button></div><div className="search-results-content">
+      {kbMatches.length
+        ? kbMatches.map((article, index) => <details key={article.id} className="ticket-kb-article" open={index === 0}>
+          <summary><span className="ticket-kb-id">{article.id}</span> {article.title}</summary>
+          {article.summary && <p>{article.summary}</p>}
+          <ol>{article.steps.map((step, stepIndex) => <li key={stepIndex}>{step}</li>)}</ol>
+          <button className="search-add-btn" onClick={() => addArticleToNotes(article)}><Plus size={14} /> Add steps to work notes</button>
+        </details>)
+        : <p>No published article matches this ticket yet. Once it’s resolved, draft one from the KB page (Draft from ticket).</p>}
+    </div></div>}
     <div style={{ padding: '0 16px' }}>
       {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
       <TeamHandoffs ticket={ticket} now={now} onReassign={onReassign} />

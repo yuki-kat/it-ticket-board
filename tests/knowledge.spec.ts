@@ -176,3 +176,33 @@ test('on a phone the Knowledge base is in the Tools menu', async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
   expect(overflow).toBe(false)
 })
+
+test.describe('Find resolution → Search knowledge base', () => {
+  async function findResolution(page: Page, ticketId: string) {
+    await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
+    await page.locator('.list-ticket-id', { hasText: ticketId }).click()
+    const panel = page.locator('.ticket-record-panel')
+    await panel.getByRole('button', { name: 'Find resolution' }).click()
+    await page.getByRole('button', { name: 'Search knowledge base' }).click()
+    return panel.getByRole('region', { name: 'Knowledge base matches' })
+  }
+
+  test('shows matching published articles and adds the steps to the work notes', async ({ page }) => {
+    await openApp(page)
+    const results = await findResolution(page, 'OPS-112')
+    await expect(results.locator('.ticket-kb-article').first()).toContainText('KB-0002')
+    await expect(results.locator('.ticket-kb-article').first().locator('ol li').first()).toHaveText('Open Services on the print server.')
+    await results.locator('.ticket-kb-article').first().getByRole('button', { name: 'Add steps to work notes' }).click()
+    await expect(results).toHaveCount(0)
+    const notes = await page.evaluate(() => (JSON.parse(localStorage.getItem('it-ticket-kanban-v1') || '[]') as { id: string; notes: string }[]).find((ticket) => ticket.id === 'OPS-112')?.notes ?? '')
+    expect(notes).toContain('Following KB-0002 "Clear a stuck print queue on a shared printer":')
+    expect(notes).toContain('1. Open Services on the print server.')
+  })
+
+  test('says so when no published article matches', async ({ page }) => {
+    await openApp(page)
+    await page.evaluate(() => localStorage.setItem('it-ticket-kanban-kb-v1', '[]'))
+    const results = await findResolution(page, 'OPS-112')
+    await expect(results).toContainText('No published article matches this ticket yet.')
+  })
+})
