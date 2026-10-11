@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { HOLD_BLOCKED_ACTIONS, holdBlocks, holdPlacedDetail, holdReleasedDetail, type LegalHold, type LegalHoldRelease } from '../lib/legalHold'
 import { loadSavedViews, type SavedView } from '../components/SavedViews'
 import {
   type AssetItem, type AssetStatus, type HealthLevel, type InventoryPaneSettings,
   type InventoryProps, type InventoryViewMode, type InventoryViewSettings, type InventoryWorkspace,
   type InventoryWorkspaceTab, type InventorySplitPaneMode, type StockItem,
-  type AssetAction, type AssetActionForm, applyAssetAction, assetActionError, canApplyAssetAction, emptyActionForm, findAssetByCode,
+  type AssetAction, type AssetActionForm, applyAssetAction, assetActionError, canApplyWithForm, emptyActionForm, findAssetByCode,
   ASSET_EXPORT_HEADERS, SAVED_INVENTORY_VIEWS_KEY, STOCK_EXPORT_HEADERS, INVENTORY_VIEW_MODE_KEY,
   INVENTORY_WORKSPACE_KEY, assetCode, assetExportRows, assetHealthLevel,
   defaultPaneSettings, emptyAsset, emptyStock, healthLevels, inStockView, inventorySplitPaneModes,
@@ -37,7 +38,7 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
   const [lowStockOnly, setLowStockOnly] = useState(false)
   const [inStockOnly, setInStockOnly] = useState(false)
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'All' | AssetStatus | 'Warranty soon'>('All')
+  const [statusFilter, setStatusFilter] = useState<'All' | AssetStatus | 'Warranty soon' | 'Legal hold'>('All')
   const [categoryFilter, setCategoryFilter] = useState('All categories')
   const [assignedFilter, setAssignedFilter] = useState('All people')
   const [healthFilter, setHealthFilter] = useState<'All health' | HealthLevel>('All health')
@@ -85,7 +86,7 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
   const warrantySoon = isWarrantySoon
   // A healthy device whose warranty ends within 60 days is shown as Monitor.
   const healthLevel = assetHealthLevel
-  const counts = { available: assets.filter((asset) => asset.status === 'Available').length, assigned: assets.filter((asset) => asset.status === 'Assigned').length, repair: assets.filter((asset) => asset.status === 'In Repair').length, warranty: assets.filter(warrantySoon).length, low: stock.filter((item) => item.quantity <= item.minimum).length }
+  const counts = { legalHold: assets.filter((asset) => !!asset.legalHold).length, available: assets.filter((asset) => asset.status === 'Available').length, assigned: assets.filter((asset) => asset.status === 'Assigned').length, repair: assets.filter((asset) => asset.status === 'In Repair').length, warranty: assets.filter(warrantySoon).length, low: stock.filter((item) => item.quantity <= item.minimum).length }
   const assetCategories = useMemo(() => [...new Set(assets.map((asset) => asset.category))].sort(), [assets])
   const assignedPeople = useMemo(() => [...new Set(assets.map((asset) => asset.assignedTo).filter(Boolean))].sort(), [assets])
   const assetTags = useMemo(() => [...new Set(assets.flatMap((asset) => asset.tags || []))].sort(), [assets])
@@ -104,7 +105,7 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
   }, [showFilterDropdown])
   const filteredAssets = useMemo(() => assets.filter((asset) => {
     const text = [asset.id, asset.name, asset.category, asset.manufacturer, asset.model, asset.serial, asset.assignedTo, asset.department, asset.location, ...(asset.tags || []), ...asset.linkedTicketIds].join(' ').toLowerCase()
-    return text.includes(query.toLowerCase()) && (statusFilter === 'All' || statusFilter === 'Warranty soon' ? statusFilter !== 'Warranty soon' || warrantySoon(asset) : asset.status === statusFilter) && (categoryFilter === 'All categories' || asset.category === categoryFilter) && (assignedFilter === 'All people' || (assignedFilter === 'Unassigned' ? !asset.assignedTo : asset.assignedTo === assignedFilter)) && (tagFilter === 'All tags' || (asset.tags || []).includes(tagFilter)) && (healthFilter === 'All health' || healthLevel(asset) === healthFilter) && (!starredOnly || asset.starred) && asset.id.toLowerCase().includes(tableFilters.id.toLowerCase()) && asset.name.toLowerCase().includes(tableFilters.name.toLowerCase()) && asset.serial.toLowerCase().includes(tableFilters.serial.toLowerCase()) && (!tableFilters.status || asset.status === tableFilters.status) && (asset.assignedTo || 'Unassigned').toLowerCase().includes(tableFilters.assignedTo.toLowerCase()) && (asset.location || '').toLowerCase().includes(tableFilters.location.toLowerCase())
+    return text.includes(query.toLowerCase()) && (statusFilter === 'All' ? true : statusFilter === 'Warranty soon' ? warrantySoon(asset) : statusFilter === 'Legal hold' ? !!asset.legalHold : asset.status === statusFilter) && (categoryFilter === 'All categories' || asset.category === categoryFilter) && (assignedFilter === 'All people' || (assignedFilter === 'Unassigned' ? !asset.assignedTo : asset.assignedTo === assignedFilter)) && (tagFilter === 'All tags' || (asset.tags || []).includes(tagFilter)) && (healthFilter === 'All health' || healthLevel(asset) === healthFilter) && (!starredOnly || asset.starred) && asset.id.toLowerCase().includes(tableFilters.id.toLowerCase()) && asset.name.toLowerCase().includes(tableFilters.name.toLowerCase()) && asset.serial.toLowerCase().includes(tableFilters.serial.toLowerCase()) && (!tableFilters.status || asset.status === tableFilters.status) && (asset.assignedTo || 'Unassigned').toLowerCase().includes(tableFilters.assignedTo.toLowerCase()) && (asset.location || '').toLowerCase().includes(tableFilters.location.toLowerCase())
   }), [assets, query, statusFilter, categoryFilter, assignedFilter, tagFilter, healthFilter, starredOnly, tableFilters])
   const filteredStock = useMemo(() => stock.filter((item) => [item.sku, item.name, item.category, item.location, ...(item.tags || [])].join(' ').toLowerCase().includes(query.toLowerCase()) && (!lowStockOnly || item.quantity <= item.minimum) && (!inStockOnly || item.quantity > 0) && (tagFilter === 'All tags' || (item.tags || []).includes(tagFilter)) && (!starredOnly || item.starred)), [stock, query, lowStockOnly, inStockOnly, tagFilter, starredOnly])
   const exportCurrentInventory = (format: 'csv' | 'xlsx') => {
@@ -133,7 +134,7 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
     setSplitLeft(inventorySplitPaneModes.includes(settings.splitLeft) ? settings.splitLeft : 'list')
     setSplitRight(inventorySplitPaneModes.includes(settings.splitRight) ? settings.splitRight : 'details')
     setQuery(settings.query || '')
-    setStatusFilter(statuses.includes(settings.statusFilter as AssetStatus) || settings.statusFilter === 'Warranty soon' ? settings.statusFilter : 'All')
+    setStatusFilter(statuses.includes(settings.statusFilter as AssetStatus) || settings.statusFilter === 'Warranty soon' || settings.statusFilter === 'Legal hold' ? settings.statusFilter : 'All')
     setCategoryFilter(settings.categoryFilter || 'All categories')
     setAssignedFilter(settings.assignedFilter || 'All people')
     setTagFilter(settings.tagFilter || 'All tags')
@@ -243,10 +244,11 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
   }
   const applyAction = () => {
     if (!selected || !action) return
+    if (!canApplyWithForm(selected, action, actionForm)) { setFormError(holdBlocks(selected, action) ? HOLD_BLOCKED_ACTIONS[action] : selected.legalHold ? 'On legal hold: return it to storage, not into repair (repairs can wipe the disk).' : 'This action is not available for this asset.'); return }
     const error = assetActionError(action, actionForm)
     if (error) { setFormError(error); return }
     const at = new Date().toISOString()
-    updateAssets((items) => items.map((asset) => asset.id === selected.id ? applyAssetAction(asset, action, actionForm, at, today) : asset))
+    updateAssets((items) => items.map((asset) => asset.id === selected.id && canApplyWithForm(asset, action, actionForm) ? applyAssetAction(asset, action, actionForm, at, today) : asset))
     setAction('')
     setFormError('')
   }
@@ -278,11 +280,11 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
     if (!bulkAction) return
     const error = assetActionError(bulkAction, actionForm)
     if (error) { setFormError(error); return }
-    const targets = checkedAssets.filter((asset) => canApplyAssetAction(asset, bulkAction)).map((asset) => asset.id)
+    const targets = checkedAssets.filter((asset) => canApplyWithForm(asset, bulkAction, actionForm)).map((asset) => asset.id)
     if (!targets.length) { setFormError('None of the selected assets can take this action.'); return }
     const at = new Date().toISOString()
     // Keep each asset's own condition unless the action sets it (repair marks it Damaged).
-    updateAssets((items) => items.map((asset) => targets.includes(asset.id) && canApplyAssetAction(asset, bulkAction) ? applyAssetAction(asset, bulkAction, { ...actionForm, condition: asset.condition }, at, today, 'bulk action') : asset))
+    updateAssets((items) => items.map((asset) => targets.includes(asset.id) && canApplyWithForm(asset, bulkAction, actionForm) ? applyAssetAction(asset, bulkAction, { ...actionForm, condition: asset.condition }, at, today, 'bulk action') : asset))
     const skipped = checkedAssets.length - targets.length
     const verb = { return: 'Returned', repair: 'Sent', move: 'Moved', retire: 'Retired', lost: 'Marked' }[bulkAction]
     const tail = { return: '', repair: ' for repair', move: ' to ' + actionForm.location.trim(), retire: '', lost: ' lost' }[bulkAction]
@@ -310,7 +312,7 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
     const form = { ...emptyActionForm(), location: scanLocation, condition: found.condition }
     // Re-check inside the update so a double scan can't return the same asset twice.
     updateAssets((items) => items.map((asset) => asset.id === found.id && asset.status === 'Assigned' ? applyAssetAction(asset, 'return', form, at, today, 'quick scan') : asset))
-    log(true, `${found.id} · ${found.name} checked in from ${found.assignedTo || 'previous holder'} to ${scanLocation.trim()}.`)
+    log(true, `${found.id} · ${found.name} checked in from ${found.assignedTo || 'previous holder'} to ${scanLocation.trim()}.${found.legalHold ? ` On legal hold (case ${found.legalHold.matter}): keep it secured, do not wipe or reissue.` : ''}`)
   }
   const transferCandidates = assets.filter((asset) => asset.status === 'Assigned' && asset.assignedTo && asset.assignedTo === transferForm.from)
   const openTransfer = (from = '') => {
@@ -332,11 +334,25 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
     const error = assetActionError(action, form)
     if (error) { setFormError(error); return }
     const at = new Date().toISOString()
-    updateAssets((items) => items.map((asset) => ids.includes(asset.id) && asset.status === 'Assigned' && asset.assignedTo === from ? applyAssetAction(asset, action, { ...form, condition: asset.condition, location: mode === 'person' ? asset.location || form.location : form.location }, at, today, 'leaver transfer') : asset))
-    setInventoryNotice(`Moved ${ids.length} asset${ids.length === 1 ? '' : 's'} from ${from} ${mode === 'person' ? 'to ' + to.trim() : 'back to ' + transferForm.location.trim()}.`)
+    // A device on legal hold can't be reissued, so in a hand-over it is collected to storage instead and the notice says so.
+    const held = mode === 'person' ? transferCandidates.filter((asset) => ids.includes(asset.id) && asset.legalHold).map((asset) => asset.id) : []
+    const storage = transferForm.location.trim() || 'IT storage'
+    updateAssets((items) => items.map((asset) => {
+      if (!ids.includes(asset.id) || asset.status !== 'Assigned' || asset.assignedTo !== from) return asset
+      if (held.includes(asset.id)) return applyAssetAction(asset, 'return', { ...form, condition: asset.condition, location: storage, returnStatus: 'Available', note: `On legal hold (case ${asset.legalHold!.matter}): collected to storage instead of being handed to ${to.trim()}` }, at, today, 'leaver transfer')
+      return applyAssetAction(asset, action, { ...form, condition: asset.condition, location: mode === 'person' ? asset.location || form.location : form.location }, at, today, 'leaver transfer')
+    }))
+    const moved = ids.length - held.length
+    setInventoryNotice(`Moved ${moved} asset${moved === 1 ? '' : 's'} from ${from} ${mode === 'person' ? 'to ' + to.trim() : 'back to ' + transferForm.location.trim()}.${held.length ? ` ${held.join(', ')} ${held.length === 1 ? 'is' : 'are'} on legal hold, so ${held.length === 1 ? 'it was' : 'they were'} collected to ${storage} instead.` : ''}`)
     setShowTransfer(false)
     setFormError('')
   }
+  const placeHold = (id: string, hold: LegalHold) => updateAssets((items) => items.map((asset) => asset.id === id && !asset.legalHold ? { ...asset, legalHold: hold, history: [...(asset.history || []), { at: hold.placedAt, action: 'Legal hold placed', detail: holdPlacedDetail(hold) }] } : asset))
+  const releaseHold = (id: string, release: LegalHoldRelease) => updateAssets((items) => items.map((asset) => {
+    if (asset.id !== id || !asset.legalHold) return asset
+    const { legalHold, ...rest } = asset
+    return { ...rest, history: [...(asset.history || []), { at: new Date().toISOString(), action: 'Legal hold released', detail: holdReleasedDetail(legalHold, release) }] }
+  }))
   const addAsset = () => {
     const id = assetCode(assetForm.id || 'AST-' + String(Date.now()).slice(-5))
     if (!assetForm.name.trim()) { setFormError('Enter an item name.'); return }
@@ -426,6 +442,7 @@ export function useInventoryContainer({ focusId = '', focusRevision = 0, command
     showScan, setShowScan, scanMode, setScanMode, scanCode, setScanCode, scanLocation, setScanLocation, scanLog, openScan, submitScan,
     // leaver transfer
     showTransfer, setShowTransfer, transferForm, setTransferForm, transferCandidates, openTransfer, chooseTransferFrom, toggleTransferAsset, applyTransfer,
+    placeHold, releaseHold,
     inventoryNotice, setInventoryNotice,
     // asset edit
     showEditAsset, setShowEditAsset, editForm, setEditForm, openEdit, saveEdit,
