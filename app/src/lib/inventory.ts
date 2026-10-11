@@ -1,6 +1,7 @@
 import type { SavedView } from '../components/SavedViews'
 import { exportCsv, type CsvValue } from './exportCsv'
 import { exportXlsxWorkbook } from './exportXlsx'
+import { holdBlocks, type LegalHold } from './legalHold'
 
 export type AssetStatus = 'Available' | 'Assigned' | 'In Repair' | 'Retired' | 'Lost'
 export type DeviceHealth = 'Healthy' | 'At Risk' | 'Critical'
@@ -29,6 +30,7 @@ export type AssetItem = {
   starred: boolean
   linkedTicketIds: string[]
   history: AssetEvent[]
+  legalHold?: LegalHold
 }
 export type StockItem = {
   sku: string
@@ -46,7 +48,7 @@ export type TicketReference = { id: string; title: string; status: string; asset
 export type InventoryCommand = { action: 'add-asset' | 'add-stock' | 'in-stock' | 'low-stock' | 'export-csv' | 'export-xlsx'; revision: number }
 export type InventoryViewMode = 'list' | 'cards' | 'split' | 'grouped' | 'attention'
 export type InventorySplitPaneMode = Exclude<InventoryViewMode, 'split'> | 'details'
-export type InventoryPaneSettings = { tab: 'assets' | 'stock'; viewMode: InventoryViewMode; splitLeft: InventorySplitPaneMode; splitRight: InventorySplitPaneMode; query: string; statusFilter: 'All' | AssetStatus | 'Warranty soon'; categoryFilter: string; assignedFilter: string; tagFilter: string; healthFilter: 'All health' | HealthLevel; starredOnly: boolean; lowStockOnly: boolean; inStockOnly: boolean }
+export type InventoryPaneSettings = { tab: 'assets' | 'stock'; viewMode: InventoryViewMode; splitLeft: InventorySplitPaneMode; splitRight: InventorySplitPaneMode; query: string; statusFilter: 'All' | AssetStatus | 'Warranty soon' | 'Legal hold'; categoryFilter: string; assignedFilter: string; tagFilter: string; healthFilter: 'All health' | HealthLevel; starredOnly: boolean; lowStockOnly: boolean; inStockOnly: boolean }
 export type InventoryWorkspaceTab = { id: string; settings: InventoryPaneSettings }
 export type InventoryViewSettings = InventoryPaneSettings & { workspaceTabs?: InventoryWorkspaceTab[]; activeWorkspaceId?: string }
 export type InventoryWorkspace = { tabs: InventoryWorkspaceTab[]; activeId: string }
@@ -117,11 +119,14 @@ export const assetActionHistoryLabels: Record<AssetAction, string> = { assign: '
 export const emptyActionForm = (): AssetActionForm => ({ person: '', department: 'Field Services', location: '', issuedBy: '', expectedReturn: '', condition: 'Good', note: '', returnStatus: 'Available' })
 /** The same rules that enable or disable the action buttons on an asset record. */
 export function canApplyAssetAction(asset: AssetItem, action: AssetAction): boolean {
+  if (holdBlocks(asset, action)) return false
   if (action === 'return') return asset.status === 'Assigned'
   if (action === 'lost') return asset.status !== 'Lost' && asset.status !== 'Retired'
   if (action === 'move') return true
   return asset.status !== 'Retired'
 }
+/** canApplyAssetAction plus the one form-dependent rule: a held device can be returned to storage, not into repair. */
+export const canApplyWithForm = (asset: AssetItem, action: AssetAction, form: AssetActionForm) => canApplyAssetAction(asset, action) && !(asset.legalHold && action === 'return' && form.returnStatus === 'In Repair')
 export function assetActionError(action: AssetAction, form: AssetActionForm): string {
   if (action === 'assign' && !form.person.trim()) return 'Enter the person receiving this asset.'
   if (action === 'assign' && !form.issuedBy.trim()) return 'Enter who issued this asset.'
@@ -182,6 +187,19 @@ export const stampLabel = (value: string) => new Intl.DateTimeFormat('en', { dat
 export const assetCode = (value: string) => value.trim().toUpperCase()
 export const parseTags = (value: string) => [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))].slice(0, 12)
 
+// Sample legal holds, so the demo shows held devices in each state: in use, collected to storage, and retired.
+const SAMPLE_HOLDS: Record<string, Omit<LegalHold, 'placedAt'> & { daysAgo: number }> = {
+  'AST-1010': { matter: 'HR-2026-031', reason: 'HR investigation into data handling. Preserve as-is: do not wipe, reimage or reissue.', placedBy: 'Legal (H. Ito)', daysAgo: 6 },
+  'AST-1007': { matter: 'LIT-2026-014', reason: "Former employee's laptop, relevant to the vendor contract dispute. Keep in locked storage.", placedBy: 'Legal (H. Ito)', daysAgo: 21 },
+  'AST-1011': { matter: 'EDS-2026-002', reason: 'E-discovery request covers this server. Keep the disks; do not dispose of the hardware.', placedBy: 'Compliance (R. Mori)', daysAgo: 48 },
+}
+function withSampleHold(asset: AssetItem, now: string): AssetItem {
+  const sample = SAMPLE_HOLDS[asset.id]
+  if (!sample) return asset
+  const { daysAgo, ...rest } = sample
+  const hold: LegalHold = { ...rest, placedAt: new Date(Date.parse(now) - daysAgo * 86_400_000).toISOString() }
+  return { ...asset, legalHold: hold, history: [...asset.history, { at: hold.placedAt, action: 'Legal hold placed', detail: `Case ${hold.matter}: ${hold.reason} (placed by ${hold.placedBy})` }] }
+}
 function sampleAssets(): AssetItem[] {
   const now = new Date().toISOString()
   const make = (id: string, name: string, category: string, manufacturer: string, model: string, serial: string, status: AssetStatus, assignedTo: string, department: string, location: string, warrantyDays: number, linkedTicketIds: string[] = []): AssetItem => ({
@@ -203,7 +221,7 @@ function sampleAssets(): AssetItem[] {
     make('AST-1010', 'iPad Air', 'Tablet', 'Apple', 'iPad Air 11', 'APIP-83371', 'Assigned', 'Aiko Tanaka', 'Field Services', 'Osaka · Office', 180),
     make('AST-1011', 'Legacy file server', 'Network', 'HPE', 'ProLiant DL360', 'HPDL-10298', 'Retired', '', 'Platform Engineering', 'Tokyo · Archive', -120),
     make('AST-1012', 'Jabra Evolve2 headset', 'Peripheral', 'Jabra', 'Evolve2 65', 'JBE2-66217', 'Available', '', 'Customer Care', 'Tokyo · IT storage', 510),
-  ]
+  ].map((asset) => withSampleHold(asset, now))
 }
 function sampleStock(): StockItem[] {
   const now = new Date().toISOString()
