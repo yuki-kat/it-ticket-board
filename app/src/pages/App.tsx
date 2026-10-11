@@ -29,6 +29,8 @@ import SearchPage from './SearchPage'
 import QuickActionsPage, { type QuickCommand } from './QuickActionsPage'
 import { recordUse } from '../lib/usage'
 import { currentTeam, segmentMs, shortDuration, teamLabel, teamSegments, timePerTeam, trackTeamChange, type TeamSegment } from '../lib/teamTime'
+import LegalHoldPanel, { LegalHoldBadge } from '../components/LegalHoldPanel'
+import { holdPlacedDetail, holdReleasedDetail, type LegalHold, type LegalHoldRelease } from '../lib/legalHold'
 import '../styles/search.css'
 import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
 import GeminiSettings from '../components/GeminiSettings'
@@ -81,6 +83,7 @@ type TicketItem = {
   resolvedAt?: string
   activity?: TicketActivity[]
   teamHistory?: TeamSegment[]
+  legalHold?: LegalHold
 }
 type DeletedTicket = TicketItem & { deletedAt: string }
 
@@ -889,7 +892,7 @@ function App() {
   }
   const remove = (id: string) => {
     const ticket = tickets.find((item) => item.id === id)
-    if (!ticket) return
+    if (!ticket || ticket.legalHold) return // a ticket on legal hold cannot be deleted
     const loggedSeconds = ticket.loggedSeconds + (ticket.timerStartedAt ? Math.max(0, Math.floor((Date.now() - new Date(ticket.timerStartedAt).getTime()) / 1000)) : 0)
     setDeletedTickets((deleted) => [{ ...ticket, loggedSeconds, timerStartedAt: null, deletedAt: new Date().toISOString() }, ...deleted.filter((item) => item.id !== id)])
     setTickets((current) => current.filter((item) => item.id !== id))
@@ -973,6 +976,12 @@ function App() {
   const openImport = () => { recordUse('import-email'); setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }
   // Handing a ticket to another team keeps the customer's SLA running; trackTeamChange starts the new team's clock.
   const reassignTicket = (id: string, group: string) => { recordUse('reassign', id); setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, assignmentGroup: group } : ticket)) }
+  const placeTicketHold = (id: string, hold: LegalHold) => setTickets((current) => current.map((ticket) => ticket.id === id && !ticket.legalHold ? { ...ticket, legalHold: hold, activity: [...(ticket.activity || []), { at: hold.placedAt, label: 'Legal hold placed', detail: holdPlacedDetail(hold) }] } : ticket))
+  const releaseTicketHold = (id: string, release: LegalHoldRelease) => setTickets((current) => current.map((ticket) => {
+    if (ticket.id !== id || !ticket.legalHold) return ticket
+    const { legalHold, ...rest } = ticket
+    return { ...rest, activity: [...(ticket.activity || []), { at: new Date().toISOString(), label: 'Legal hold released', detail: holdReleasedDetail(legalHold, release) }] }
+  }))
   const linkTicketToAsset = (ticketId: string, assetId: string) => setTickets((current) => current.map((ticket) => ticket.id === ticketId ? { ...ticket, assetId } : ticket))
   const createTicketForAsset = (asset: AssetItem) => openNewForm({ assetId: asset.id, title: asset.name + ' issue', requester: asset.assignedTo, affectedUser: asset.assignedTo, department: asset.department })
   const openAssetFromTicket = (id: string) => { setSelectedTicketId(''); setInventoryFocusId(id); setInventoryFocusRevision((value) => value + 1); setPage('inventory'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -1119,7 +1128,7 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); openWorkNotes(selectedTicket.id, 'record') }} onReassign={(group) => reassignTicket(selectedTicket.id, group)} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); openWorkNotes(selectedTicket.id, 'record') }} onReassign={(group) => reassignTicket(selectedTicket.id, group)} onPlaceHold={(hold) => placeTicketHold(selectedTicket.id, hold)} onReleaseHold={(release) => releaseTicketHold(selectedTicket.id, release)} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
     {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onSaveNotes={(value) => saveTicketNotes(descriptionPopupTicketId, value)} onOpenWorkNotes={() => { setDescriptionPopupTicketId(''); openWorkNotes(descriptionPopupTicketId, 'popup') }} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); openTicket(descriptionPopupTicketId) }} /></Overlay>}
     {workNotes && tickets.find(t => t.id === workNotes.id) && <Overlay className="work-notes-overlay" onClose={() => setWorkNotes(null)}><WorkNotesPopup ticket={tickets.find(t => t.id === workNotes.id)!} onSaveNotes={(value) => { recordUse('add-note', workNotes.id); saveTicketNotes(workNotes.id, value) }} backLabel={workNotes.from === 'popup' ? 'Back to ticket summary' : workNotes.from === 'record' ? 'Back to full ticket' : 'Back to Quick actions'} onBack={() => { setWorkNotes(null); if (workNotes.from === 'popup') setDescriptionPopupTicketId(workNotes.id); else if (workNotes.from === 'record') setSelectedTicketId(workNotes.id) }} onClose={() => setWorkNotes(null)} /></Overlay>}
@@ -1351,6 +1360,7 @@ function DescriptionPopup({ ticket, onSaveNotes, onOpenWorkNotes, onClose, onOpe
           </div>}
         </div>
         <button onClick={() => { const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); const userInfo = ticket.affectedUser || ticket.requester || 'User'; const emailEntry = `[${timestamp}] - Email sent to ${userInfo}`; onSaveNotes(ticket.notes ? `${ticket.notes}\n${emailEntry}` : emailEntry); const email = ticket.affectedUserEmail || ''; if (email) { const link = document.createElement('a'); link.href = `mailto:${email}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Mail size={14} /> Email</button>
+        <LegalHoldBadge hold={ticket.legalHold} />
         <div style={{ flex: 1 }} />
         {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}
       </div>
@@ -1956,7 +1966,7 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes, onSetSta
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onOpenWorkNotes, onReassign, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onOpenWorkNotes: () => void; onReassign: (group: string) => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onOpenWorkNotes, onReassign, onPlaceHold, onReleaseHold, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onOpenWorkNotes: () => void; onReassign: (group: string) => void; onPlaceHold: (hold: LegalHold) => void; onReleaseHold: (release: LegalHoldRelease) => void; onClose: () => void }) {
   const { user } = useAuth()
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -2110,6 +2120,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   }
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
+    {ticket.legalHold && <div className="ticket-hold-wrap"><LegalHoldPanel hold={ticket.legalHold} kind="ticket" blocks="While it is on hold the ticket can't be deleted. You can keep working it: notes, state changes and reassignments are all recorded in its activity log." onPlace={onPlaceHold} onRelease={onReleaseHold} /></div>}
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
     <div className="record-actions" style={{ display: 'flex', gap: '8px' }}>
       <div style={{ position: 'relative' }}>
@@ -2181,6 +2192,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
     <div style={{ padding: '0 16px' }}>
       {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
       <TeamHandoffs ticket={ticket} now={now} onReassign={onReassign} />
+      {!ticket.legalHold && <div className="ticket-hold-wrap is-idle"><LegalHoldPanel kind="ticket" blocks="While it is on hold the ticket can't be deleted. You can keep working it: notes, state changes and reassignments are all recorded in its activity log." onPlace={onPlaceHold} onRelease={onReleaseHold} /></div>}
     </div>
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} onSetStatus={onSetStatus} />
   </section>
@@ -2237,7 +2249,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
       const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ticket.createdAt)) : 'Not recorded'
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
-        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button><button className="list-search-btn" onClick={() => openTicket(ticket.id)} title={`Search for ${ticket.title}`} aria-label={`Search for ${ticket.id}`} style={{ marginLeft: '6px', padding: '4px', background: 'none', border: 'none', color: '#596f79', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', fontSize: '14px' }}><Search size={14} /></button></div></td>
+        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button><LegalHoldBadge hold={ticket.legalHold} /><button className="list-search-btn" onClick={() => openTicket(ticket.id)} title={`Search for ${ticket.title}`} aria-label={`Search for ${ticket.id}`} style={{ marginLeft: '6px', padding: '4px', background: 'none', border: 'none', color: '#596f79', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', fontSize: '14px' }}><Search size={14} /></button></div></td>
         <td><button className="list-title list-title-link" onClick={() => openDescriptionPopup(ticket.id)} title={`Show details for ${ticket.title}`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>
@@ -2274,7 +2286,7 @@ function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addU
       <div className="ticket-card-face ticket-card-front">
     <div className="ticket-card-front-layout">
       <div className="ticket-card-left">
-        <div className="card-top"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={14} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="ticket-id-link" onClick={() => openMatrix(ticket.id)} title={`Show ${ticket.id} in escalation matrix`}>{ticket.id}</button><button className="flip-card-button" onClick={() => setShowDetails(true)} aria-label={`Show more details for ${ticket.id}`} title="Show ticket details"><RotateCcw size={15} /></button><button className="more-button" title="Move task to Deleted" onClick={() => remove(ticket.id)} aria-label={`Move ${ticket.id} to Deleted`}><X size={14} /></button></div>
+        <div className="card-top"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={14} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="ticket-id-link" onClick={() => openMatrix(ticket.id)} title={`Show ${ticket.id} in escalation matrix`}>{ticket.id}</button><LegalHoldBadge hold={ticket.legalHold} /><button className="flip-card-button" onClick={() => setShowDetails(true)} aria-label={`Show more details for ${ticket.id}`} title="Show ticket details"><RotateCcw size={15} /></button><button className="more-button" title={ticket.legalHold ? 'On legal hold: it cannot be deleted' : 'Move task to Deleted'} onClick={() => remove(ticket.id)} disabled={!!ticket.legalHold} aria-label={`Move ${ticket.id} to Deleted`}><X size={14} /></button></div>
         <div className="record-type-line"><span>{ticket.recordType}</span><code>{tableNames[ticket.recordType]}</code></div><h3>{ticket.title}</h3>{ticket.requester && <div className="requester">Requested by {ticket.requester}</div>}<div className="created-at-line">Created {createdLabel}</div>{!!ticket.tags?.length && <div className="ticket-card-tags" title={ticket.tags.join(", ")}>{ticket.tags.slice(0, 2).join(" · ")}{ticket.tags.length > 2 ? ` +${ticket.tags.length - 2}` : ""}</div>}<div className="department-line">Department <b>{ticket.department || 'Field Services'}</b></div>{ticket.affectedUser && <div className="affected-user-line">Affected user <b>{ticket.affectedUser}</b></div>}
         <div className="card-meta"><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span>{ticket.status === 'Escalated' && <span className="escalated-tag"><ArrowUp size={11} /> Tier {ticket.currentTier}</span>}{isEscalationDue && <span className="escalation-due-tag">Tier {ticket.currentTier + 1} due</span>}</div>
         <div className={`resolution-sla ${resolutionSla.breached && ticket.status !== 'Resolved' ? 'breached' : ''}${isAtRisk ? ' at-risk' : ''}`} title={`Resolution target: ${Math.round(resolutionTargetMs(ticket.severity) / 3_600_000)} calendar hours from creation`}><Clock3 size={12} /><span>Resolution SLA{isAtRisk ? ' · at risk' : ''}</span><b>{ticket.status === 'Resolved' ? 'Resolved' : resolutionSla.label}</b></div>
