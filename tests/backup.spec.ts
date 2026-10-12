@@ -103,7 +103,7 @@ test.describe('Backup and restore', () => {
 
   const bad: [string, string, RegExp][] = [
     ['text that is not JSON', 'hello', /could not be read/],
-    ['a file from another program', JSON.stringify({ app: 'other', format: 1 }), /not made by the IT Ticket Board/],
+    ['a file from another program', JSON.stringify({ app: 'other', format: 1 }), /not made by Binboard/],
     ['a newer format', JSON.stringify({ app: 'it-ticket-board', format: 99, records: {} }), /newer version/],
     ['tickets missing fields', JSON.stringify({ app: 'it-ticket-board', format: 1, records: { tickets: [{ id: 'T-1' }], assets: [], stock: [] } }), /has no title/],
     ['repeated ticket ids', JSON.stringify({ app: 'it-ticket-board', format: 1, records: { tickets: [{ id: 'T-1', title: 'a', status: 'New' }, { id: 'T-1', title: 'b', status: 'New' }], assets: [], stock: [] } }), /repeats the id/],

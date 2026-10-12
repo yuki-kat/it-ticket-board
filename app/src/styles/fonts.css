@@ -1,0 +1,6 @@
+/* Roboto for the Binboard look, bundled so the single-file page renders it offline: Vite inlines these files
+   (assetsInlineLimit), latin subset only, four weights, about 88 KB in all. Helvetica/Arial remain as fallbacks. */
+@font-face { font-family: Roboto; font-style: normal; font-weight: 300; font-display: swap; src: url('../../node_modules/@fontsource/roboto/files/roboto-latin-300-normal.woff2') format('woff2'); }
+@font-face { font-family: Roboto; font-style: normal; font-weight: 400; font-display: swap; src: url('../../node_modules/@fontsource/roboto/files/roboto-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: Roboto; font-style: normal; font-weight: 500; font-display: swap; src: url('../../node_modules/@fontsource/roboto/files/roboto-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: Roboto; font-style: normal; font-weight: 700; font-display: swap; src: url('../../node_modules/@fontsource/roboto/files/roboto-latin-700-normal.woff2') format('woff2'); }

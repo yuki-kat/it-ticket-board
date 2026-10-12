@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 // Test the auth flow: signup, login, and localStorage persistence
 test.describe('Authentication', () => {
   test('sign-in fields are not marked invalid before the user types', async ({ page }) => {
-    const red = 'rgb(201, 76, 70)'
+    const red = 'rgb(211, 47, 47)' // Binboard error red (#d32f2f)
     await page.goto('/index.html#/signin')
     await expect(page.locator('input[type="email"]')).not.toHaveCSS('border-top-color', red)
     await expect(page.locator('input[type="password"]')).not.toHaveCSS('border-top-color', red)

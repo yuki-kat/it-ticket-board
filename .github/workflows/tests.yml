@@ -101,7 +101,7 @@ jobs:
       - name: Smoke test through nginx
         run: |
           curl -fsS http://127.0.0.1:8080/health
-          curl -fsS http://127.0.0.1:8080/ -o page.html && grep -q '<title>IT Ticket Board' page.html
+          curl -fsS http://127.0.0.1:8080/ -o page.html && grep -q '<title>Binboard' page.html
           curl -fsS -X POST http://127.0.0.1:8080/api/auth/signup -H 'Content-Type: application/json' \
             -d '{"email":"ci@test.local","password":"Passw0rd!long","name":"CI"}' -o signup.json && grep -q '"token"' signup.json
           echo "Board, API and database answer through nginx."

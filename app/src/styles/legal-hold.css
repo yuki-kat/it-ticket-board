@@ -1,0 +1,41 @@
+/* Legal hold: a deep violet used nowhere else in the board, so a held item stands out at a glance. */
+.legal-hold-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; background: #4a2a78; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; line-height: 1.5; white-space: nowrap; vertical-align: middle; }
+
+.legal-hold-banner { display: grid; gap: 8px; margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: #4a2a78; color: #fff; box-shadow: 0 6px 18px rgb(74 42 120 / 25%); }
+.legal-hold-banner-head { display: flex; align-items: flex-start; gap: 10px; }
+.legal-hold-banner-head strong { display: block; font-size: 15px; letter-spacing: 0.01em; }
+.legal-hold-banner-head span { display: block; font-size: 12px; color: #e3d8f5; }
+.legal-hold-reason { margin: 0; color: #fff; font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.legal-hold-blocks { margin: 0; padding: 8px 10px; border-radius: 8px; background: rgb(255 255 255 / 12%); font-size: 12px; line-height: 1.45; color: #f1ebfb; }
+
+.legal-hold-panel { margin: 0 0 14px; }
+.legal-hold-open { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 1px solid #cbbbe6; border-radius: 8px; background: #faf7ff; color: #4a2a78; font-size: 12px; font-weight: 700; cursor: pointer; }
+.legal-hold-open:hover { background: #f1eafd; }
+
+.legal-hold-form { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid #cbbbe6; border-radius: 12px; background: #faf7ff; color: #2b1a47; }
+.legal-hold-banner .legal-hold-form { margin-top: 4px; }
+.legal-hold-form h4 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; color: #4a2a78; }
+.legal-hold-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: #3c2b5c; }
+.legal-hold-form input, .legal-hold-form textarea { width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid #cbbbe6; border-radius: 8px; background: #fff; color: #1f1433; font: inherit; font-size: 13px; font-weight: 400; resize: vertical; }
+.legal-hold-form input:focus, .legal-hold-form textarea:focus { outline: 3px solid #c9b4ef; outline-offset: 1px; border-color: #8d6cc4; }
+.legal-hold-note { margin: 0; font-size: 12px; line-height: 1.45; color: #5b4a7a; }
+.legal-hold-error { margin: 0; font-size: 12px; font-weight: 600; color: #b4382c; }
+.legal-hold-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.legal-hold-place, .legal-hold-release { min-height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: #4a2a78; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.legal-hold-place:hover, .legal-hold-release:hover { background: #3a1f61; }
+.legal-hold-secondary { min-height: 34px; padding: 0 12px; border: 1px solid #cbbbe6; border-radius: 8px; background: #fff; color: #4a2a78; font-size: 12px; font-weight: 600; cursor: pointer; }
+.legal-hold-secondary.on-dark { border-color: rgb(255 255 255 / 45%); background: transparent; color: #fff; }
+.legal-hold-secondary.on-dark:hover { background: rgb(255 255 255 / 12%); }
+.legal-hold-open:focus-visible, .legal-hold-place:focus-visible, .legal-hold-release:focus-visible, .legal-hold-secondary:focus-visible { outline: 3px solid #c9b4ef; outline-offset: 2px; }
+
+/* Inventory: the Legal hold summary card and badges inside list cells. */
+.inventory-kpis button.legal-hold-kpi svg { color: #4a2a78; }
+.inventory-kpis button.legal-hold-kpi.selected { border-color: #8d6cc4; box-shadow: inset 0 0 0 1px #8d6cc4; }
+.inventory-table td b .legal-hold-badge { margin-left: 4px; }
+.inventory-detail-body > .legal-hold-panel { margin: 16px 0 0; }
+
+/* Tickets: the banner sits under the panel header; the idle "Place legal hold" button under the SLA timer. */
+.ticket-hold-wrap { padding: 0 16px; }
+.ticket-hold-wrap .legal-hold-banner { margin-top: 4px; }
+.ticket-hold-wrap.is-idle { padding: 12px 0 0; }
+.ticket-list-number .legal-hold-badge, .card-top .legal-hold-badge { margin-left: 4px; }

@@ -2,16 +2,16 @@
  * Page addresses. The app is still one file, but each page has its own address after the #, so the
  * browser's Back and Forward buttons move between pages and a refresh or bookmark opens the same page:
  *
- *   #/home   #/tickets   #/inventory   #/quick   #/explore   #/explore/priority   #/explore/priority/OPS-101   #/signin
+ *   #/home   #/tickets   #/inventory   #/kb   #/quick   #/explore   #/explore/priority   #/explore/priority/OPS-101   #/signin
  *
  * (#ticket=OPS-101, the full-page ticket record opened in a new tab, is handled separately in App.tsx.)
  */
-export type PageId = 'home' | 'board' | 'inventory' | 'search' | 'explore' | 'new' | 'escalation' | 'quick' | 'signin'
+export type PageId = 'home' | 'board' | 'inventory' | 'search' | 'explore' | 'new' | 'escalation' | 'quick' | 'kb' | 'signin'
 export type ExploreKey = 'active' | 'priority' | 'overdue' | 'escalated'
 export type Route = { page: PageId; queue?: ExploreKey; ticket?: string }
 
 export const EXPLORE_KEYS: ExploreKey[] = ['active', 'priority', 'overdue', 'escalated']
-const SLUGS: Record<Exclude<PageId, 'explore' | 'new' | 'signin'>, string> = { home: 'home', board: 'tickets', inventory: 'inventory', search: 'search', escalation: 'escalation', quick: 'quick' }
+const SLUGS: Record<Exclude<PageId, 'explore' | 'new' | 'signin'>, string> = { home: 'home', board: 'tickets', inventory: 'inventory', search: 'search', escalation: 'escalation', quick: 'quick', kb: 'kb' }
 
 const decode = (part: string) => { try { return decodeURIComponent(part) } catch { return part } }
 
@@ -29,6 +29,7 @@ export function parseRoute(hash: string): Route {
   if (first === 'signin') return { page: 'signin' }
   if (first === 'escalation') return { page: 'escalation' }
   if (first === 'quick') return { page: 'quick' }
+  if (first === 'kb') return { page: 'kb' }
   if (first === 'explore') {
     const queue = EXPLORE_KEYS.find((key) => key === second)
     return { page: 'explore', queue, ticket: queue ? third : undefined }

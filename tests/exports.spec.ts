@@ -43,7 +43,7 @@ test.describe('Exports (source)', () => {
   test('the Tickets Export CSV button is styled (a compact button, not bare text)', async ({ page }) => {
     await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
     const style = await page.locator('.export-csv-button').evaluate((element) => { const css = getComputedStyle(element); return { display: css.display, height: css.height, borderStyle: css.borderTopStyle, fontSize: css.fontSize } })
-    expect(style).toEqual({ display: 'flex', height: '35px', borderStyle: 'solid', fontSize: '10px' })
+    expect(style).toEqual({ display: 'flex', height: '40px', borderStyle: 'solid', fontSize: '13px' }) // Binboard outlined button
   })
 
   test('the Tickets Export CSV follows the search filter', async ({ page }) => {

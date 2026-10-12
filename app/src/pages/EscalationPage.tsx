@@ -83,7 +83,7 @@ export default function EscalationPage({ onClose, onSignIn }: EscalationPageProp
               </select>
             </label>
           : <p className="text-sm text-gray-700">Team <b className="text-gray-900">{team.name}</b></p>}
-        <span className="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-700">{team.role === 'admin' ? 'Admin' : 'Member'}</span>
+        <span className="escalation-role px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-700">{team.role === 'admin' ? 'Admin' : 'Member'}</span>
         <button onClick={() => setCreating(true)} className="ml-auto flex items-center gap-1 text-sm text-orange-700 hover:underline"><Plus size={14} />New team</button>
       </div>
       <TeamWorkspace key={team.id} team={team} currentUserEmail={user?.email} onTeamsChanged={() => void loadTeams()} />
@@ -91,7 +91,7 @@ export default function EscalationPage({ onClose, onSignIn }: EscalationPageProp
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto" style={{ paddingInline: 16 }}>
+    <div className="escalation-page w-full max-w-4xl mx-auto" style={{ paddingInline: 16 }}>
       {header}
       {body}
     </div>
@@ -160,7 +160,7 @@ function TeamWorkspace({ team, currentUserEmail, onTeamsChanged }: { team: Team;
 
   return (
     <>
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+      <div className="escalation-info mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
         <Settings2 size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
         <div className="text-sm">
           <p className="font-semibold text-blue-900">Escalation Matrix</p>
@@ -171,7 +171,7 @@ function TeamWorkspace({ team, currentUserEmail, onTeamsChanged }: { team: Team;
         </div>
       </div>
 
-      <div className="flex gap-2 mb-6 border-b border-gray-200" style={{ overflowX: 'auto' }}>
+      <div className="escalation-tabs flex gap-2 mb-6 border-b border-gray-200" style={{ overflowX: 'auto' }}>
         {[
           { id: 'groups', label: 'Assignment Groups' },
           { id: 'rules', label: 'Escalation Rules' },

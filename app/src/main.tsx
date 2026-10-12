@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// Bundled Roboto for the Binboard look (works offline in the single-file build)
+import './styles/fonts.css'
 // Modern design system - establishes color tokens and typography
 import './styles/design-system.css'
 import './styles/layout-redesign.css'
@@ -15,6 +17,9 @@ import './styles/inventory.css'
 import './styles/saved-views.css'
 import AppWrapper from './pages/AppWrapper.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
+// Binboard (Material UI) theme: component details the build-time recolour can't express. Before gui-fixes so
+// its layout fixes still win.
+import './styles/binboard-theme.css'
 // After App, so its fixes come after every component's own stylesheet.
 import './styles/gui-fixes.css'
 

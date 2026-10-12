@@ -1,6 +1,8 @@
 // Shared Gemini caller: tries each configured model in turn, retries brief overload/rate-limit
 // errors with backoff, and turns failures into messages the UI can show as-is.
 
+import { AiError } from './aiError.js'
+
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 // Google retires Gemini models often, so the list can be changed with GEMINI_MODELS (comma-separated)
@@ -18,11 +20,7 @@ const RETRYABLE = new Set([429, 500, 502, 503, 504])
 // Newer Flash models spend output tokens on reasoning before answering; a low cap can leave no text.
 const MIN_OUTPUT_TOKENS = 4096
 
-export class GeminiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message)
-  }
-}
+export class GeminiError extends AiError {}
 
 export interface GenerateContentResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>
@@ -50,15 +48,16 @@ function retryDelay(response: globalThis.Response, attempt: number) {
   return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 5000) : 1000 * attempt
 }
 
-export async function generateContent(request: GenerateContentRequest): Promise<{ data: GenerateContentResponse; model: string }> {
-  const apiKey = process.env.GEMINI_API_KEY?.trim()
+// `options` carries a key and model saved in Tools → AI providers; without it the GEMINI_API_KEY env var is used.
+export async function generateContent(request: GenerateContentRequest, options: { apiKey?: string; models?: string[] } = {}): Promise<{ data: GenerateContentResponse; model: string }> {
+  const apiKey = options.apiKey?.trim() || process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) throw new GeminiError(503, 'AI suggestions are not set up on this server (GEMINI_API_KEY is missing).')
 
   const body = JSON.stringify({
     ...request,
     generationConfig: { ...request.generationConfig, maxOutputTokens: Math.max(request.generationConfig?.maxOutputTokens ?? 0, MIN_OUTPUT_TOKENS) },
   })
-  const models = geminiModels()
+  const models = options.models?.length ? options.models : geminiModels()
   const deadline = Date.now() + TOTAL_BUDGET_MS
   let lastError = new GeminiError(502, 'Gemini did not return an answer.')
 

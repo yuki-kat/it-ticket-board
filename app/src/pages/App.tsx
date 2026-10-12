@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Copy, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, NotebookPen, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X, Zap } from 'lucide-react'
+import { Activity, BookOpen, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, BrainCircuit, Building2, Check, ChevronDown, Clock3, Copy, Download, Layers, ListChecks, LogIn, LogOut, Mail, Menu, MessageSquare, NotebookPen, Phone, Plus, RotateCcw, Search, Settings2, ShieldAlert, Sparkles, Star, Ticket, Trash2, Workflow, X, Zap } from 'lucide-react'
 import Overlay from '../components/Overlay'
 import BackupSection from '../components/BackupSection'
 import AccountSection from '../components/AccountSection'
@@ -28,9 +28,15 @@ import { exportXlsx } from '../lib/exportXlsx'
 import SearchPage from './SearchPage'
 import QuickActionsPage, { type QuickCommand } from './QuickActionsPage'
 import { recordUse } from '../lib/usage'
+import { currentTeam, segmentMs, shortDuration, teamLabel, teamSegments, timePerTeam, trackTeamChange, type TeamSegment } from '../lib/teamTime'
+import LegalHoldPanel, { LegalHoldBadge } from '../components/LegalHoldPanel'
+import { holdPlacedDetail, holdReleasedDetail, type LegalHold, type LegalHoldRelease } from '../lib/legalHold'
 import '../styles/search.css'
 import { useDescriptionAssist, useQueueAssist, usePriorityAssist } from '../hooks/useGemini'
-import GeminiSettings from '../components/GeminiSettings'
+import AiProvidersSettings from '../components/AiProvidersSettings'
+import BinboardLogo, { AnimatedBinboardMark } from '../components/BinboardLogo'
+import KnowledgePage from './KnowledgePage'
+import { loadArticles, rankArticles, type KbArticle } from '../lib/kb'
 import { generateTicketSuggestions } from '../api/gemini'
 import EscalationPage from './EscalationPage'
 import CompactSLATimer from '../components/CompactSLATimer'
@@ -79,8 +85,12 @@ type TicketItem = {
   urgency?: Assessment
   resolvedAt?: string
   activity?: TicketActivity[]
+  teamHistory?: TeamSegment[]
+  legalHold?: LegalHold
 }
 type DeletedTicket = TicketItem & { deletedAt: string }
+// The segmented view switcher in the Tickets toolbar (the All Views picker offers the same choices).
+const VIEW_SEGMENTS: [CardSize, string][] = [['small', 'Kanban compact'], ['regular', 'Kanban detailed'], ['list', 'List'], ['split', 'Split'], ['my-work', 'My work']]
 
 const statuses: Status[] = ['New', 'In Progress', 'Waiting on User', 'Escalated', 'Resolved']
 // Ticket lists offered as Quick actions commands, and the commands shown before anything has been learned.
@@ -229,6 +239,9 @@ function resolutionTargetMs(severity: Severity) {
   return 120 * 60 * 60_000
 }
 
+// Default team (OLA) target: half the customer resolution SLA, so at least two teams fit inside it.
+const teamTargetMs = (severity: Severity) => resolutionTargetMs(severity) / 2
+
 function slaTime(ticket: TicketItem, now: number) {
   const deadline = new Date(ticket.createdAt).getTime() + resolutionTargetMs(ticket.severity) + pausedMsFor(ticket.id, now)
   const delta = deadline - now
@@ -375,6 +388,14 @@ function parseIncomingEmail(text: string) {
   }
 }
 
+// Escalated tickets now with a specialist team first sat with the Service Desk for a quarter of their age.
+function withSampleHandoff(ticket: TicketItem, now: number): TicketItem {
+  if (ticket.status !== 'Escalated' || ticket.assignmentGroup === 'Service Desk') return ticket
+  const created = Date.parse(ticket.createdAt)
+  const handedOn = new Date(created + (now - created) / 4).toISOString()
+  return { ...ticket, teamHistory: [{ group: 'Service Desk', from: ticket.createdAt, to: handedOn }, { group: ticket.assignmentGroup, from: handedOn }] }
+}
+
 function makeSampleTickets(): TicketItem[] {
   const now = Date.now()
   const due = (minutes: number) => new Date(now + minutes * 60_000).toISOString()
@@ -446,7 +467,7 @@ function makeSampleTickets(): TicketItem[] {
     create('OPS-164', 'Incident', 'Third-party service down', 'Platform Engineering', 'Infrastructure', 'Avery Chen', 'P1 – Critical', 'Escalated', 50, 'Payment gateway API returning 503 errors.', 'Monitoring third-party status page; retrying failed transactions.', [], 900, 2),
     create('OPS-165', 'Work Order', 'Install antivirus updates', 'Security', 'Field Services', 'Riley Brooks', 'P3 – Medium', 'In Progress', 180, 'Deploy latest antivirus definitions to all workstations.', 'Rolled out to 80 of 120 machines.'),
     create('OPS-166', 'Incident', 'Configuration drift detected', 'Infrastructure', 'Infrastructure', 'Morgan Diaz', 'P2 – High', 'New', 420, 'Production servers have drifted from standard configuration.', 'Documenting changes and planning remediation.'),
-  ]
+  ].map((ticket) => withSampleHandoff(ticket, now))
 }
 
 function loadTickets(): TicketItem[] {
@@ -500,7 +521,8 @@ function App() {
   const updateStock = (update: (items: StockItem[]) => StockItem[]) => setStockState(update)
   const setTickets = (update: (current: TicketItem[]) => TicketItem[]) => setTicketState((current) => {
     const previous = new Map(current.map((ticket) => [ticket.id, ticket]))
-    return update(current).map((ticket) => recordActivity(previous.get(ticket.id), ticket))
+    const at = new Date().toISOString()
+    return update(current).map((ticket) => trackTeamChange(previous.get(ticket.id), recordActivity(previous.get(ticket.id), ticket), at))
   })
   const assessTicket = (id: string, field: 'impact' | 'urgency', value: string) => setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, [field]: assessmentLevels.includes(value as Assessment) ? value as Assessment : undefined } : ticket))
   const [deletedTickets, setDeletedTickets] = useState<DeletedTicket[]>(() => {
@@ -875,7 +897,7 @@ function App() {
   }
   const remove = (id: string) => {
     const ticket = tickets.find((item) => item.id === id)
-    if (!ticket) return
+    if (!ticket || ticket.legalHold) return // a ticket on legal hold cannot be deleted
     const loggedSeconds = ticket.loggedSeconds + (ticket.timerStartedAt ? Math.max(0, Math.floor((Date.now() - new Date(ticket.timerStartedAt).getTime()) / 1000)) : 0)
     setDeletedTickets((deleted) => [{ ...ticket, loggedSeconds, timerStartedAt: null, deletedAt: new Date().toISOString() }, ...deleted.filter((item) => item.id !== id)])
     setTickets((current) => current.filter((item) => item.id !== id))
@@ -908,7 +930,7 @@ function App() {
     const sla = slaTime(ticket, Date.now())
     const reason = ticket.notes || ticket.description || 'No additional notes recorded.'
     const subject = `[TEST DRAFT – do not action] Escalation to ${contact.tier} for ${ticket.id} (${ticket.severity.split(' – ')[0]})`
-    const body = `*** TEST DRAFT — do not action. Nothing is sent automatically. ***\n\nHello ${contact.role},\n\nI am escalating ${ticket.id} to ${contact.tier}.\n\nWhy it needs escalation: ${why}\n\nTicket: ${ticket.id} — ${ticket.title}\nType: ${ticket.recordType} (${tableNames[ticket.recordType]})\nPriority: ${ticket.severity}\nRequester: ${ticket.requester || 'Not provided'} · Affected user: ${ticket.affectedUser || 'Not provided'}\nStatus: ${ticket.status} · Assignment group: ${ticket.assignmentGroup || 'No group'} · Assigned to: ${ticket.assignee || 'Unassigned'}\nOpen for: ${elapsedLabel(ticket.createdAt, Date.now())}\nResolution SLA: ${sla.label} (calendar time)\nMatrix threshold: ${thresholdText}\n\nNotes: ${reason}\n\nPlease review and advise on the next action.\n\nThis draft was created from the local Ops Kanban prototype.`
+    const body = `*** TEST DRAFT — do not action. Nothing is sent automatically. ***\n\nHello ${contact.role},\n\nI am escalating ${ticket.id} to ${contact.tier}.\n\nWhy it needs escalation: ${why}\n\nTicket: ${ticket.id} — ${ticket.title}\nType: ${ticket.recordType} (${tableNames[ticket.recordType]})\nPriority: ${ticket.severity}\nRequester: ${ticket.requester || 'Not provided'} · Affected user: ${ticket.affectedUser || 'Not provided'}\nStatus: ${ticket.status} · Assignment group: ${ticket.assignmentGroup || 'No group'} · Assigned to: ${ticket.assignee || 'Unassigned'}\nOpen for: ${elapsedLabel(ticket.createdAt, Date.now())}\nResolution SLA: ${sla.label} (calendar time)\nMatrix threshold: ${thresholdText}\n\nNotes: ${reason}\n\nPlease review and advise on the next action.\n\nThis draft was created from the local Binboard prototype.`
     const compose = new URLSearchParams({ to: contact.email, cc: 'yuki.katayama@intersoftkk.com', subject, body })
     window.open(`https://outlook.office.com/mail/deeplink/compose?${compose.toString()}`, '_blank', 'noopener,noreferrer')
     setTickets((current) => current.map((item) => item.id === ticket.id ? { ...item, status: 'Escalated', currentTier: nextTier } : item))
@@ -957,6 +979,14 @@ function App() {
   const openWorkNotes = (id: string, from: 'popup' | 'record' | 'quick') => { recordUse('work-notes', id); setWorkNotes({ id, from }) }
   const openReports = () => { recordUse('reports'); setShowReports(true) }
   const openImport = () => { recordUse('import-email'); setShowToolsMenu(false); setEmailText(''); setImportError(''); setShowImport(true) }
+  // Handing a ticket to another team keeps the customer's SLA running; trackTeamChange starts the new team's clock.
+  const reassignTicket = (id: string, group: string) => { recordUse('reassign', id); setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, assignmentGroup: group } : ticket)) }
+  const placeTicketHold = (id: string, hold: LegalHold) => setTickets((current) => current.map((ticket) => ticket.id === id && !ticket.legalHold ? { ...ticket, legalHold: hold, activity: [...(ticket.activity || []), { at: hold.placedAt, label: 'Legal hold placed', detail: holdPlacedDetail(hold) }] } : ticket))
+  const releaseTicketHold = (id: string, release: LegalHoldRelease) => setTickets((current) => current.map((ticket) => {
+    if (ticket.id !== id || !ticket.legalHold) return ticket
+    const { legalHold, ...rest } = ticket
+    return { ...rest, activity: [...(ticket.activity || []), { at: new Date().toISOString(), label: 'Legal hold released', detail: holdReleasedDetail(legalHold, release) }] }
+  }))
   const linkTicketToAsset = (ticketId: string, assetId: string) => setTickets((current) => current.map((ticket) => ticket.id === ticketId ? { ...ticket, assetId } : ticket))
   const createTicketForAsset = (asset: AssetItem) => openNewForm({ assetId: asset.id, title: asset.name + ' issue', requester: asset.assignedTo, affectedUser: asset.assignedTo, department: asset.department })
   const openAssetFromTicket = (id: string) => { setSelectedTicketId(''); setInventoryFocusId(id); setInventoryFocusRevision((value) => value + 1); setPage('inventory'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -983,6 +1013,7 @@ function App() {
     { id: 'go:inventory', label: 'Inventory', group: 'Go to', icon: <Layers size={16} />, needsTicket: false, run: () => goToPage('inventory') },
     { id: 'go:escalation', label: 'Escalation', group: 'Go to', icon: <ShieldAlert size={16} />, needsTicket: false, run: () => goToPage('escalation') },
     { id: 'go:explore', label: 'Explore tickets', group: 'Go to', icon: <Workflow size={16} />, needsTicket: false, run: openExplore },
+    { id: 'go:kb', label: 'Knowledge base', group: 'Go to', icon: <BookOpen size={16} />, needsTicket: false, run: () => goToPage('kb') },
     ...QUICK_FILTERS.map(([filter, label]): QuickCommand => ({ id: `filter:${filter}`, label: `Show ${label}`, group: 'Ticket list', icon: <ListChecks size={16} />, needsTicket: false, run: () => showTickets(filter, true) })),
     { id: 'new-task', label: 'New task', group: 'Create', icon: <Plus size={16} />, needsTicket: false, run: () => openNewForm() },
     { id: 'import-email', label: 'Ticket from email', group: 'Create', icon: <Mail size={16} />, needsTicket: false, run: openImport },
@@ -1004,7 +1035,7 @@ function App() {
 
   return <div className={`app-shell view-${cardSize}`}>
     <header className="topbar">
-      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button><button className={page === 'escalation' ? 'active' : ''} aria-current={page === 'escalation' ? 'page' : undefined} onClick={() => goToPage('escalation')}>Escalation</button></nav></div>
+      <div className="brand-area"><button className="brand brand-home-button" onClick={() => { setPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Go to home" title="Home"><BinboardLogo /></button><nav className="primary-nav" aria-label="Main navigation"><button className={page === 'home' || page === 'explore' ? 'active' : ''} aria-current={page === 'home' ? 'page' : undefined} onClick={() => goToPage('home')}>Home</button><button className={page === 'board' ? 'active' : ''} aria-current={page === 'board' ? 'page' : undefined} onClick={() => goToPage('board')}>Tickets</button><button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => goToPage('search')}>Search</button><button className={page === 'inventory' ? 'active' : ''} aria-current={page === 'inventory' ? 'page' : undefined} onClick={() => goToPage('inventory')}>Inventory</button><button className={page === 'escalation' ? 'active' : ''} aria-current={page === 'escalation' ? 'page' : undefined} onClick={() => goToPage('escalation')}>Escalation</button><button className={`nav-kb${page === 'kb' ? ' active' : ''}`} aria-current={page === 'kb' ? 'page' : undefined} onClick={() => goToPage('kb')} title="Knowledge base">KB</button></nav></div>
       <div className="top-actions">
         <SyncBadge onOpen={() => setShowSettings(true)} />
         <button type="button" className={`header-quick-button${page === 'quick' ? ' active' : ''}`} onClick={() => goToPage('quick')} aria-current={page === 'quick' ? 'page' : undefined} title="Your most-used commands"><Zap size={15} /> <span className="topbar-label">Quick actions</span></button>
@@ -1034,7 +1065,7 @@ function App() {
             <button type="button" onClick={() => { setShowToolsMenu(false); openReports() }}><BarChart3 size={16} /><span>Reports<small>Trends and workload</small></span></button>
             <button type="button" onClick={() => { setShowToolsMenu(false); setShowDeleted(true) }}><Trash2 size={16} /><span>Deleted<small>{deletedTickets.length} recoverable</small></span></button>
             <span className="header-tools-heading">ACCOUNT</span>
-            <button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>Gemini AI Settings<small>Configure API key</small></span></button>
+            <button type="button" onClick={() => { setShowToolsMenu(false); goToPage('kb') }}><BookOpen size={16} /><span>Knowledge base<small>Articles and Ask the KB</small></span></button><button type="button" onClick={() => { setShowToolsMenu(false); setShowGeminiSettings(true) }}><BrainCircuit size={16} /><span>AI providers<small>Gemini, OpenAI, Claude or your own</small></span></button>
             {user
               ? <button type="button" onClick={() => { setShowToolsMenu(false); void logout().then(() => setPage('signin')) }}><LogOut size={16} /><span>Logout<small>Sign out of this account</small></span></button>
               : <button type="button" onClick={() => { setShowToolsMenu(false); setPage('signin') }}><LogIn size={16} /><span>Sign in<small>Needed for AI suggestions</small></span></button>}
@@ -1044,13 +1075,13 @@ function App() {
         {page !== 'inventory' && page !== 'new' && <button type="button" className="primary-button" onClick={() => openNewForm()} aria-label="New task"><Plus size={16} /> <span className="topbar-label">New task</span></button>}
       </div>
     </header>
-    <QuickPageNav page={(page === 'explore' || page === 'new' || page === 'escalation' || page === 'quick') ? 'home' : page} onChange={goToPage} />
+    <QuickPageNav page={(page === 'explore' || page === 'new' || page === 'escalation' || page === 'quick' || page === 'kb') ? 'home' : page} onChange={goToPage} />
     <DebugPanel />
     {page === 'home' ? <HomeScreen tickets={tickets} now={clock} showTickets={showTickets} openTicket={openTicket} searchTicket={openRelatedTicket} openReports={() => openReports()} openSettings={() => setShowSettings(true)} widgets={homeWidgets} openExplore={openExplore} /> : page === 'explore' ? <ExplorePage queues={exploreQueuesFor(tickets, clock)} tickets={tickets} queue={exploreQueue} ticketId={exploreTicketId}
       onSelectQueue={(queue) => { setExploreQueue(queue); setExploreTicketId(undefined) }} onSelectTicket={setExploreTicketId}
       onOpenQueue={(queue) => showTickets(EXPLORE_FILTERS[queue], true)} onOpenAll={() => showTickets('all', true)} onOpenRecord={setSelectedTicketId} onHome={() => goToPage('home')}
-      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'search' ? <SearchPage tickets={tickets} openTicket={openTicket} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={openTicket} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : page === 'escalation' ? <EscalationPage onClose={() => goToPage('home')} onSignIn={() => goToPage('signin')} /> : page === 'quick' ? <QuickActionsPage commands={quickCommands} tickets={tickets} starterIds={QUICK_STARTERS} now={clock} /> : <main className="main-content">
-      <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Ops Kanban</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
+      renderSummary={(ticket) => <ExploreTicketSummary ticket={ticket} now={clock} />} /> : page === 'search' ? <SearchPage tickets={tickets} openTicket={openTicket} /> : page === 'inventory' ? <InventoryPage focusId={inventoryFocusId} focusRevision={inventoryFocusRevision} command={inventoryCommand} onCommandHandled={() => setInventoryCommand(null)} assets={assets} stock={stock} updateAssets={updateAssets} updateStock={updateStock} tickets={tickets} openTicket={openTicket} linkTicket={linkTicketToAsset} createTicket={createTicketForAsset} /> : page === 'escalation' ? <EscalationPage onClose={() => goToPage('home')} onSignIn={() => goToPage('signin')} /> : page === 'quick' ? <QuickActionsPage commands={quickCommands} tickets={tickets} starterIds={QUICK_STARTERS} now={clock} /> : page === 'kb' ? <KnowledgePage tickets={tickets} openTicket={openTicket} /> : <main className="main-content">
+      <div className="page-heading"><div><div className="eyebrow">OPERATIONS <span>·</span> LIVE BOARD</div><h1>Binboard</h1><p className="subtitle">A focused view of ownership, escalation, and resolution work across the service desk.</p></div><div className="date-chip"><Clock3 size={15} />{new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div></div>
       <div className="prototype-note"><span className="prototype-dot" /><b>Sync: live</b><span>Email intake: mock · 0 new</span><span>{tickets.length} cards on the board, {open.length} open. SLA clocks count calendar time.</span><button onClick={() => setShowModel(true)}>How this maps <ArrowRight size={13} /></button></div>
       <section className="summary-strip" aria-label="Task summary">
         <Metric icon={<Ticket size={17} />} label="Open" value={open.length} tone="blue" selected={metricFilter === 'active'} onClick={() => setMetricFilter((current) => current === 'active' ? 'all' : 'active')} />
@@ -1080,7 +1111,7 @@ function App() {
         <label>Right view<select value={splitRight} onChange={(event) => setSplitRight(event.target.value as SplitPaneMode)} aria-label="Choose right split view"><SplitPaneOptions /></select></label>
         <button type="button" onClick={() => { setSplitLeft(splitRight); setSplitRight(splitLeft) }}><RotateCcw size={13} /> Swap sides</button>
       </div>}
-      <div className="board-label"><span className="live-dot" />Task board <span className="ticket-total">{visible.length === tickets.length ? `${tickets.length} records` : `${visible.length} of ${tickets.length} records`}</span></div><div className="board-filters"><label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tickets, people, tags" aria-label="Search tickets, people, tags" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}</label><button type="button" className="all-views-button" aria-label="Open all ticket views" onClick={() => setShowViewPicker(true)}>All Views</button>{(cardSize === 'small' || cardSize === 'regular') && <label className="filter-field"><span>Board by</span><select value={boardBy} onChange={(event) => setBoardBy(event.target.value as BoardBy)} aria-label="Group board by"><option>State</option><option>Task type</option><option>Assignment group</option></select></label>}<div className="board-filters-dropdown" ref={boardFiltersDropdownRef}><button className="board-filters-button" onClick={() => setShowBoardFiltersDropdown(!showBoardFiltersDropdown)} aria-expanded={showBoardFiltersDropdown}><ChevronDown size={14} /> Filters</button>{showBoardFiltersDropdown && <div className="board-filters-menu"><div className="board-filters-menu-section">
+      <div className="board-label"><span className="live-dot" />Task board <span className="ticket-total">{visible.length === tickets.length ? `${tickets.length} records` : `${visible.length} of ${tickets.length} records`}</span></div><div className="board-filters"><label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tickets, people, tags" aria-label="Search tickets, people, tags" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}</label><div className="view-segmented" role="group" aria-label="View">{VIEW_SEGMENTS.map(([value, label]) => <button key={value} type="button" aria-pressed={cardSize === value} className={cardSize === value ? 'active' : ''} onClick={() => setCardSize(value)}>{label}</button>)}</div><button type="button" className="all-views-button" aria-label="Open all ticket views" onClick={() => setShowViewPicker(true)}>All Views</button>{(cardSize === 'small' || cardSize === 'regular') && <label className="filter-field"><span>Board by</span><select value={boardBy} onChange={(event) => setBoardBy(event.target.value as BoardBy)} aria-label="Group board by"><option>State</option><option>Task type</option><option>Assignment group</option></select></label>}<div className="board-filters-dropdown" ref={boardFiltersDropdownRef}><button className="board-filters-button" onClick={() => setShowBoardFiltersDropdown(!showBoardFiltersDropdown)} aria-expanded={showBoardFiltersDropdown}><ChevronDown size={14} /> Filters</button>{showBoardFiltersDropdown && <div className="board-filters-menu"><div className="board-filters-menu-section">
       <label><span>Type</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as RecordType | 'All task types')} aria-label="Filter by task type"><option>All task types</option>{recordTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
       <label><span>Group</span><select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} aria-label="Filter by assignment group"><option>All groups</option>{groupOptions.map((group) => <option key={group}>{group}</option>)}</select></label>
       <label><span>Assignee</span><select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} aria-label="Filter by assignee"><option>All assignees</option>{assigneeOptions.map((assignee) => <option key={assignee}>{assignee}</option>)}<option>Unassigned</option></select></label>
@@ -1103,14 +1134,14 @@ function App() {
     </main>}
 
     {showViewPicker && <ViewPicker current={cardSize} onChoose={(value) => { setCardSize(value as CardSize); setShowViewPicker(false) }} onClose={() => setShowViewPicker(false)} />}
-    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); openWorkNotes(selectedTicket.id, 'record') }} onClose={() => setSelectedTicketId('')} /></Overlay>}
+    {selectedTicket && <Overlay className="record-overlay" onClose={() => setSelectedTicketId('')}><TicketRecordPanel ticket={selectedTicket} now={clock} linkedAssetId={selectedAssetId} onOpenAsset={openAssetFromTicket} onToggleStar={() => toggleTicketStar(selectedTicket.id)} onSaveTags={(value) => saveTicketTags(selectedTicket.id, value)} onSaveNotes={(value) => saveTicketNotes(selectedTicket.id, value)} onSetStatus={(status) => setTicketStatus(selectedTicket.id, status)} onOpenWorkNotes={() => { setSelectedTicketId(''); openWorkNotes(selectedTicket.id, 'record') }} onReassign={(group) => reassignTicket(selectedTicket.id, group)} onPlaceHold={(hold) => placeTicketHold(selectedTicket.id, hold)} onReleaseHold={(release) => releaseTicketHold(selectedTicket.id, release)} onClose={() => setSelectedTicketId('')} /></Overlay>}
 
     {descriptionPopupTicketId && tickets.find(t => t.id === descriptionPopupTicketId) && <Overlay className="description-popup-overlay" onClose={() => setDescriptionPopupTicketId('')}><DescriptionPopup ticket={tickets.find(t => t.id === descriptionPopupTicketId)!} onSaveNotes={(value) => saveTicketNotes(descriptionPopupTicketId, value)} onOpenWorkNotes={() => { setDescriptionPopupTicketId(''); openWorkNotes(descriptionPopupTicketId, 'popup') }} onClose={() => setDescriptionPopupTicketId('')} onOpenTicket={() => { setDescriptionPopupTicketId(''); openTicket(descriptionPopupTicketId) }} /></Overlay>}
     {workNotes && tickets.find(t => t.id === workNotes.id) && <Overlay className="work-notes-overlay" onClose={() => setWorkNotes(null)}><WorkNotesPopup ticket={tickets.find(t => t.id === workNotes.id)!} onSaveNotes={(value) => { recordUse('add-note', workNotes.id); saveTicketNotes(workNotes.id, value) }} backLabel={workNotes.from === 'popup' ? 'Back to ticket summary' : workNotes.from === 'record' ? 'Back to full ticket' : 'Back to Quick actions'} onBack={() => { setWorkNotes(null); if (workNotes.from === 'popup') setDescriptionPopupTicketId(workNotes.id); else if (workNotes.from === 'record') setSelectedTicketId(workNotes.id) }} onClose={() => setWorkNotes(null)} /></Overlay>}
 
     {showReports && <Overlay className="report-overlay" onClose={() => setShowReports(false)}><ReportsPanel tickets={tickets} now={clock} onClose={() => setShowReports(false)} /></Overlay>}
     {showSettings && <Overlay className="settings-overlay" onClose={() => setShowSettings(false)}><SettingsPanel screenPattern={screenPattern} onScreenPatternChange={setScreenPattern} view={cardSize} onViewChange={setCardSize} widgets={homeWidgets} onWidgetsChange={setHomeWidgets} onClose={() => setShowSettings(false)} /></Overlay>}
-    {showGeminiSettings && <GeminiSettings onClose={() => setShowGeminiSettings(false)} />}
+    {showGeminiSettings && <AiProvidersSettings onClose={() => setShowGeminiSettings(false)} />}
 
     {showDeleted && <Overlay onClose={() => setShowDeleted(false)}><section className="matrix-panel deleted-panel" role="dialog" aria-modal="true" aria-labelledby="deleted-title"><div className="panel-header"><div><div className="eyebrow">RECOVERABLE ITEMS</div><h2 id="deleted-title">Deleted tasks</h2></div><button className="close-button" onClick={() => setShowDeleted(false)} aria-label="Close deleted tasks"><X size={19} /></button></div><p className="panel-intro">Removed cards are stored here in this browser. Restore a task to put it back on the board.</p>{deletedTickets.length ? <div className="deleted-list">{deletedTickets.map((ticket) => <article className="deleted-item" key={ticket.id}><div><b>{ticket.id}</b><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span><h3>{ticket.title}</h3><p>{ticket.recordType} · Deleted {new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.deletedAt))}</p><small>Created by {ticket.createdBy || 'Not recorded'}</small></div><button className="restore-button" onClick={() => restore(ticket.id)}><RotateCcw size={14} /> Restore</button></article>)}</div> : <div className="deleted-empty"><Trash2 size={22} /><b>Nothing in Deleted</b><span>Removed tasks will appear here and can be restored.</span></div>}</section></Overlay>}
 
@@ -1202,7 +1233,7 @@ function HomeScreen({ tickets, now, showTickets, openTicket, searchTicket, openR
   }
   const visibleInsights = insightOrder.filter((key) => widgets[key])
   return <main className="main-content home-content">
-    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={openExplore}>Explore tickets <ArrowRight size={16} /></button></div><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
+    <section className="home-hero" aria-labelledby="home-title"><div><div className="home-hero-kicker"><span className="home-hero-dot" /> SERVICE DESK OVERVIEW <span className="home-hero-date">{dateLabel}</span></div><h1 id="home-title">Good to see you.</h1><p>See what needs attention across your tickets, then open the view that helps you act.</p><button onClick={openExplore}>Explore tickets <ArrowRight size={16} /></button></div><AnimatedBinboardMark tone="onDark" size={170} className="home-hero-mark" /><div className="home-hero-visual" aria-hidden="true"><span className="home-hero-ring ring-one" /><span className="home-hero-ring ring-two" /><div className="home-hero-number">{open.length}<small>open tickets</small></div></div></section>
     <div className="home-section-heading"><div><span className="eyebrow">AT A GLANCE</span><h2>Ticket overview</h2></div><p>Based on the tickets saved in this browser</p></div>
     <section className="home-kpi-grid" aria-label="Ticket totals">
       {kpiCards.map((item) => <button className="home-kpi" key={item.filter} onClick={() => setPopup({ type: 'kpi', filter: item.filter })}>{kpiContent(item)}</button>)}
@@ -1335,6 +1366,7 @@ function DescriptionPopup({ ticket, onSaveNotes, onOpenWorkNotes, onClose, onOpe
           </div>}
         </div>
         <button onClick={() => { const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); const userInfo = ticket.affectedUser || ticket.requester || 'User'; const emailEntry = `[${timestamp}] - Email sent to ${userInfo}`; onSaveNotes(ticket.notes ? `${ticket.notes}\n${emailEntry}` : emailEntry); const email = ticket.affectedUserEmail || ''; if (email) { const link = document.createElement('a'); link.href = `mailto:${email}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }} style={{ border: 'none', background: 'transparent', color: '#0066cc', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', fontWeight: '500' }}><Mail size={14} /> Email</button>
+        <LegalHoldBadge hold={ticket.legalHold} />
         <div style={{ flex: 1 }} />
         {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}
       </div>
@@ -1416,6 +1448,45 @@ function WorkNotesPopup({ ticket, onSaveNotes, onBack, backLabel, onClose }: { t
   </section>
 }
 
+// One line under the SLA timer in list rows: how long the current team has had the ticket against its team target.
+function TeamClock({ ticket, now }: { ticket: TicketItem; now: number }) {
+  if (ticket.status === 'Resolved') return null
+  const { group, ms } = currentTeam(ticket, now)
+  const target = teamTargetMs(ticket.severity)
+  const tone = ms > target ? ' over' : ms > target * 0.75 ? ' near' : ''
+  return <small className={'team-clock' + tone} title={`With ${teamLabel(group)} for ${shortDuration(ms)}. Team target ${shortDuration(target)} (half the resolution SLA).`}>With team {shortDuration(ms)}</small>
+}
+
+const handoffTime = (iso: string) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+
+// Full ticket panel: the current team's clock, every handoff so far, and reassigning to another team.
+function TeamHandoffs({ ticket, now, onReassign }: { ticket: TicketItem; now: number; onReassign: (group: string) => void }) {
+  const segments = teamSegments(ticket)
+  const { group, ms, handoffs } = currentTeam(ticket, now)
+  const target = teamTargetMs(ticket.severity)
+  const resolved = ticket.status === 'Resolved'
+  const tone = ms > target ? 'over' : ms > target * 0.75 ? 'near' : ''
+  const groups = assignmentGroups.includes(ticket.assignmentGroup) || !ticket.assignmentGroup ? assignmentGroups : [ticket.assignmentGroup, ...assignmentGroups]
+  return <section className="team-handoffs" aria-labelledby={`team-time-${ticket.id}`}>
+    <div className="team-handoffs-head">
+      <h4 id={`team-time-${ticket.id}`}>Time with team</h4>
+      <span>{handoffs === 0 ? 'No handoffs yet' : handoffs === 1 ? '1 handoff' : `${handoffs} handoffs`}</span>
+    </div>
+    <p className="team-now"><b>{teamLabel(group)}</b> {resolved ? 'held it until it was resolved,' : 'has had it for'} <b className={'team-now-time ' + tone}>{shortDuration(ms)}</b>. Team target {shortDuration(target)}, half the {ticket.severity.split(' – ')[0]} resolution SLA. The customer's SLA timer keeps running across handoffs.</p>
+    <div className="team-bar" role="img" aria-label={`${Math.round(ms / target * 100)}% of the team target used`}><i className={tone} style={{ width: Math.min(100, ms / target * 100) + '%' }} /></div>
+    <div className="team-history-scroll"><table className="team-history">
+      <thead><tr><th>Team</th><th>Received</th><th>Handed on</th><th>Time</th></tr></thead>
+      <tbody>{segments.map((segment, index) => <tr key={index} className={segment.to ? '' : 'current'}><th>{teamLabel(segment.group)}</th><td>{handoffTime(segment.from)}</td><td>{segment.to ? handoffTime(segment.to) : resolved ? 'Resolved' : 'Now'}</td><td>{shortDuration(segmentMs(segment, ticket, now))}</td></tr>)}</tbody>
+    </table></div>
+    {!resolved && <label className="team-reassign">Reassign to
+      <select value={ticket.assignmentGroup} onChange={(event) => onReassign(event.target.value)}>
+        {!ticket.assignmentGroup && <option value="">Unassigned</option>}
+        {groups.map((name) => <option key={name} value={name}>{name}</option>)}
+      </select>
+    </label>}
+  </section>
+}
+
 function ReportsPanel({ tickets, now, onClose }: { tickets: TicketItem[]; now: number; onClose: () => void }) {
   const [period, setPeriod] = useState<'7' | '30' | '90' | 'all'>('30')
   const start = period === 'all' ? -Infinity : now - Number(period) * 24 * 60 * 60_000
@@ -1450,11 +1521,16 @@ function ReportsPanel({ tickets, now, onClose }: { tickets: TicketItem[]; now: n
   const assignees = [...new Set(tickets.map((ticket) => ticket.assignee.trim() || 'Unassigned'))].map((name) => ({ name, open: open.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name).length, overdue: open.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name && slaTime(ticket, now).breached).length, created: created.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name).length, resolved: resolved.filter((ticket) => (ticket.assignee.trim() || 'Unassigned') === name).length })).sort((a, b) => b.open - a.open || a.name.localeCompare(b.name))
   const periodLabel = period === 'all' ? 'all time' : 'the last ' + period + ' days'
 
+  // Where the time went: each team's stays on tickets created in this period (see lib/teamTime.ts).
+  const teamRows = timePerTeam(created, now, (ticket) => teamTargetMs(ticket.severity))
+  const handedOn = created.filter((ticket) => teamSegments(ticket).length > 1)
+  const mostHandoffs = handedOn.reduce<TicketItem | undefined>((best, ticket) => !best || teamSegments(ticket).length > teamSegments(best).length ? ticket : best, undefined)
   return <section className="report-panel" role="dialog" aria-modal="true" aria-labelledby="reports-title">
     <header className="report-header"><div><div className="eyebrow">SERVICE DESK ANALYTICS</div><h2 id="reports-title">Reports</h2></div><div className="report-header-actions"><label>Period <select value={period} onChange={(event) => setPeriod(event.target.value as typeof period)}><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All time</option></select></label><button className="close-button" onClick={onClose} aria-label="Close reports"><X size={19} /></button></div></header>
     <p className="report-intro">Created and resolved figures cover {periodLabel}. Closed tickets without a completion timestamp are counted as closed, but omitted from resolution-time and SLA measures. Times use the selected 24-hour calendar schedule.</p>
     <div className="report-kpis"><div><strong>{closed.length}</strong><span>Closed now</span><small>{tickets.length} total tickets</small></div><div><strong>{resolved.length ? Math.round(within.length / resolved.length * 100) + '%' : '—'}</strong><span>Resolved within SLA</span><small>{within.length} of {resolved.length} measured</small></div><div><strong>{durationLabel(median)}</strong><span>Median time to resolve</span><small>{resolved.length} timed resolutions</small></div><div><strong>{created.length}</strong><span>Created</span><small>In {periodLabel}</small></div></div>
     <section className="report-section"><div className="report-section-heading"><h3>SLA by priority</h3><p>Only tickets with a recorded resolution time contribute to the SLA rate.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Priority</th><th>Resolved</th><th>Within SLA</th><th>Median to resolve</th><th>Target</th><th>Open now</th></tr></thead><tbody>{byPriority.map((item) => <tr key={item.key}><th><span className={'report-priority ' + item.key.toLowerCase()}>{item.label}</span></th><td>{item.count}</td><td>{item.count ? Math.round(item.success / item.count * 100) + '%' : '—'}</td><td>{durationLabel(item.middle)}</td><td>{item.target}</td><td>{item.open}</td></tr>)}</tbody></table></div></section>
+    <section className="report-section"><div className="report-section-heading"><h3>Time per team</h3><p>How long each team held tickets created in this period. {handedOn.length ? `${handedOn.length} ${handedOn.length === 1 ? 'ticket was' : 'tickets were'} handed between teams${mostHandoffs ? `; ${mostHandoffs.id} passed through ${teamSegments(mostHandoffs).length} teams` : ''}.` : 'No ticket has changed team yet.'} Team target: half the resolution SLA.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Team</th><th>Tickets</th><th>Total time</th><th>Average stay</th><th>Over team target</th><th>Handed on</th></tr></thead><tbody>{teamRows.length ? teamRows.map((row) => <tr key={row.group}><th>{row.group}</th><td>{row.tickets}</td><td>{shortDuration(row.ms)}</td><td>{shortDuration(row.ms / Math.max(1, row.tickets))}</td><td>{row.overTarget}</td><td>{row.handedOn}</td></tr>) : <tr><td colSpan={6}>No tickets in this period.</td></tr>}</tbody></table></div></section>
     <section className="report-section"><div className="report-section-heading"><h3>Ticket activity by week</h3><p>Created and resolved tickets over the last eight calendar weeks.</p></div><div className="report-week-chart" role="img" aria-label="Weekly created and resolved ticket counts">{weeks.map((week) => <div className="report-week" key={week.label}><div className="report-week-bars"><i className="created" title={week.created + ' created'} style={{ height: Math.max(2, week.created / maxWeek * 100) + '%' }} /><i className="resolved" title={week.resolved + ' resolved'} style={{ height: Math.max(2, week.resolved / maxWeek * 100) + '%' }} /></div><span>{week.label}</span></div>)}</div><div className="report-legend"><span><i className="created" /> Created</span><span><i className="resolved" /> Resolved</span></div></section>
     <div className="report-breakdown-grid"><section className="report-section"><div className="report-section-heading"><h3>By assignment group</h3><p>Current open load and period activity.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Group</th><th>Open</th><th>Past SLA</th><th>Created</th><th>Resolved</th></tr></thead><tbody>{groups.map((group) => <tr key={group.name}><th>{group.name}</th><td>{group.open}</td><td>{group.overdue}</td><td>{group.created}</td><td>{group.resolved}</td></tr>)}</tbody></table></div></section><section className="report-section"><div className="report-section-heading"><h3>By assignee</h3><p>Current open load and period activity.</p></div><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Assignee</th><th>Open</th><th>Past SLA</th><th>Created</th><th>Resolved</th></tr></thead><tbody>{assignees.map((person) => <tr key={person.name}><th>{person.name}</th><td>{person.open}</td><td>{person.overdue}</td><td>{person.created}</td><td>{person.resolved}</td></tr>)}</tbody></table></div></section></div>
   </section>
@@ -1896,18 +1972,34 @@ function TicketRecordDetails({ ticket, now, linkedAssetId, onSaveNotes, onSetSta
   </>
 }
 
-function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onOpenWorkNotes, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onOpenWorkNotes: () => void; onClose: () => void }) {
+function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleStar, onSaveTags, onSaveNotes, onSetStatus, onOpenWorkNotes, onReassign, onPlaceHold, onReleaseHold, onClose }: { ticket: TicketItem; now: number; linkedAssetId: string; onOpenAsset: (id: string) => void; onToggleStar: () => void; onSaveTags: (value: string) => void; onSaveNotes: (value: string) => void; onSetStatus: (status: Status) => void; onOpenWorkNotes: () => void; onReassign: (group: string) => void; onPlaceHold: (hold: LegalHold) => void; onReleaseHold: (release: LegalHoldRelease) => void; onClose: () => void }) {
   const { user } = useAuth()
   const [tagsText, setTagsText] = useState((ticket.tags || []).join(', '))
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState('')
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [showSearchMenu, setShowSearchMenu] = useState(false)
+  const [kbMatches, setKbMatches] = useState<KbArticle[] | null>(null)
   const [showCallMenu, setShowCallMenu] = useState(false)
   const [showMessageMenu, setShowMessageMenu] = useState(false)
   const [showEmailMenu, setShowEmailMenu] = useState(false)
   useEffect(() => { setTagsText((ticket.tags || []).join(', ')) }, [ticket.id, ticket.tags])
+  // Find resolution → Search knowledge base: ranks published articles by the ticket's words, in this browser, no AI.
+  const searchKnowledgeBase = () => {
+    const published = loadArticles().filter((article) => article.status === 'Published')
+    const hits = rankArticles(published, [ticket.title, ticket.description, (ticket.tags || []).join(' ')].join(' '))
+    // A long description shares a word or two with almost any article; keep only matches close to the best one.
+    const cutoff = Math.max(2, (hits[0]?.score ?? 0) * 0.4)
+    setKbMatches(hits.filter((hit) => hit.score >= cutoff).slice(0, 3).map((hit) => hit.article))
+    setShowSearchResults(false)
+  }
+  const addArticleToNotes = (article: KbArticle) => {
+    const entry = `[${new Date().toLocaleString()}] ${user?.name || 'User'} - Following ${article.id} "${article.title}":\n${article.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`
+    onSaveNotes(ticket.notes ? `${ticket.notes}\n${entry}` : entry)
+    setKbMatches(null)
+  }
   const performSearch = async () => {
+    setKbMatches(null)
     setIsLoadingAI(true)
     try {
       const solutions = await generateTicketSuggestions(
@@ -2050,6 +2142,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
   }
   return <section className="ticket-record-panel" role="dialog" aria-modal="true" aria-labelledby="ticket-record-title">
     <header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h2 id="ticket-record-title">{ticket.id}</h2><p>{ticket.title}</p></div><div className="record-header-actions"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={onToggleStar} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={20} fill={ticket.starred ? "currentColor" : "none"} /></button>{linkedAssetId && <button className="record-asset-link" onClick={() => onOpenAsset(linkedAssetId)}>View asset {linkedAssetId} <ArrowRight size={13} /></button>}<button className="close-button" onClick={onClose} aria-label="Close ticket details"><X size={19} /></button></div></header>
+    {ticket.legalHold && <div className="ticket-hold-wrap"><LegalHoldPanel hold={ticket.legalHold} kind="ticket" blocks="While it is on hold the ticket can't be deleted. You can keep working it: notes, state changes and reassignments are all recorded in its activity log." onPlace={onPlaceHold} onRelease={onReleaseHold} /></div>}
     <div className="ticket-tags-editor"><label htmlFor="ticket-tags-input">Edit tags <small>Separate with commas</small></label><div><input id="ticket-tags-input" value={tagsText} onChange={(event) => setTagsText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') onSaveTags(tagsText) }} placeholder="VPN, payroll, follow-up…" /><button onClick={() => onSaveTags(tagsText)} disabled={JSON.stringify(parseTicketTags(tagsText)) === JSON.stringify(ticket.tags || [])}>Save tags</button></div></div>
     <div className="record-actions" style={{ display: 'flex', gap: '8px' }}>
       <div style={{ position: 'relative' }}>
@@ -2111,6 +2204,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
           <button className="ticket-card-popout-close" onClick={() => setShowSearchMenu(false)} aria-label="Close search menu">×</button>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>Search options</h3>
           <div className="ticket-card-popout-actions" style={{ flexDirection: 'column', gap: '8px', marginTop: '12px', justifyContent: 'flex-start' }}>
+            <button className="ticket-card-popout-open" onClick={() => { searchKnowledgeBase(); setShowSearchMenu(false); }} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Search knowledge base</button>
             <button className="ticket-card-popout-open" onClick={() => { performSearch(); setShowSearchMenu(false); }} disabled={isLoadingAI} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>{isLoadingAI ? 'Analyzing...' : 'Search AI'}</button>
             <button className="ticket-card-popout-open" onClick={() => { performTextSearch(); setShowSearchMenu(false); }} style={{ width: '100%', textAlign: 'left', paddingLeft: '16px' }}>Search web</button>
           </div>
@@ -2118,8 +2212,20 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
       </div>}
     </div>
     {showSearchResults && <div className="ticket-search-results"><div className="search-results-header"><h5>Search & AI Results</h5><button onClick={() => setShowSearchResults(false)} aria-label="Close search results"><X size={16} /></button></div><div className="search-results-content"><p>{searchResults}</p><button className="search-add-btn" onClick={addSearchToNotes}><Plus size={14} /> Add to work notes</button></div></div>}
+    {kbMatches && <div className="ticket-search-results ticket-kb-results" role="region" aria-label="Knowledge base matches"><div className="search-results-header"><h5>Knowledge base matches</h5><button onClick={() => setKbMatches(null)} aria-label="Close knowledge base matches"><X size={16} /></button></div><div className="search-results-content">
+      {kbMatches.length
+        ? kbMatches.map((article, index) => <details key={article.id} className="ticket-kb-article" open={index === 0}>
+          <summary><span className="ticket-kb-id">{article.id}</span> {article.title}</summary>
+          {article.summary && <p>{article.summary}</p>}
+          <ol>{article.steps.map((step, stepIndex) => <li key={stepIndex}>{step}</li>)}</ol>
+          <button className="search-add-btn" onClick={() => addArticleToNotes(article)}><Plus size={14} /> Add steps to work notes</button>
+        </details>)
+        : <p>No published article matches this ticket yet. Once it’s resolved, draft one from the KB page (Draft from ticket).</p>}
+    </div></div>}
     <div style={{ padding: '0 16px' }}>
       {(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={false} />; })()}
+      <TeamHandoffs ticket={ticket} now={now} onReassign={onReassign} />
+      {!ticket.legalHold && <div className="ticket-hold-wrap is-idle"><LegalHoldPanel kind="ticket" blocks="While it is on hold the ticket can't be deleted. You can keep working it: notes, state changes and reassignments are all recorded in its activity log." onPlace={onPlaceHold} onRelease={onReleaseHold} /></div>}
     </div>
     <TicketRecordDetails ticket={ticket} now={now} linkedAssetId={linkedAssetId} onSaveNotes={onSaveNotes} onSetStatus={onSetStatus} />
   </section>
@@ -2128,7 +2234,7 @@ function TicketRecordPanel({ ticket, now, linkedAssetId, onOpenAsset, onToggleSt
 function TicketRecordPage({ ticket, now }: { ticket: TicketItem; now: number }) {
   const boardUrl = window.location.href.split('#')[0]
   return <div className="record-page-shell">
-    <header className="record-page-topbar"><a className="brand record-brand-home" href={boardUrl} aria-label="Go to home"><div className="brand-mark"><Activity size={17} /></div><span>OPS <b>KANBAN</b></span></a><a href={boardUrl}><ArrowLeft size={15} /> Back to home</a></header>
+    <header className="record-page-topbar"><a className="brand record-brand-home" href={boardUrl} aria-label="Go to home"><BinboardLogo /></a><a href={boardUrl}><ArrowLeft size={15} /> Back to home</a></header>
     <main className="record-page-main"><article className="ticket-record-page"><header className="record-header"><div><span className="record-table-name">{ticket.recordType} · {tableNames[ticket.recordType]}</span><h1>{ticket.id}</h1><p>{ticket.title}</p></div><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span></header><TicketRecordDetails ticket={ticket} now={now} /></article></main>
   </div>
 }
@@ -2176,7 +2282,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
       const created = ticket.createdAt ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(ticket.createdAt)) : 'Not recorded'
       return <tr key={ticket.id} className={selectedIds.includes(ticket.id) ? 'selected-row' : ''}>
         <td className="selection-column"><input type="checkbox" checked={selectedIds.includes(ticket.id)} aria-label={`Select ${ticket.id}`} onClick={(event) => toggleSelection(ticket.id, event.shiftKey, event.currentTarget.checked)} onChange={() => {}} /></td>
-        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button><button className="list-search-btn" onClick={() => openTicket(ticket.id)} title={`Search for ${ticket.title}`} aria-label={`Search for ${ticket.id}`} style={{ marginLeft: '6px', padding: '4px', background: 'none', border: 'none', color: '#596f79', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', fontSize: '14px' }}><Search size={14} /></button></div></td>
+        <td><div className="ticket-list-number"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={15} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="list-ticket-id" onClick={() => openTicket(ticket.id)} title={`Open ${ticket.id} details`}>{ticket.id}</button><LegalHoldBadge hold={ticket.legalHold} /><button className="list-search-btn" onClick={() => openTicket(ticket.id)} title={`Search for ${ticket.title}`} aria-label={`Search for ${ticket.id}`} style={{ marginLeft: '6px', padding: '4px', background: 'none', border: 'none', color: 'rgba(0, 0, 0, 0.54)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', fontSize: '14px' }}><Search size={14} /></button></div></td>
         <td><button className="list-title list-title-link" onClick={() => openDescriptionPopup(ticket.id)} title={`Show details for ${ticket.title}`}>{ticket.title}</button><span className="list-type">{ticket.recordType}</span>{!!ticket.tags?.length && <span className="ticket-list-tags">{ticket.tags.slice(0, 3).join(" · ")}{ticket.tags.length > 3 ? ` +${ticket.tags.length - 3}` : ""}</span>}</td>
         <td>{ticket.department || 'Field Services'}</td>
         <td>{ticket.assignmentGroup || 'Unassigned'}</td>
@@ -2184,7 +2290,7 @@ function ListView({ tickets, now, openTicket, openDescriptionPopup, toggleStar, 
         <td><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span></td>
         <td><span className={`status-pill status-${ticket.status.toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</span></td>
         <td className="list-date">{created}</td>
-        <td>{(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}</td>
+        <td>{(() => { const sla = getSLATimes(ticket.severity); return <CompactSLATimer ticketId={ticket.id} createdAt={ticket.createdAt} status={ticket.status} responseTimeMinutes={sla.responseMinutes} resolutionTimeHours={sla.resolutionHours} compact={true} />; })()}<TeamClock ticket={ticket} now={now} /></td>
       </tr>
     }) : <tr><td colSpan={10} className="list-empty">No task records match the current filters.</td></tr>}</tbody></table></div>
   </section>
@@ -2213,7 +2319,7 @@ function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addU
       <div className="ticket-card-face ticket-card-front">
     <div className="ticket-card-front-layout">
       <div className="ticket-card-left">
-        <div className="card-top"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={14} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="ticket-id-link" onClick={() => openMatrix(ticket.id)} title={`Show ${ticket.id} in escalation matrix`}>{ticket.id}</button><button className="flip-card-button" onClick={() => setShowDetails(true)} aria-label={`Show more details for ${ticket.id}`} title="Show ticket details"><RotateCcw size={15} /></button><button className="more-button" title="Move task to Deleted" onClick={() => remove(ticket.id)} aria-label={`Move ${ticket.id} to Deleted`}><X size={14} /></button></div>
+        <div className="card-top"><button className={"ticket-star" + (ticket.starred ? " is-starred" : "")} onClick={() => toggleStar(ticket.id)} aria-pressed={ticket.starred} aria-label={`${ticket.starred ? 'Remove star from' : 'Star'} ${ticket.id}`}><Star size={14} fill={ticket.starred ? "currentColor" : "none"} /></button><button className="ticket-id-link" onClick={() => openMatrix(ticket.id)} title={`Show ${ticket.id} in escalation matrix`}>{ticket.id}</button><LegalHoldBadge hold={ticket.legalHold} /><button className="flip-card-button" onClick={() => setShowDetails(true)} aria-label={`Show more details for ${ticket.id}`} title="Show ticket details"><RotateCcw size={15} /></button><button className="more-button" title={ticket.legalHold ? 'On legal hold: it cannot be deleted' : 'Move task to Deleted'} onClick={() => remove(ticket.id)} disabled={!!ticket.legalHold} aria-label={`Move ${ticket.id} to Deleted`}><X size={14} /></button></div>
         <div className="record-type-line"><span>{ticket.recordType}</span><code>{tableNames[ticket.recordType]}</code></div><h3>{ticket.title}</h3>{ticket.requester && <div className="requester">Requested by {ticket.requester}</div>}<div className="created-at-line">Created {createdLabel}</div>{!!ticket.tags?.length && <div className="ticket-card-tags" title={ticket.tags.join(", ")}>{ticket.tags.slice(0, 2).join(" · ")}{ticket.tags.length > 2 ? ` +${ticket.tags.length - 2}` : ""}</div>}<div className="department-line">Department <b>{ticket.department || 'Field Services'}</b></div>{ticket.affectedUser && <div className="affected-user-line">Affected user <b>{ticket.affectedUser}</b></div>}
         <div className="card-meta"><span className={`severity-badge ${sevClass(ticket.severity)}`}>{ticket.severity.split(' – ')[0]}</span>{ticket.status === 'Escalated' && <span className="escalated-tag"><ArrowUp size={11} /> Tier {ticket.currentTier}</span>}{isEscalationDue && <span className="escalation-due-tag">Tier {ticket.currentTier + 1} due</span>}</div>
         <div className={`resolution-sla ${resolutionSla.breached && ticket.status !== 'Resolved' ? 'breached' : ''}${isAtRisk ? ' at-risk' : ''}`} title={`Resolution target: ${Math.round(resolutionTargetMs(ticket.severity) / 3_600_000)} calendar hours from creation`}><Clock3 size={12} /><span>Resolution SLA{isAtRisk ? ' · at risk' : ''}</span><b>{ticket.status === 'Resolved' ? 'Resolved' : resolutionSla.label}</b></div>
