@@ -2,29 +2,29 @@
 
 :root {
   /* Color Palette - Light Mode (Default) */
-  --color-primary: #1a7f7e;        /* Teal - primary actions, status indicators */
-  --color-primary-light: #2a9f9e;  /* Lighter teal for hover states */
-  --color-primary-dark: #0f5f5e;   /* Darker teal for active states */
-  --color-primary-bg: #f0fffe;     /* Very light teal background */
+  --color-primary: #1976d2;        /* Binboard blue (MUI primary) - primary actions, status indicators */
+  --color-primary-light: #42a5f5;  /* Lighter blue for hover accents */
+  --color-primary-dark: #1565c0;   /* Darker blue for hover/pressed */
+  --color-primary-bg: rgba(25, 118, 210, 0.08); /* Primary tint: chips, active tabs */
 
-  --color-accent-warm: #d97757;    /* Warm orange-brown for alerts/escalation */
-  --color-accent-red: #c94c46;     /* Red for critical/failed states */
-  --color-accent-green: #4a9b6f;   /* Green for success/resolved */
-  --color-accent-amber: #d4a036;   /* Amber for warnings/pending */
+  --color-accent-warm: #ed6c02;    /* MUI warning - pair with a word or icon */
+  --color-accent-red: #d32f2f;     /* MUI error */
+  --color-accent-green: #2e7d32;   /* MUI success */
+  --color-accent-amber: #ed6c02;   /* MUI warning */
 
   --color-neutral-white: #ffffff;  /* Pure white for cards and content */
-  --color-neutral-bg: #f8f9f8;     /* Subtle off-white background */
-  --color-neutral-light: #f0f1f0;  /* Light gray for secondary surfaces */
-  --color-neutral-border: #e2e6e4; /* Borders and dividers */
-  --color-neutral-line: #d9dcd9;   /* Subtle lines */
+  --color-neutral-bg: #f5f5f5;     /* MUI page background */
+  --color-neutral-light: #fafafa;  /* Table headers, secondary surfaces */
+  --color-neutral-border: rgba(0, 0, 0, 0.12); /* MUI divider */
+  --color-neutral-line: rgba(0, 0, 0, 0.23); /* Input borders */
 
-  --color-text-primary: #1a2b2f;   /* Main text */
-  --color-text-secondary: #5a6b6f; /* Secondary text */
-  --color-text-tertiary: #8a9b9f;  /* Tertiary/muted text */
+  --color-text-primary: rgba(0, 0, 0, 0.87); /* Main text */
+  --color-text-secondary: rgba(0, 0, 0, 0.6); /* Secondary text */
+  --color-text-tertiary: rgba(0, 0, 0, 0.6); /* Muted text (kept readable: .38 is for disabled only) */
   color-scheme: light;
 
   /* Typography */
-  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-family-base: Roboto, Helvetica, Arial, sans-serif;
   --font-family-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
 
   --font-size-xs: 11px;
@@ -55,15 +55,15 @@
 
   /* Border Radius */
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 8px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(26, 43, 47, 0.06);
-  --shadow-md: 0 2px 6px rgba(26, 43, 47, 0.08);
-  --shadow-lg: 0 4px 12px rgba(26, 43, 47, 0.12);
-  --shadow-xl: 0 8px 24px rgba(26, 43, 47, 0.16);
+  --shadow-sm: 0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14), 0 1px 3px 0 rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 11px 15px -7px rgba(0, 0, 0, 0.2), 0 24px 38px 3px rgba(0, 0, 0, 0.14), 0 9px 46px 8px rgba(0, 0, 0, 0.12);
 }
 
 /* Base Styles */
