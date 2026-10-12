@@ -34,6 +34,27 @@ test('Kanban Detailed cards give the title real width', async ({ page }) => {
   expect(box!.height).toBeLessThan(120)
 })
 
+// The build-time recolour must not touch Binboard's own stylesheets: MUI info blue sits inside its teal hue window.
+test('P3 chips keep the info colours and kanban lanes keep 8px corners', async ({ page }) => {
+  await openApp(page)
+  await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
+  await page.getByRole('group', { name: 'View' }).getByRole('button', { name: 'Kanban detailed', exact: true }).click()
+  await expect(page.locator('.lane').first()).toHaveCSS('border-top-left-radius', '8px')
+  const p3 = page.locator('.severity-badge.p3').first()
+  await expect(p3).toHaveCSS('background-color', 'rgba(2, 136, 209, 0.12)')
+  await expect(p3).toHaveCSS('color', 'rgb(1, 87, 155)')
+})
+
+// The old dark-teal scrims are saturated enough to have mapped to blue; dialogs should sit on a neutral backdrop.
+test('the All Views backdrop is neutral, not blue', async ({ page }) => {
+  await openApp(page)
+  await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
+  await page.getByRole('button', { name: 'Open all ticket views' }).click()
+  const backdrop = await page.locator('.views-modal').evaluate((element) => getComputedStyle(element).backgroundColor)
+  const [r, g, b] = backdrop.match(/[\d.]+/g)!.map(Number)
+  expect(r === g && g === b, backdrop).toBe(true)
+})
+
 test('clicking the hero logo moves a card to the next lane', async ({ page }) => {
   await openApp(page)
   const mark = page.getByRole('button', { name: 'Binboard logo: click to move a card' })

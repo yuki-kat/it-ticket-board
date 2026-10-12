@@ -29,7 +29,13 @@
 body, .app-shell { background: var(--bb-page); }
 button, input, select, textarea { font-family: var(--bb-font); }
 h1, h2, h3, h4, h5, h6 { font-family: var(--bb-font); }
-:where(button, a, input, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--bb-primary); outline-offset: 2px; }
+.overlay { background: rgba(0, 0, 0, 0.5); } /* MUI backdrop; the old dark-teal scrim would otherwise map to blue */
+main.new-task-page .form-panel { border-radius: 4px; box-shadow: var(--bb-e1); } /* a page card (Paper), beats gui-fixes */
+@media (max-width: 600px) { main.new-task-page .form-panel { border-radius: 0; } } /* full-bleed on phones, as before */
+/* Keyboard focus ring: one 2px blue ring everywhere. !important because many older per-component rules set their own
+   3px teal / pale-blue rings with higher specificity. (Buttons animate outline via `transition: all`, so read it settled.) */
+:is(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--bb-primary) !important; outline-offset: 2px; }
+.home-hero :focus-visible { outline-color: #ffffff !important; }
 .eyebrow, .home-hero-kicker { font-size: 12px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--bb-text-2); }
 code, pre, kbd, samp { font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
 
@@ -82,7 +88,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 .home-kpi:hover, .inventory-kpis button:hover { transform: none; box-shadow: var(--bb-e2); }
 
 /* ---- Home ---------------------------------------------------------------------------------------------------- */
-.home-hero { position: relative; overflow: hidden; border-radius: 8px; background: linear-gradient(120deg, #1565c0 0%, #1976d2 65%, #2a86e0 100%); color: #fff; box-shadow: none; }
+.home-hero { position: relative; overflow: hidden; border-radius: 4px; background: linear-gradient(120deg, #1565c0 0%, #1976d2 65%, #2a86e0 100%); color: #fff; box-shadow: none; }
 .home-hero::before, .home-hero::after { display: none; }
 .home-hero h1 { color: #fff; font-size: 44px; line-height: 1.1; font-weight: 500; letter-spacing: -1px; }
 .home-hero p { color: #fff; font-size: 15px; line-height: 1.5; }
@@ -92,12 +98,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 .home-hero button:not(.bb-animated) { min-height: 44px; padding: 0 20px; border: 0; border-radius: 4px; background: #fff; color: var(--bb-primary-hover); font-size: 14px; font-weight: 500; box-shadow: none; }
 .home-hero .bb-animated, .home-hero .bb-animated:hover { flex: none; min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 .home-hero-mark { margin-left: auto; }
-.home-kpi-icon { border-radius: 8px; }
+.home-kpi-icon { border-radius: 4px; }
 .home-kpi-label { color: var(--bb-text-2); font-size: 14px; font-weight: 500; }
 .home-kpi strong, .home-kpi b { color: var(--bb-text); font-weight: 500; }
 .home-kpi-action { color: var(--bb-primary-hover); font-size: 14px; font-weight: 500; }
 .home-action-strip button { min-height: 36px; padding: 0 8px 0 14px; border: 1px solid var(--bb-input); border-radius: 18px; background: var(--bb-surface); color: var(--bb-text); font-size: 13px; font-weight: 500; }
-.home-action-strip button b, .home-action-strip button strong { min-width: 22px; padding: 0 6px; border-radius: 11px; background: var(--bb-primary-tint); color: var(--bb-primary-hover); font-size: 12px; text-align: center; }
+.home-action-strip button b, .home-action-strip button strong { min-width: 22px; padding: 0 6px; border-radius: 4px; background: var(--bb-primary-tint); color: var(--bb-primary-hover); font-size: 12px; text-align: center; }
 .home-section-heading h2, .home-insights-heading h2 { font-size: 22px; font-weight: 400; color: var(--bb-text); }
 .home-chart-card h3 { font-size: 16px; font-weight: 500; color: var(--bb-text); }
 .home-chart-badge { border-radius: 4px; background: rgba(0, 0, 0, 0.08); color: rgba(0, 0, 0, 0.7); }
@@ -108,7 +114,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 .page-heading h1 { font-size: 34px; font-weight: 400; letter-spacing: 0; color: var(--bb-text); }
 .page-heading .subtitle { color: var(--bb-text-2); }
 .date-chip { border: 1px solid var(--bb-input); border-radius: 16px; background: var(--bb-surface); color: var(--bb-text); }
-.metric-icon { border-radius: 8px; }
+.metric-icon { border-radius: 4px; }
 .metric-label { color: var(--bb-text-2); font-size: 12px; }
 .metric-value { color: var(--bb-text); font-weight: 500; }
 /* Tabs with a 2px blue underline */
@@ -137,7 +143,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 .severity-badge.p3, .home-recent-priority.p3 { background: rgba(2, 136, 209, 0.12); color: #01579b; }
 .severity-badge.p4, .home-recent-priority.p4 { background: rgba(0, 0, 0, 0.08); color: rgba(0, 0, 0, 0.7); }
 /* State chips */
-.status-pill { padding: 2px 10px; border: 0; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.status-pill { padding: 2px 10px; border: 0; border-radius: 4px; font-size: 12px; font-weight: 500; }
 .status-pill.status-new { background: rgba(0, 0, 0, 0.08); color: rgba(0, 0, 0, 0.7); }
 .status-pill.status-in-progress { background: var(--bb-primary-tint); color: var(--bb-primary-hover); }
 .status-pill.status-waiting-on-user { background: rgba(156, 39, 176, 0.12); color: #7b1fa2; }
@@ -147,7 +153,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 .lane { border: 0; border-radius: 8px; background: var(--bb-primary-wash); box-shadow: none; }
 .lane-heading, .lane-title { color: var(--bb-text); }
 .lane-title h2, .lane-heading h2 { font-size: 16px; font-weight: 500; }
-.lane-count { min-width: 24px; padding: 0 8px; border: 0; border-radius: 12px; background: rgba(0, 0, 0, 0.08); color: var(--bb-text); font-size: 12px; font-weight: 500; }
+.lane-count { min-width: 24px; padding: 0 8px; border: 0; border-radius: 4px; background: rgba(0, 0, 0, 0.08); color: var(--bb-text); font-size: 12px; font-weight: 500; }
 .ticket-card { border: 0; border-radius: 4px; background: var(--bb-surface); box-shadow: var(--bb-e1); }
 .ticket-card-face { border: 0; border-radius: 4px; background: var(--bb-surface); }
 .ticket-card.overdue, .ticket-card.at-risk { box-shadow: var(--bb-e1); }
@@ -168,7 +174,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 .inventory-kpis button.selected { background: var(--bb-surface); box-shadow: var(--bb-e1), inset 0 0 0 2px var(--bb-primary); }
 .inventory-tabs button { border-bottom: 2px solid transparent; border-radius: 0; color: var(--bb-text-2); }
 .inventory-tabs button.active { border-bottom-color: var(--bb-primary); color: var(--bb-primary-hover); font-weight: 500; }
-.inventory-status { border-radius: 12px; font-size: 12px; font-weight: 500; }
+.inventory-status { border-radius: 4px; font-size: 12px; font-weight: 500; }
 .inventory-health-badge { border-radius: 16px; font-weight: 500; }
 .inventory-view-buttons { border: 1px solid var(--bb-input); border-radius: 4px; background: var(--bb-surface); box-shadow: none; }
 .inventory-view-buttons button { border-radius: 0; }
@@ -181,7 +187,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 .escalation-page .hover\:bg-orange-700:hover { background-color: var(--bb-primary-hover); }
 .escalation-page .border-orange-600 { border-color: var(--bb-primary); }
 .escalation-page .focus\:ring-orange-500:focus { --tw-ring-color: var(--bb-primary); }
-.escalation-role { padding: 2px 10px; border-radius: 12px; background: var(--bb-primary-tint); color: var(--bb-primary-hover); font-size: 12px; font-weight: 500; }
+.escalation-role { padding: 2px 10px; border-radius: 4px; background: var(--bb-primary-tint); color: var(--bb-primary-hover); font-size: 12px; font-weight: 500; }
 .escalation-info { border: 1px solid rgba(2, 136, 209, 0.35); border-radius: 4px; background: rgba(2, 136, 209, 0.1); }
 .escalation-info .text-blue-600 { color: #0288d1; }
 .escalation-info .text-blue-900, .escalation-info .text-blue-800 { color: var(--bb-text); }

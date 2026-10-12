@@ -75,7 +75,7 @@ function checkList(label: string, list: unknown, idField: string, required: stri
 export function parseBackup(text: string): ParsedBackup {
   let data: unknown
   try { data = JSON.parse(text) } catch { return { ok: false, problems: ['This is not a backup file: it could not be read as JSON.'] } }
-  if (!isObject(data) || data.app !== BACKUP_APP) return { ok: false, problems: ['This file was not made by the IT Ticket Board.'] }
+  if (!isObject(data) || data.app !== BACKUP_APP) return { ok: false, problems: ['This file was not made by Binboard.'] }
   if (typeof data.format !== 'number' || data.format < 1) return { ok: false, problems: ['This backup has no version number.'] }
   if (data.format > BACKUP_FORMAT) return { ok: false, problems: [`This backup was made by a newer version of the board (format ${data.format}). Update the board first.`] }
   if (!isObject(data.records)) return { ok: false, problems: ['This backup has no tickets, assets or stock in it.'] }

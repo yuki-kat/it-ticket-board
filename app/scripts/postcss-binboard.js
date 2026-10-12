@@ -11,7 +11,7 @@
  *   - corner radii of 5–15px become 4px. Pills (16px and up) and percentages are kept.
  *
  * The source files are untouched, so removing this plugin restores the old look. Component-level details that a
- * value mapping can't express live in styles/binboard-theme.css.
+ * value mapping can't express live in styles/binboard-theme.css, which (like the other Binboard stylesheets) is skipped.
  */
 const TEXT_PROPS = /^(color|caret-color|text-decoration-color|-webkit-text-fill-color)$/
 const FILL_PROPS = /^(background|background-color|background-image|fill|stroke|stop-color|accent-color)$/
@@ -20,6 +20,8 @@ const SHADOW_PROPS = /^(box-shadow|text-shadow|filter|-webkit-box-shadow)$/
 const COLOR = /#[0-9a-f]{8}\b|#[0-9a-f]{6}\b|#[0-9a-f]{3,4}\b|rgba?\([^)]*\)/gi
 const FONT = /Aptos|Segoe UI|\bInter\b/i
 const ROBOTO = 'Roboto, Helvetica, Arial, sans-serif'
+// Stylesheets written for Binboard already use the final values (MUI info blue #0288d1 sits inside the teal hue window).
+const OWN_FILES = /[\\/](binboard-theme|binboard-logo|design-system|fonts)\.css$/
 
 function parse(token) {
   if (token[0] === '#') {
@@ -59,7 +61,8 @@ function text({ s, l }, a) {
 }
 
 function fill({ s, l }, a) {
-  if (a < 1 && l < 0.6) return s >= 0.3 ? blue(a) : black(a) // translucent overlays and glows
+  // Translucent tints: mid tones are accent washes (blue); very dark ones are scrims behind dialogs (neutral black).
+  if (a < 1 && l < 0.6) return s >= 0.3 && l >= 0.2 ? blue(a) : black(a)
   if (l < 0.5) return s >= 0.2 ? hex('#1976d2', a) : hex('#424242', a)
   if (l < 0.8) return s >= 0.3 ? hex('#90caf9', a) : hex('#bdbdbd', a)
   if (s >= 0.25) return l >= 0.95 ? hex('#f3f8fd', a) : l >= 0.88 ? hex('#e3eefa', a) : hex('#bbdefb', a)
@@ -72,8 +75,8 @@ function border({ s, l }, a) {
   return s >= 0.25 ? hex('#1976d2', a) : black(0.6 * a)
 }
 
-// Focus glows (saturated, clearly visible) turn blue; soft drop shadows turn neutral black.
-const shadow = ({ s, l }, a) => (s >= 0.3 && l < 0.6 && a >= 0.12 && a < 1 ? blue(a) : black(Math.min(a, 0.2)))
+// Focus glows (saturated mid tones, clearly visible) turn blue; drop shadows (very dark or faint) turn neutral black.
+const shadow = ({ s, l }, a) => (s >= 0.3 && l >= 0.2 && l < 0.6 && a >= 0.12 && a < 1 ? blue(a) : black(Math.min(a, 0.2)))
 
 function role(prop) {
   if (prop.startsWith('--')) return /text|fg|ink|heading|muted|label/i.test(prop) ? text : /border|divider|line|ring/i.test(prop) ? border : fill
@@ -99,6 +102,7 @@ export default function binboard() {
   return {
     postcssPlugin: 'binboard-theme',
     Declaration(decl) {
+      if (OWN_FILES.test(decl.source?.input.file ?? '')) return
       const prop = decl.prop.toLowerCase()
       if (/^border(-(top|bottom)-(left|right))?-radius$/.test(prop)) { decl.value = radius(decl.value); return }
       if (prop === 'font-family' || prop === 'font') { if (FONT.test(decl.value)) decl.value = prop === 'font' ? decl.value.replace(/(['"]?(Aptos|Segoe UI|Inter)['"]?\s*,\s*)+[^;]*$/i, ROBOTO) : ROBOTO; return }

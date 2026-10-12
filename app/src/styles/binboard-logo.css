@@ -4,7 +4,7 @@
 .bb-wordmark { font-family: Roboto, Helvetica, Arial, sans-serif; font-size: 22px; font-weight: 400; line-height: 1; letter-spacing: -0.5px; color: rgba(0, 0, 0, 0.87); text-transform: none; white-space: nowrap; }
 .bb-wordmark b { font-weight: 700; }
 
-.bb-animated { display: block; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.bb-animated { display: block; padding: 0; border: 0; border-radius: 4px; background: none; cursor: pointer; }
 .bb-animated:focus-visible { outline: 2px solid #1976d2; outline-offset: 4px; }
 .bb-animated.on-dark:focus-visible { outline-color: #ffffff; }
 .bb-animated svg { display: block; transition: transform .15s ease; }
