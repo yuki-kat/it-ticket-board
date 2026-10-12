@@ -77,7 +77,7 @@ function StateCard({ ctx, onOpen, segments }: CardProps) {
   </article>
 }
 
-const PRIORITY_COLORS = ['#db6763', '#e4a551', '#4b91a2', '#a0aeb8']
+const PRIORITY_COLORS = ['#d32f2f', '#ed6c02', '#0288d1', '#90a4ae'] // MUI error, warning, info, blue-grey
 function PriorityCard({ ctx, onOpen, segments }: CardProps) {
   const open = ctx.tickets.filter(isOpen)
   const data = ['P1', 'P2', 'P3', 'P4'].map((priority, index) => ({ priority, count: open.filter((ticket) => ticket.severity.startsWith(priority)).length, color: PRIORITY_COLORS[index] }))
@@ -94,7 +94,7 @@ function PriorityCard({ ctx, onOpen, segments }: CardProps) {
     <div className="home-priority-content">
       <div className="home-donut">
         <svg viewBox="0 0 180 180" role="img" aria-label={`Open ticket priorities: ${data.map((item) => `${item.priority} ${item.count}`).join(', ')}`}>
-          <circle cx="90" cy="90" r="65" fill="none" stroke="#e9eef1" strokeWidth="22" />
+          <circle cx="90" cy="90" r="65" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="22" />
           {/* In the popup the arcs can be clicked too; the legend rows beside them are the keyboard route. */}
           {rings.filter((ring) => ring.count).map((ring) => <circle key={ring.priority} className={segments ? 'insight-arc' + (segments.selected === ring.priority ? ' selected' : '') : undefined} data-priority={ring.priority} onClick={segments ? () => segments.onSelect(ring.priority) : undefined} cx="90" cy="90" r="65" fill="none" stroke={ring.color} strokeWidth="22" strokeDasharray={`${ring.length} ${circumference - ring.length}`} strokeDashoffset={-ring.offset} transform="rotate(-90 90 90)" />)}
         </svg>
@@ -126,10 +126,10 @@ function IntakeCard({ ctx, onOpen, segments }: CardProps) {
     <CardHeading kind="intake" ctx={ctx} badge="24 HOURS" />
     <div className="home-trend-chart">
       <svg viewBox="0 0 680 205" role="img" aria-label={`Ticket intake in the last 24 hours: ${buckets.reduce((sum, bucket) => sum + bucket.count, 0)} tickets`} preserveAspectRatio="none">
-        <line x1="34" y1="174" x2="658" y2="174" stroke="#d9e3e8" /><line x1="34" y1="111" x2="658" y2="111" stroke="#edf1f3" /><line x1="34" y1="49" x2="658" y2="49" stroke="#edf1f3" />
-        <path d={area} fill="#e7f2f5" />
-        <path d={line} fill="none" stroke="#2f7186" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((point, index) => buckets[index].count > 0 && <circle key={index} cx={point.x} cy={point.y} r="3.5" fill="#2f7186" stroke="white" strokeWidth="2" />)}
+        <line x1="34" y1="174" x2="658" y2="174" stroke="rgba(0,0,0,0.12)" /><line x1="34" y1="111" x2="658" y2="111" stroke="rgba(0,0,0,0.06)" /><line x1="34" y1="49" x2="658" y2="49" stroke="rgba(0,0,0,0.06)" />
+        <path d={area} fill="rgba(25,118,210,0.08)" />
+        <path d={line} fill="none" stroke="#1976d2" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((point, index) => buckets[index].count > 0 && <circle key={index} cx={point.x} cy={point.y} r="3.5" fill="#1976d2" stroke="white" strokeWidth="2" />)}
         {/* In the popup, each hour that has tickets is a column that lists them. */}
         {segments && buckets.map((bucket, index) => bucket.count > 0 && <rect key={bucket.start} className="insight-hour" x={points[index].x - 13} y="40" width="26" height="134" rx="4" {...segmentAttributes(segments, String(bucket.start), `${hourLabel(bucket.start)}, ${bucket.count} ticket${bucket.count === 1 ? '' : 's'}`)} />)}
         <text x="5" y="53">{max}</text><text x="12" y="178">0</text><text x="34" y="199">{hourLabel(buckets[0].start)}</text><text x="315" y="199">{hourLabel(buckets[11].start)}</text><text x="607" y="199">Now</text>

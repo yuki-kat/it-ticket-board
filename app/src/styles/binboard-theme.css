@@ -1,0 +1,233 @@
+/*
+ * Binboard theme: the Material UI look (blue, Roboto, 4px corners, MUI elevation).
+ * Colours, fonts and radii in the legacy stylesheets are rewritten at build time by scripts/postcss-binboard.js; this
+ * file holds what a value mapping can't express: component shapes, type, elevation, the header, chips, kanban lanes,
+ * tables and dialogs. Imported just before gui-fixes.css, so gui-fixes' layout fixes still win ties.
+ */
+:root {
+  --bb-primary: #1976d2;
+  --bb-primary-hover: #1565c0;
+  --bb-primary-pressed: #0d47a1;
+  --bb-primary-tint: rgba(25, 118, 210, 0.12);
+  --bb-primary-wash: rgba(25, 118, 210, 0.08);
+  --bb-text: rgba(0, 0, 0, 0.87);
+  --bb-text-2: rgba(0, 0, 0, 0.6);
+  --bb-divider: rgba(0, 0, 0, 0.12);
+  --bb-input: rgba(0, 0, 0, 0.23);
+  --bb-page: #f5f5f5;
+  --bb-surface: #ffffff;
+  --bb-head: #fafafa;
+  --bb-font: Roboto, Helvetica, Arial, sans-serif;
+  --bb-e1: 0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14), 0 1px 3px 0 rgba(0, 0, 0, 0.12);
+  --bb-e2: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  --bb-e8: 0 5px 5px -3px rgba(0, 0, 0, 0.2), 0 8px 10px 1px rgba(0, 0, 0, 0.14), 0 3px 14px 2px rgba(0, 0, 0, 0.12);
+  --bb-e24: 0 11px 15px -7px rgba(0, 0, 0, 0.2), 0 24px 38px 3px rgba(0, 0, 0, 0.14), 0 9px 46px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* ---- Base ---------------------------------------------------------------------------------------------------- */
+:root, body { font-family: var(--bb-font); color: var(--bb-text); background: var(--bb-page); }
+body, .app-shell { background: var(--bb-page); }
+button, input, select, textarea { font-family: var(--bb-font); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--bb-font); }
+:where(button, a, input, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--bb-primary); outline-offset: 2px; }
+.eyebrow, .home-hero-kicker { font-size: 12px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--bb-text-2); }
+code, pre, kbd, samp { font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* ---- Header (all pages) -------------------------------------------------------------------------------------- */
+.topbar { min-height: 65px; background: var(--bb-surface); border-bottom: 1px solid var(--bb-divider); box-shadow: none; }
+.topbar .brand, .record-page-topbar .brand { gap: 0; color: var(--bb-text); }
+.topbar .brand-home-button { padding: 0; border: 0; background: none; }
+.brand .bb-logo .bb-wordmark { font-size: 22px; letter-spacing: -0.5px; text-transform: none; color: var(--bb-text); }
+.primary-nav { align-self: stretch; gap: 4px; }
+.primary-nav button { display: flex; align-items: center; min-height: 48px; height: 100%; padding: 0 16px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--bb-text-2); font-size: 14px; font-weight: 400; letter-spacing: 0; text-decoration: none; box-shadow: none; }
+.primary-nav button:hover { background: rgba(0, 0, 0, 0.04); color: var(--bb-text); }
+.primary-nav button.active { border-bottom-color: var(--bb-primary); color: var(--bb-primary-hover); font-weight: 500; }
+.primary-nav button.active::after { display: none; }
+.topbar-label { color: var(--bb-text-2); font-size: 12px; }
+.top-actions { gap: 12px; }
+.header-tools-trigger, .header-quick-button { min-height: 40px; padding: 0 14px; border: 1px solid var(--bb-input); border-radius: 4px; background: var(--bb-surface); color: var(--bb-text); font-size: 14px; font-weight: 500; box-shadow: none; }
+.header-tools-trigger:hover, .header-quick-button:hover { background: rgba(0, 0, 0, 0.04); border-color: var(--bb-text); }
+.header-quick-button svg { color: #ed6c02; }
+.header-quick-button.active { border-color: var(--bb-primary); background: var(--bb-primary-wash); color: var(--bb-primary-hover); }
+
+/* ---- Buttons ------------------------------------------------------------------------------------------------- */
+.primary-button, .kb-primary, .ai-primary { min-height: 40px; padding: 0 20px; border: 0; border-radius: 4px; background: var(--bb-primary); color: #fff; font-size: 14px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: var(--bb-e2); }
+.primary-button:hover, .kb-page .kb-primary:hover:not(:disabled), .ai-providers-panel .ai-primary:hover { background: var(--bb-primary-hover); }
+.primary-button:active { background: var(--bb-primary-pressed); }
+.primary-button span { font-size: inherit; }
+.topbar .primary-button { min-height: 40px; }
+/* Outlined blue (MUI "outlined" variant) */
+.home-reports-link, .inventory-heading-button, .export-csv-button, .saved-view-save, .kb-heading-actions > button:not(.kb-primary), .ai-add {
+  min-height: 40px; padding: 0 16px; border: 1px solid rgba(25, 118, 210, 0.5); border-radius: 4px; background: var(--bb-surface); color: var(--bb-primary-hover); font-size: 14px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: none;
+}
+.home-reports-link:hover, .inventory-heading-button:hover, .export-csv-button:hover, .saved-view-save:hover { border-color: var(--bb-primary); background: var(--bb-primary-wash); }
+/* Outlined neutral (filters, starred, views) */
+.board-filters-button, .ticket-star-filter, .all-views-button, .inventory-filters-button, .inventory-star-filter, .inventory-action1-sync-button, .metric-show-more {
+  min-height: 40px; padding: 0 14px; border: 1px solid var(--bb-input); border-radius: 4px; background: var(--bb-surface); color: var(--bb-text); font-size: 13px; font-weight: 500; box-shadow: none;
+}
+.inventory-action1-sync-button { color: var(--bb-primary-hover); border-color: rgba(25, 118, 210, 0.5); }
+
+/* ---- Inputs -------------------------------------------------------------------------------------------------- */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { border-color: var(--bb-input); border-radius: 4px; color: var(--bb-text); }
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { border-color: var(--bb-primary); box-shadow: inset 0 0 0 1px var(--bb-primary); }
+.search-box, .inventory-search { border-color: var(--bb-input); border-radius: 4px; background: var(--bb-surface); }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):user-invalid, select:user-invalid, textarea:user-invalid { border-color: #d32f2f; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
+
+/* ---- Surfaces: MUI Paper with elevation 1 ------------------------------------------------------------------ */
+.home-kpi, .home-chart-card, .home-trend-card, .home-recent-card, .home-action-strip, .summary-strip, .list-view, .board-toolbar,
+.inventory-kpis button, .inventory-list, .inventory-toolbar, .kb-ask, .kb-reader, .kb-editor, .kb-page .kb-items button, .quick-section {
+  border: 0; border-radius: 4px; background: var(--bb-surface); box-shadow: var(--bb-e1);
+}
+.home-kpi:hover, .inventory-kpis button:hover { transform: none; box-shadow: var(--bb-e2); }
+
+/* ---- Home ---------------------------------------------------------------------------------------------------- */
+.home-hero { position: relative; overflow: hidden; border-radius: 8px; background: linear-gradient(120deg, #1565c0 0%, #1976d2 65%, #2a86e0 100%); color: #fff; box-shadow: none; }
+.home-hero::before, .home-hero::after { display: none; }
+.home-hero h1 { color: #fff; font-size: 44px; line-height: 1.1; font-weight: 500; letter-spacing: -1px; }
+.home-hero p { color: #fff; font-size: 15px; line-height: 1.5; }
+.home-hero .home-hero-kicker { color: #fff; }
+.home-hero-dot { background: #fff; box-shadow: none; }
+.home-hero-date { color: rgba(255, 255, 255, 0.9); border-color: rgba(255, 255, 255, 0.4); }
+.home-hero button:not(.bb-animated) { min-height: 44px; padding: 0 20px; border: 0; border-radius: 4px; background: #fff; color: var(--bb-primary-hover); font-size: 14px; font-weight: 500; box-shadow: none; }
+.home-hero .bb-animated, .home-hero .bb-animated:hover { flex: none; min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+.home-hero-mark { margin-left: auto; }
+.home-kpi-icon { border-radius: 8px; }
+.home-kpi-label { color: var(--bb-text-2); font-size: 14px; font-weight: 500; }
+.home-kpi strong, .home-kpi b { color: var(--bb-text); font-weight: 500; }
+.home-kpi-action { color: var(--bb-primary-hover); font-size: 14px; font-weight: 500; }
+.home-action-strip button { min-height: 36px; padding: 0 8px 0 14px; border: 1px solid var(--bb-input); border-radius: 18px; background: var(--bb-surface); color: var(--bb-text); font-size: 13px; font-weight: 500; }
+.home-action-strip button b, .home-action-strip button strong { min-width: 22px; padding: 0 6px; border-radius: 11px; background: var(--bb-primary-tint); color: var(--bb-primary-hover); font-size: 12px; text-align: center; }
+.home-section-heading h2, .home-insights-heading h2 { font-size: 22px; font-weight: 400; color: var(--bb-text); }
+.home-chart-card h3 { font-size: 16px; font-weight: 500; color: var(--bb-text); }
+.home-chart-badge { border-radius: 4px; background: rgba(0, 0, 0, 0.08); color: rgba(0, 0, 0, 0.7); }
+.home-status-track { height: 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.08); }
+.home-status-fill { border-radius: 4px; background: var(--bb-primary); }
+
+/* ---- Tickets ------------------------------------------------------------------------------------------------- */
+.page-heading h1 { font-size: 34px; font-weight: 400; letter-spacing: 0; color: var(--bb-text); }
+.page-heading .subtitle { color: var(--bb-text-2); }
+.date-chip { border: 1px solid var(--bb-input); border-radius: 16px; background: var(--bb-surface); color: var(--bb-text); }
+.metric-icon { border-radius: 8px; }
+.metric-label { color: var(--bb-text-2); font-size: 12px; }
+.metric-value { color: var(--bb-text); font-weight: 500; }
+/* Tabs with a 2px blue underline */
+.ticket-browser-tab, .inventory-browser-tab { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; box-shadow: none; }
+.ticket-browser-tab button, .inventory-browser-tab button { color: var(--bb-text-2); font-size: 14px; font-weight: 400; }
+.ticket-browser-tab.active, .inventory-browser-tab.active { border-bottom-color: var(--bb-primary); background: none; }
+.ticket-browser-tab.active button, .inventory-browser-tab.active button { color: var(--bb-primary-hover); font-weight: 500; }
+.ticket-browser-tab::before, .ticket-browser-tab::after, .inventory-browser-tab::before, .inventory-browser-tab::after { display: none; }
+.board-label { font-size: 20px; font-weight: 500; color: var(--bb-text); }
+/* Segmented view switcher */
+.view-segmented { display: flex; flex: none; max-width: 100%; overflow-x: auto; border: 1px solid var(--bb-input); border-radius: 4px; background: var(--bb-surface); }
+.view-segmented button { flex: none; min-height: 40px; padding: 0 14px; border: 0; border-right: 1px solid var(--bb-input); border-radius: 0; background: var(--bb-surface); color: var(--bb-text); font-size: 13px; font-weight: 400; white-space: nowrap; }
+.view-segmented button:last-child { border-right: 0; }
+.view-segmented button.active { background: var(--bb-primary-tint); color: var(--bb-primary-hover); font-weight: 500; }
+/* Table */
+.task-table th, .inventory-table th { position: sticky; top: 0; z-index: 1; background: var(--bb-head); border-bottom: 1px solid var(--bb-divider); color: var(--bb-text-2); font-size: 12px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; }
+.task-table td, .inventory-table td { border-bottom: 1px solid var(--bb-divider); color: var(--bb-text); font-size: 14px; }
+.task-table tbody tr:hover td, .inventory-table tbody tr:hover td { background: rgba(0, 0, 0, 0.04); }
+.list-ticket-id, .inventory-id, .ticket-id-link { font-family: var(--bb-font); font-weight: 500; color: var(--bb-primary-hover); letter-spacing: 0.2px; }
+.list-title-link, .list-title { color: var(--bb-text); font-weight: 500; }
+.list-type, .list-date { color: var(--bb-text-2); }
+/* Priority chips: tinted fill, dark ink (warning/info inks are too light for small text on white) */
+.severity-badge { display: inline-block; padding: 2px 8px; border: 0; border-radius: 4px; font-size: 12px; font-weight: 500; line-height: 1.5; }
+.severity-badge.p1, .home-recent-priority.p1 { background: rgba(211, 47, 47, 0.12); color: #c62828; }
+.severity-badge.p2, .home-recent-priority.p2 { background: rgba(237, 108, 2, 0.14); color: #b45309; }
+.severity-badge.p3, .home-recent-priority.p3 { background: rgba(2, 136, 209, 0.12); color: #01579b; }
+.severity-badge.p4, .home-recent-priority.p4 { background: rgba(0, 0, 0, 0.08); color: rgba(0, 0, 0, 0.7); }
+/* State chips */
+.status-pill { padding: 2px 10px; border: 0; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.status-pill.status-new { background: rgba(0, 0, 0, 0.08); color: rgba(0, 0, 0, 0.7); }
+.status-pill.status-in-progress { background: var(--bb-primary-tint); color: var(--bb-primary-hover); }
+.status-pill.status-waiting-on-user { background: rgba(156, 39, 176, 0.12); color: #7b1fa2; }
+.status-pill.status-escalated { background: rgba(237, 108, 2, 0.14); color: #b45309; }
+.status-pill.status-resolved { background: rgba(46, 125, 50, 0.12); color: #1b5e20; }
+/* Kanban: tinted 8px lanes, white 4px cards */
+.lane { border: 0; border-radius: 8px; background: var(--bb-primary-wash); box-shadow: none; }
+.lane-heading, .lane-title { color: var(--bb-text); }
+.lane-title h2, .lane-heading h2 { font-size: 16px; font-weight: 500; }
+.lane-count { min-width: 24px; padding: 0 8px; border: 0; border-radius: 12px; background: rgba(0, 0, 0, 0.08); color: var(--bb-text); font-size: 12px; font-weight: 500; }
+.ticket-card { border: 0; border-radius: 4px; background: var(--bb-surface); box-shadow: var(--bb-e1); }
+.ticket-card-face { border: 0; border-radius: 4px; background: var(--bb-surface); }
+.ticket-card.overdue, .ticket-card.at-risk { box-shadow: var(--bb-e1); }
+.ticket-card h3 { color: var(--bb-text); font-size: 14px; font-weight: 500; line-height: 1.4; }
+.avatar { background: rgba(0, 0, 0, 0.12); color: var(--bb-text); }
+/* Kanban Detailed cards: the description column was a fixed 280px beside a ~190px card, which squeezed the main
+   column to zero width (titles one letter per line). Stack it under the main content instead. */
+.ticket-card-front-layout { display: flex; flex-direction: column; min-width: 0; }
+.ticket-card-left { flex: none; width: 100%; min-width: 0; }
+.ticket-card-right { flex: none; width: 100%; max-width: 100%; min-width: 0; }
+.ticket-card-right .ticket-description-section { width: auto; max-width: 100%; }
+.ticket-card-left .department-line { position: static; width: auto; }
+
+/* ---- Inventory ----------------------------------------------------------------------------------------------- */
+.inventory-heading h1 { font-size: 34px; font-weight: 400; letter-spacing: 0; color: var(--bb-text); }
+.inventory-kpis button span { color: var(--bb-text-2); font-size: 13px; font-weight: 500; }
+.inventory-kpis button strong { color: var(--bb-text); font-size: 30px; font-weight: 500; letter-spacing: 0; }
+.inventory-kpis button.selected { background: var(--bb-surface); box-shadow: var(--bb-e1), inset 0 0 0 2px var(--bb-primary); }
+.inventory-tabs button { border-bottom: 2px solid transparent; border-radius: 0; color: var(--bb-text-2); }
+.inventory-tabs button.active { border-bottom-color: var(--bb-primary); color: var(--bb-primary-hover); font-weight: 500; }
+.inventory-status { border-radius: 12px; font-size: 12px; font-weight: 500; }
+.inventory-health-badge { border-radius: 16px; font-weight: 500; }
+.inventory-view-buttons { border: 1px solid var(--bb-input); border-radius: 4px; background: var(--bb-surface); box-shadow: none; }
+.inventory-view-buttons button { border-radius: 0; }
+.inventory-view-buttons button.active { background: var(--bb-primary-tint); color: var(--bb-primary-hover); box-shadow: none; }
+
+/* ---- Escalation (Tailwind utilities, re-pointed from orange to the primary blue) ------------------------------ */
+.escalation-page h1 { font-size: 28px; font-weight: 400; color: var(--bb-text); }
+.escalation-page .text-orange-600, .escalation-page .text-orange-700 { color: var(--bb-primary-hover); }
+.escalation-page .bg-orange-600 { background-color: var(--bb-primary); border-radius: 4px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: var(--bb-e2); }
+.escalation-page .hover\:bg-orange-700:hover { background-color: var(--bb-primary-hover); }
+.escalation-page .border-orange-600 { border-color: var(--bb-primary); }
+.escalation-page .focus\:ring-orange-500:focus { --tw-ring-color: var(--bb-primary); }
+.escalation-role { padding: 2px 10px; border-radius: 12px; background: var(--bb-primary-tint); color: var(--bb-primary-hover); font-size: 12px; font-weight: 500; }
+.escalation-info { border: 1px solid rgba(2, 136, 209, 0.35); border-radius: 4px; background: rgba(2, 136, 209, 0.1); }
+.escalation-info .text-blue-600 { color: #0288d1; }
+.escalation-info .text-blue-900, .escalation-info .text-blue-800 { color: var(--bb-text); }
+.escalation-tabs { gap: 0; border-bottom: 1px solid var(--bb-divider); }
+.escalation-tabs button { min-height: 48px; padding: 0 16px; font-size: 14px; }
+.escalation-tabs button.border-orange-600 { color: var(--bb-primary-hover); font-weight: 500; }
+.escalation-tabs button.border-transparent { color: var(--bb-text-2); font-weight: 400; }
+.escalation-page .bg-white.rounded-lg, .escalation-page .bg-white.border { border: 0; border-radius: 4px; box-shadow: var(--bb-e1); }
+.escalation-page table th { background: var(--bb-head); color: var(--bb-text-2); font-size: 12px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; }
+.escalation-page table td, .escalation-page table th { border-color: var(--bb-divider); }
+.escalation-page input[type="number"] { height: 40px; border: 1px solid var(--bb-input); border-radius: 4px; }
+
+/* ---- Dialogs and side panels --------------------------------------------------------------------------------- */
+.matrix-panel, .form-panel, .ticket-record-panel, .inventory-detail-panel, .inventory-action-panel, .ai-providers-panel, .views-dialog, .saved-view-dialog, .work-notes-popup, .description-popup {
+  border: 0; border-radius: 4px; box-shadow: var(--bb-e24);
+}
+.close-button { border-radius: 50%; }
+
+/* ---- Logo placement ------------------------------------------------------------------------------------------ */
+.signin-brand { display: flex; align-items: center; gap: 12px; }
+.signin-brand h1.bb-wordmark { margin: 0; font-size: 28px; }
+
+/* ---- Phone --------------------------------------------------------------------------------------------------- */
+@media (max-width: 720px) {
+  .home-hero-mark { display: none; }
+  .home-hero h1 { font-size: 32px; }
+  .primary-nav button { padding: 0 8px; }
+}
+
+/* ---- Polish after the first screenshots ---------------------------------------------------------------------- */
+.ticket-card-face { box-shadow: none; }
+.ticket-browser-tabs .ticket-browser-tab button, .inventory-browser-tabs .inventory-browser-tab button { font-size: 14px; color: var(--bb-text-2); }
+.ticket-browser-tabs .ticket-browser-tab.active button, .inventory-browser-tabs .inventory-browser-tab.active button { color: var(--bb-primary-hover); font-weight: 500; }
+:is(.saved-view-select, .filter-field, .inventory-more-views, .table-filters-row, label) select { color: var(--bb-text); }
+.saved-view-save, .export-csv-button { font-size: 13px; }
+.task-table .list-title-link, .task-table .list-title { font-size: 14px; }
+.inventory-table td b { font-size: 14px; color: var(--bb-text); }
+.list-view-heading :is(b, strong, h2), .inventory-list-caption b { color: var(--bb-text); font-weight: 500; }
+.board-filters-button, .inventory-filters-button { font-size: 13px; }
+/* Phone: keep the mark in the header (an older rule hides the button's text span), drop the hero toy and the
+   segmented switcher (All Views still offers every view). */
+@media (max-width: 720px) {
+  .home-hero .home-hero-mark { display: none; }
+  .board-toolbar .view-segmented { display: none; }
+}
+@media (max-width: 520px) {
+  .topbar .brand-home-button > .bb-logo { display: inline-flex; }
+  .topbar .brand-home-button .bb-wordmark { display: none; }
+}

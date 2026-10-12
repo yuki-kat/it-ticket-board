@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatedBinboardMark } from '../components/BinboardLogo'
 import { useAuth } from '../contexts/AuthContext'
 import '../styles/signin-page.css'
 
@@ -38,7 +39,7 @@ export default function SignInPage({ onSignIn, onSkip }: { onSignIn: () => void;
     <div className="signin-card">
       <div className="signin-form-side">
         <div className="signin-header">
-          <h1>OPS <b>KANBAN</b></h1>
+          <div className="signin-brand"><AnimatedBinboardMark size={56} /><h1 className="bb-wordmark"><b>Bin</b>board</h1></div>
           <h2>Every open ticket, in front of the right person.</h2>
         </div>
         <form className="signin-form" onSubmit={handleSubmit}>

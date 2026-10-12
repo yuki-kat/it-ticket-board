@@ -1,0 +1,15 @@
+/* Binboard logo: the mark, the wordmark, and the clickable animated mark (components/BinboardLogo.tsx). */
+.bb-logo { display: inline-flex; align-items: center; gap: 10px; }
+.bb-mark { display: block; flex: none; }
+.bb-wordmark { font-family: Roboto, Helvetica, Arial, sans-serif; font-size: 22px; font-weight: 400; line-height: 1; letter-spacing: -0.5px; color: rgba(0, 0, 0, 0.87); text-transform: none; white-space: nowrap; }
+.bb-wordmark b { font-weight: 700; }
+
+.bb-animated { display: block; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.bb-animated:focus-visible { outline: 2px solid #1976d2; outline-offset: 4px; }
+.bb-animated.on-dark:focus-visible { outline-color: #ffffff; }
+.bb-animated svg { display: block; transition: transform .15s ease; }
+.bb-animated:active svg { transform: scale(.96); }
+.bb-animated.ready .bb-card { transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .bb-animated .bb-card, .bb-animated svg { transition: none !important; }
+}
