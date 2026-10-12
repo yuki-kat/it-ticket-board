@@ -118,9 +118,8 @@
   .kb-page .kb-reader-actions .kb-danger { margin-left: 0; }
 }
 
-/* Below 1024px the nav already runs into the header buttons (on main too), so the KB link is left out there;
-   Tools → Knowledge base opens the page at every width. */
-@media (max-width: 1023px) { .primary-nav .nav-kb { display: none; } }
+/* The KB link shows at every width: below the header breakpoint the nav has its own row (gui-fixes.css).
+   Tools → Knowledge base also opens the page. */
 
 /* Ticket panel: Find resolution → Search knowledge base. Reuses the .ticket-search-results popout. */
 .ticket-kb-results .search-results-content { display: grid; gap: 8px; }

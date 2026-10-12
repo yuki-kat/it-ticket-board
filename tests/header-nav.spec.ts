@@ -1,9 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { openApp } from './helpers'
 
-// The main navigation in the header used to run underneath the header buttons below 1024px wide
-// (at phone width "Escalation" was half hidden under Quick actions). Below 1024px it now has its own
-// row under the logo and the buttons; from 1024px it sits beside them as before.
+// The main navigation in the header used to run underneath the header buttons on narrower screens
+// (at phone width "Escalation" was half hidden under Quick actions). Below 1240px it now has its own
+// row under the logo and the buttons; from 1240px it sits beside them. 1200/1240 sit either side of that line.
 
 type NavReport = { link: string; problem: string }[]
 
@@ -37,24 +37,25 @@ const headerButtonsOnOneLine = (page: Page) => page.locator('.top-actions').eval
   return Math.max(...tops) - Math.min(...tops) <= 2
 })
 
-for (const width of [320, 390, 600, 768, 1024, 1280]) {
+for (const width of [320, 390, 600, 768, 1024, 1200, 1240, 1440]) {
   test.describe(`Header at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
     test.beforeEach(async ({ page }) => openApp(page))
 
     test('every nav link is fully visible, clickable and clear of the header buttons', async ({ page }) => {
-      await expect(page.locator('.primary-nav button')).toHaveCount(5)
+      await expect(page.locator('.primary-nav button')).toHaveCount(6) // Home, Tickets, Search, Inventory, Escalation, KB
       expect(await navProblems(page)).toEqual([])
       expect(await headerButtonsOnOneLine(page)).toBe(true)
       expect(await pageScrollsSideways(page)).toBe(false)
     })
 
     test('the last link opens its page without scrolling the nav first', async ({ page }) => {
-      const escalation = page.locator('.primary-nav button', { hasText: 'Escalation' })
-      const box = (await escalation.boundingBox())!
+      const kb = page.locator('.primary-nav button').last()
+      await expect(kb).toHaveText('KB')
+      const box = (await kb.boundingBox())!
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
-      await expect(escalation).toHaveAttribute('aria-current', 'page')
-      await expect(page).toHaveURL(/#\/escalation$/)
+      await expect(kb).toHaveAttribute('aria-current', 'page')
+      await expect(page).toHaveURL(/#\/kb$/)
     })
   })
 }
@@ -63,14 +64,8 @@ test.describe('Header with room to grow', () => {
   test.use({ viewport: { width: 390, height: 800 } })
   test.beforeEach(async ({ page }) => openApp(page))
 
-  test('a sixth nav link (such as KB) still fits at phone width', async ({ page }) => {
-    await page.locator('.primary-nav').evaluate((nav) => { const link = document.createElement('button'); link.textContent = 'KB'; nav.append(link) })
-    expect(await navProblems(page)).toEqual([])
-    expect(await pageScrollsSideways(page)).toBe(false)
-  })
-
   test('if links ever outgrow the row, the row scrolls instead of the page', async ({ page }) => {
-    await page.locator('.primary-nav').evaluate((nav) => { for (const name of ['KB', 'Reports', 'Assets']) { const link = document.createElement('button'); link.textContent = name; nav.append(link) } })
+    await page.locator('.primary-nav').evaluate((nav) => { for (const name of ['Reports', 'Assets', 'Changes']) { const link = document.createElement('button'); link.textContent = name; nav.append(link) } })
     const nav = await page.locator('.primary-nav').evaluate((element) => ({ scrolls: element.scrollWidth > element.clientWidth, overflowX: getComputedStyle(element).overflowX }))
     expect(nav).toEqual({ scrolls: true, overflowX: 'auto' })
     expect(await pageScrollsSideways(page)).toBe(false)
@@ -78,7 +73,7 @@ test.describe('Header with room to grow', () => {
 })
 
 // On the hosted site a sync badge ("Saved to <workspace>", up to 240px) joins the header buttons.
-for (const width of [700, 1024, 1100]) {
+for (const width of [700, 1024, 1240, 1300]) {
   test.describe(`Header with a sync badge at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
     test.beforeEach(async ({ page }) => openApp(page))
