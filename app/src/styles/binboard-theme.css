@@ -230,4 +230,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 @media (max-width: 520px) {
   .topbar .brand-home-button > .bb-logo { display: inline-flex; }
   .topbar .brand-home-button .bb-wordmark { display: none; }
+  /* Uppercase labels are wider: keep Quick scan, Leaver transfer and the + button on one row. */
+  .inventory-heading-actions { flex-wrap: nowrap; }
+  .inventory-heading-button { padding: 0 10px; font-size: 12px; letter-spacing: .2px; white-space: nowrap; }
+  .inventory-heading-actions .primary-button { flex: none; width: 40px; }
 }
