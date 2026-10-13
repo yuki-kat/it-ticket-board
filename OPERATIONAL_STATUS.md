@@ -87,7 +87,6 @@ open index.html
 Choose from:
 - **Railway** (Recommended) - Full stack, $4-5/month
 - **Render** - Generous free tier
-- **Vercel** - Frontend only (free)
 - **Oracle Cloud** - Always free tier
 
 See `FREE_DEPLOYMENT_OPTIONS.md` for detailed setup.
