@@ -268,7 +268,7 @@ CREATE TABLE IF NOT EXISTS escalation_matrices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id UUID NOT NULL UNIQUE REFERENCES teams(id) ON DELETE CASCADE,
   file_name VARCHAR(255) NOT NULL,
-  file_type VARCHAR(50) NOT NULL, -- image/png, image/jpeg, application/pdf, etc.
+  file_type VARCHAR(255) NOT NULL, -- image/png, application/pdf, Word and Excel types, etc.
   file_size INT NOT NULL,
   file_path VARCHAR(500) NOT NULL,
   uploaded_by UUID NOT NULL REFERENCES users(id),
@@ -281,7 +281,7 @@ CREATE TABLE IF NOT EXISTS sla_matrices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id UUID NOT NULL UNIQUE REFERENCES teams(id) ON DELETE CASCADE,
   file_name VARCHAR(255) NOT NULL,
-  file_type VARCHAR(50) NOT NULL, -- image/png, image/jpeg, application/pdf, etc.
+  file_type VARCHAR(255) NOT NULL, -- image/png, application/pdf, Word and Excel types, etc.
   file_size INT NOT NULL,
   file_path VARCHAR(500) NOT NULL,
   uploaded_by UUID NOT NULL REFERENCES users(id),
@@ -295,6 +295,9 @@ ALTER TABLE escalation_matrices ADD COLUMN IF NOT EXISTS file_data BYTEA;
 ALTER TABLE escalation_matrices ALTER COLUMN file_path DROP NOT NULL;
 ALTER TABLE sla_matrices ADD COLUMN IF NOT EXISTS file_data BYTEA;
 ALTER TABLE sla_matrices ALTER COLUMN file_path DROP NOT NULL;
+-- Word and Excel MIME types are 65–71 characters; the original VARCHAR(50) rejected them.
+ALTER TABLE escalation_matrices ALTER COLUMN file_type TYPE VARCHAR(255);
+ALTER TABLE sla_matrices ALTER COLUMN file_type TYPE VARCHAR(255);
 
 -- Escalation history and audit trail
 CREATE TABLE IF NOT EXISTS escalation_history (

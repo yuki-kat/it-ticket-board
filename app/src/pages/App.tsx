@@ -40,6 +40,8 @@ import { loadArticles, rankArticles, type KbArticle } from '../lib/kb'
 import { generateTicketSuggestions } from '../api/gemini'
 import EscalationPage from './EscalationPage'
 import CompactSLATimer from '../components/CompactSLATimer'
+import { ImportedMatrixView, MatrixImportBar } from '../components/EscalationMatrixImport'
+import { importedThreshold, loadImportedMatrix, tierContacts, type ImportedMatrix } from '../lib/escalationMatrix'
 import { onPauseChange, pausedMsFor, syncStatusPause } from '../utils/slaPause'
 
 type Status = 'New' | 'In Progress' | 'Waiting on User' | 'Escalated' | 'Resolved'
@@ -590,6 +592,7 @@ function App() {
   const [splitLeft, setSplitLeft] = useState<SplitPaneMode>('list')
   const [splitRight, setSplitRight] = useState<SplitPaneMode>('details')
   const [showMatrix, setShowMatrix] = useState(false)
+  const [importedMatrix, setImportedMatrix] = useState<ImportedMatrix | null>(() => loadImportedMatrix())
   const [matrixFocusId, setMatrixFocusId] = useState('')
   const [showModel, setShowModel] = useState(false)
 
@@ -922,11 +925,12 @@ function App() {
   const escalate = (ticket: TicketItem) => {
     if (ticket.status === 'Resolved' || ticket.currentTier >= 3) return
     const nextTier = (ticket.currentTier + 1) as 2 | 3
-    const contact = tierRows[nextTier - 1]
+    // An imported matrix (Tools → Escalation matrix → Import from Excel) supplies the contact and the threshold wording.
+    const contact = tierContacts(tierRows)[nextTier - 1]
     const elapsedMs = Date.now() - new Date(ticket.createdAt).getTime()
     const thresholdMs = escalationTargetMs(ticket.severity, nextTier)
-    const thresholdText = severityRows.find((row) => row.level === ticket.severity)?.[nextTier === 2 ? 'tier2' : 'tier3'] || 'per matrix'
-    const why = elapsedMs >= thresholdMs ? `The ${thresholdText} escalation threshold has been reached.` : `Manual escalation requested before the ${thresholdText} threshold.`
+    const thresholdText = importedThreshold(ticket.severity, nextTier) || severityRows.find((row) => row.level === ticket.severity)?.[nextTier === 2 ? 'tier2' : 'tier3'] || 'per matrix'
+    const why = elapsedMs >= thresholdMs ? `The Tier ${nextTier} escalation threshold in the matrix (${thresholdText}) has been reached.` : `Manual escalation requested before the Tier ${nextTier} threshold in the matrix (${thresholdText}).`
     const sla = slaTime(ticket, Date.now())
     const reason = ticket.notes || ticket.description || 'No additional notes recorded.'
     const subject = `[TEST DRAFT – do not action] Escalation to ${contact.tier} for ${ticket.id} (${ticket.severity.split(' – ')[0]})`
@@ -1160,13 +1164,18 @@ function App() {
     {showMatrix && <Overlay className="matrix-overlay" onClose={() => closeMatrix()}><section className="matrix-panel" role="dialog" aria-modal="true" aria-labelledby="matrix-title">
       <div className="panel-header"><div><div className="eyebrow">REFERENCE</div><h2 id="matrix-title">Escalation matrix</h2></div><button className="close-button" onClick={closeMatrix} aria-label="Close matrix"><X size={19} /></button></div>
       <p className="panel-intro">Use severity to guide response, resolution, and escalation. Select a ticket number to filter the board to that record.</p>
+      <MatrixImportBar matrix={importedMatrix} onChange={setImportedMatrix} />
+      {importedMatrix ? <ImportedMatrixView matrix={importedMatrix} tickets={tickets} focusId={matrixFocusId} onOpenTicket={openRelatedTicket} /> : <>
       <h3 className="section-label">Priority & service levels</h3><div className="severity-list">{severityRows.map((row) => {
         const related = tickets.filter((ticket) => ticket.severity === row.level)
         return <article className="severity-row" key={row.level}><div className="severity-top"><span className={`severity-badge ${sevClass(row.level)}`}>{row.level.split(' – ')[0]}</span><span className="severity-name">{row.level.split(' – ')[1]}</span></div><p>{row.definition}</p><div className="example"><b>Example</b>{row.examples}</div><div className="sla-grid"><div><span>First response</span><b>{row.response}</b></div><div><span>Resolution target</span><b>{row.resolution}</b></div><div><span>Escalate to Tier 2</span><b>{row.tier2}</b></div><div><span>Escalate to Tier 3</span><b>{row.tier3}</b></div></div><div className="related-tickets"><span>Related tickets</span>{related.length ? related.map((ticket) => <button className={matrixFocusId === ticket.id ? 'selected' : ''} key={ticket.id} onClick={() => openRelatedTicket(ticket.id)} title={`Show ${ticket.title} on the board`}>{ticket.id}</button>) : <em>None on board</em>}</div></article>
       })}</div>
       <h3 className="section-label contacts-label">Escalation contacts · placeholders</h3><div className="contacts-table"><div className="contact-head"><span>Tier</span><span>Role / contact</span><span>Escalate if unresolved</span></div>{tierRows.map((row) => <div className="contact-row" key={row.tier}><b>{row.tier}</b><span>{row.role}<small>{row.name} · <a href={`mailto:${row.email}?subject=IT%20escalation`} title="Placeholder email address; replace with the real contact">{row.email}</a></small></span><span>{row.when}<small>{row.phone}</small></span></div>)}</div>
       <h3 className="section-label contacts-label">Escalation path by priority</h3><div className="contacts-table escalation-path"><div className="contact-head"><span>Priority</span><span>Tier 1 response</span><span>Tier 2 / Tier 3</span></div>{severityRows.map((row) => <div className="contact-row" key={`path-${row.level}`}><b>{row.level.split(' – ')[0]}</b><span>Respond within {row.response}</span><span>Tier 2: {row.tier2}<small>Tier 3: {row.tier3}</small></span></div>)}</div>
-      <div className="matrix-note">Source: Escalation Matrix - VW.xlsx <span>The source has no contact names, emails, or phone numbers. Example.com addresses above are placeholders. Email actions open a test draft only; nothing sends automatically.</span></div>
+      </>}
+      {importedMatrix
+        ? <div className="matrix-note">Source: {importedMatrix.fileName} <span>Escalation emails use these contacts and thresholds. SLA timers on tickets keep the board's built-in timings. Email actions open a test draft only; nothing sends automatically.</span></div>
+        : <div className="matrix-note">Source: built-in example matrix <span>Example.com addresses above are placeholders; import your own matrix to replace them. Email actions open a test draft only; nothing sends automatically.</span></div>}
     </section></Overlay>}
 
     {showImport && <Overlay className="import-overlay" onClose={() => setShowImport(false)}><section className="form-panel import-panel" role="dialog" aria-modal="true" aria-labelledby="import-title"><div className="panel-header"><div><div className="eyebrow">EMAIL INTAKE · LOCAL DEMO</div><h2 id="import-title">Create a task from email</h2></div><button className="close-button" onClick={() => setShowImport(false)} aria-label="Close email import"><X size={19} /></button></div><p className="panel-intro">Paste the email text. The board will suggest fields from labels such as Subject, Issue, Requester, Affected user, Priority, and Assignment group. You can review and edit everything before creating the task.</p><label className="field email-paste-field">Email text<textarea autoFocus value={emailText} onChange={(event) => { setEmailText(event.target.value); setImportError('') }} placeholder={'From: Yuki Katayama <yuki@example.com>\nSubject: VPN sign-in issue\n\nIssue: VPN sign-in failing for remote staff\nRequester: Yuki Katayama\nAffected user: Yuki Katayama\nPriority: P2\nImpact: Remote access is unavailable.'} rows={14} /></label><div className="import-note">Email text stays in this browser. Import only extracts ticket details; it does not open links, follow instructions, or send messages.</div>{importError && <div className="form-error" role="alert">{importError}</div>}<div className="form-footer"><button className="text-button" onClick={() => setShowImport(false)}>Cancel</button><button className="primary-button" onClick={importEmail}><Mail size={15} /> Review ticket fields</button></div></section></Overlay>}
@@ -2309,7 +2318,7 @@ function TicketCard({ ticket, index, laneCount, boardBy, now, move, remove, addU
   const dueLabel = due ? `${isOverdue ? 'Past due' : 'Due'} ${new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(due)}` : 'No due date'
   const resolutionSla = slaTime(ticket, now)
   const completedTasks = ticket.universalTasks.filter((task) => task.done).length
-  const nextContact = ticket.currentTier < 3 ? tierRows[ticket.currentTier] : null
+  const nextContact = ticket.currentTier < 3 ? tierContacts(tierRows)[ticket.currentTier] : null
   const elapsedLogged = loggedSecondsNow(ticket, now)
   const createdLabel = ticket.createdAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ticket.createdAt)) : 'Not recorded'
   const addTask = () => { if (!taskTitle.trim()) return; addUniversalTask(ticket.id, taskTitle.trim()); setTaskTitle('') }

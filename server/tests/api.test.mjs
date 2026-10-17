@@ -83,6 +83,15 @@ test('matrix uploads: admin can upload and download, wrong input is rejected, no
   assert.equal(download.status, 200)
   assert.ok(Buffer.from(await download.arrayBuffer()).equals(png), 'download must match the uploaded bytes')
 
+  // Excel workbooks are accepted, also when the browser sends them as a generic binary type.
+  const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  const workbook = Buffer.from('PK\x03\x04' + randomBytes(64).toString('hex'))
+  assert.equal((await upload(team.id, admin, { type: xlsxType, bytes: workbook, name: 'matrix.xlsx' })).status, 200)
+  const generic = await upload(team.id, admin, { type: 'application/octet-stream', bytes: workbook, name: 'Escalation Points.xlsx' })
+  assert.equal(generic.status, 200)
+  assert.equal((await generic.json()).file_type, xlsxType, 'a generic upload is stored with the real Excel type')
+  assert.equal((await upload(team.id, admin, { type: 'application/octet-stream', name: 'tool.bin' })).status, 400)
+
   const wrongType = await upload(team.id, admin, { type: 'application/x-msdownload', name: 'tool.exe' })
   assert.equal(wrongType.status, 400)
   assert.match((await wrongType.json()).error, /File type not allowed/)

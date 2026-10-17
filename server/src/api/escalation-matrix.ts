@@ -208,13 +208,25 @@ const ALLOWED_TYPES = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
 ];
+// Some browsers send Excel files as a generic binary type; accept those by extension and store the real type.
+const EXCEL_BY_EXTENSION: Record<string, string> = {
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.xls': 'application/vnd.ms-excel',
+};
+const fileType = (file: Express.Multer.File) => {
+  if (ALLOWED_TYPES.includes(file.mimetype)) return file.mimetype;
+  const extension = /\.[^.]+$/.exec(file.originalname.toLowerCase())?.[0] || '';
+  return file.mimetype === 'application/octet-stream' ? EXCEL_BY_EXTENSION[extension] : undefined;
+};
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_BYTES },
   fileFilter: (_req: Request, file, cb: FileFilterCallback) => {
-    if (ALLOWED_TYPES.includes(file.mimetype)) cb(null, true);
+    if (fileType(file)) cb(null, true);
     else cb(new Error(`File type not allowed: ${file.mimetype}`));
   },
 });
@@ -264,7 +276,7 @@ function addMatrixRoutes(kind: MatrixKind) {
            file_name = $2, file_type = $3, file_size = $4, file_data = $5, file_path = NULL,
            uploaded_by = $6, updated_at = CURRENT_TIMESTAMP
          RETURNING ${MATRIX_COLUMNS}`,
-        [teamId, file.originalname, file.mimetype, file.size, file.buffer, req.user?.user_id]
+        [teamId, file.originalname, fileType(file), file.size, file.buffer, req.user?.user_id]
       );
       await removeLegacyFile(previous.rows[0]?.file_path);
       res.json(result.rows[0]);

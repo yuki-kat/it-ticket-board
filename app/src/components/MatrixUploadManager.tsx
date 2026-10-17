@@ -165,14 +165,14 @@ export default function MatrixUploadManager({
             <div className="flex flex-col items-center gap-2">
               <Upload size={32} className="text-gray-400" />
               <span className="text-sm font-medium text-gray-700">Upload {type} matrix</span>
-              <span className="text-xs text-gray-500">PDF, PNG, JPG, or DOCX (max 10MB)</span>
+              <span className="text-xs text-gray-500">PDF, PNG, JPG, DOCX or Excel (max 10MB)</span>
             </div>
             <input
               type="file"
               onChange={handleFileUpload}
               disabled={uploading}
               className="hidden"
-              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt"
+              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt,.xlsx,.xls"
             />
           </label>
           {uploading && <p className="text-sm text-gray-500 mt-2">Uploading...</p>}
@@ -233,7 +233,7 @@ export default function MatrixUploadManager({
                 onChange={handleFileUpload}
                 disabled={uploading}
                 className="hidden"
-                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt"
+                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt,.xlsx,.xls"
               />
             </div>
           )}
