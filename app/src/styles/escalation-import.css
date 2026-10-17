@@ -1,0 +1,30 @@
+/* Tools → Escalation matrix: Import from Excel and the imported matrix view (components/EscalationMatrixImport.tsx). */
+.matrix-import { display: grid; gap: 8px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 4px; background: #ffffff; }
+.matrix-import-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.matrix-import-button, .matrix-reset-button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 4px; font: 500 13px/1 Roboto, Helvetica, Arial, sans-serif; letter-spacing: 0.4px; cursor: pointer; }
+.matrix-import-button { border: 0; background: #1976d2; color: #ffffff; text-transform: uppercase; box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12); }
+.matrix-import-button:hover { background: #1565c0; }
+.matrix-import-button:disabled { opacity: 0.7; cursor: progress; }
+.matrix-reset-button { border: 1px solid rgba(25, 118, 210, 0.5); background: #ffffff; color: #1565c0; }
+.matrix-reset-button:hover { border-color: #1976d2; background: rgba(25, 118, 210, 0.08); }
+.matrix-import-status { margin: 0; color: rgba(0, 0, 0, 0.6); font-size: 13px; line-height: 1.5; }
+.matrix-import-status b { color: rgba(0, 0, 0, 0.87); font-weight: 500; overflow-wrap: anywhere; }
+.matrix-import-error { margin: 0; padding: 8px 10px; border-radius: 4px; background: rgba(211, 47, 47, 0.08); color: #c62828; font-size: 13px; }
+
+.matrix-routes, .matrix-contacts { display: grid; gap: 8px; }
+.matrix-route { padding: 12px 14px; border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 4px; background: #ffffff; }
+.matrix-route-head { display: grid; gap: 2px; margin-bottom: 8px; }
+.matrix-route-head b { color: rgba(0, 0, 0, 0.87); font-size: 14px; font-weight: 500; }
+.matrix-route-head small { color: rgba(0, 0, 0, 0.6); font-size: 12px; }
+.matrix-route-tiers { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.matrix-route-tiers li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 13px; color: rgba(0, 0, 0, 0.87); }
+.matrix-route-tiers li > span, .matrix-route-queue > span { color: rgba(0, 0, 0, 0.6); font-size: 11px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; }
+.matrix-route-tiers li div { display: grid; gap: 2px; overflow-wrap: anywhere; white-space: pre-line; }
+.matrix-route-tiers a, .matrix-contact a { color: #1565c0; font-size: 12px; overflow-wrap: anywhere; }
+.matrix-route-queue { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.08); font-size: 12px; color: rgba(0, 0, 0, 0.6); overflow-wrap: anywhere; }
+.matrix-contact { display: grid; gap: 2px; padding: 10px 14px; border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 4px; background: #ffffff; font-size: 13px; color: rgba(0, 0, 0, 0.87); }
+.matrix-contact b { font-weight: 500; }
+.matrix-contact > span { white-space: pre-line; overflow-wrap: anywhere; }
+.matrix-contact small { display: flex; flex-wrap: wrap; gap: 4px 12px; color: rgba(0, 0, 0, 0.6); font-size: 12px; }
+.matrix-contact small > span { white-space: pre-line; }
+.matrix-contact em { font-style: normal; }
