@@ -1,6 +1,6 @@
 # Binboard launch videos
 
-Source for the two promo videos and their audio: a 60-second sales video and a 34-second open-source showcase, both 1920×1080. Everything on screen is sample data, and the escalation workbook is the made-up test fixture.
+Source for the promo videos and their audio, all 1920×1080: a 60-second sales video, a 34-second open-source showcase, and a 1:41 guided tour (`record-tour.mjs`, music section `tour`). Everything on screen is sample data, and the escalation workbook is the made-up test fixture.
 
 | Folder | What's in it |
 | --- | --- |
@@ -31,7 +31,7 @@ Run these from the repository root.
    node marketing/video/record/record-sales.mjs "$PWD/index.html" "$PWD/tests/fixtures/escalation-matrix-sample.xlsx" marketing/video/work/sales-take
    node marketing/video/record/record-oss.mjs "$PWD/index.html" "$PWD/tests/fixtures/escalation-matrix-sample.xlsx" marketing/video/work/oss-take
    ```
-   The open-source recorder serves the board on 127.0.0.1:4192 and stands in for the AI API itself.
+   The open-source and tour recorders serve the board on 127.0.0.1:4192 and stand in for the AI API themselves. The tour is recorded the same way (`record-tour.mjs`, encoded with `-t 100.7`). Record it from a build that includes the Kanban card fix (PR #98).
 2. **Encode** at full HD: drop the first 1.5 seconds of browser start-up, scale up from 1440×810 and add a silent track. For the sales video:
    ```bash
    ffmpeg -ss 1.5 -t 60.04 -i marketing/video/work/sales-take/*.webm -f lavfi -i anullsrc=r=48000:cl=stereo \
