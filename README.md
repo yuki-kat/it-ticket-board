@@ -1,12 +1,14 @@
-# IT Ticket Board
+# Binboard
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Tests](https://github.com/yuki-kat/it-ticket-board/actions/workflows/tests.yml/badge.svg)](https://github.com/yuki-kat/it-ticket-board/actions)
 
-An **IT service desk board** for tickets, SLAs, escalation and asset inventory. It runs two ways:
+**Binboard** is an IT service desk board for tickets, SLAs, escalation and asset inventory. It runs two ways:
 
 - **As one file, offline.** Double-click `index.html`. No install, no server, and your data stays in your browser.
 - **Hosted, with accounts.** The hosted site adds sign-in, shared team escalation settings and AI-suggested fixes, backed by a small Node + Postgres server.
+
+The repository, hosting addresses and file names still use the project's original name, `it-ticket-board`.
 
 **Try it:** open the **[live demo](https://yuki-kat.github.io/it-ticket-board/)**. It starts with sample tickets and assets, and your changes stay in your browser. You can also download [`index.html`](index.html) and open it, or use the [hosted site with sign-in](https://it-ticket-board-frontend.onrender.com) (free hosting, so the first visit can take about a minute to wake up).
 
@@ -90,7 +92,7 @@ docker compose exec db psql -U ticket_board -d ticket_board -c "UPDATE users SET
 | --- | --- |
 | `app/` | The front end: React + TypeScript, built with Vite. Every UI change is made here. |
 | `index.html` | **Built from `app/`** into one self-contained file (`cd app && npm run build:page`). Don't edit it by hand. |
-| `server/` | The backend: Express + Postgres. Handles sign-in, teams, escalation settings, document uploads and the Gemini proxy. |
+| `server/` | The backend: Express + Postgres. Handles sign-in, teams, escalation settings, document uploads and AI calls (Gemini, OpenAI, Claude or your own provider). |
 | `tests/` | Playwright browser tests that open `index.html` exactly as it ships. |
 | `supabase/` | SQL for workspaces and sync. |
 | `legacy/` | The old compiled page, kept for comparison. |
@@ -148,7 +150,7 @@ The site is public, and anyone can create an account.
 
 There are two separate sign-ins, for different features:
 
-- **Tools → Sign in** (email and password, handled by this repo's server). Needed for **Find resolution** and the **Escalation** page.
+- **Tools → Sign in** (email and password, handled by this repo's server). Needed for **Find resolution**, the **Escalation** page, and drafting or asking in the **Knowledge base**.
 - **Settings → Account** (an email link, handled by Supabase). Needed for **workspaces and sync**.
 
 Roles on the Escalation page:
@@ -188,7 +190,7 @@ Workspace roles: an **admin** can invite people, change roles and remove members
 - If two people change the same ticket, the change sent last wins for the whole ticket.
 - Before sync starts, what the browser had is kept: **Backup and restore → Put it back** returns to it and stops syncing.
 
-The rules are in `app/src/syncLogic.ts`, and sending and reading in `app/src/cloudSync.ts`.
+The rules are in `app/src/lib/syncLogic.ts`, and sending and reading in `app/src/lib/cloudSync.ts`.
 
 SLA pause state is kept in each browser and is not synced yet.
 
@@ -196,7 +198,7 @@ SLA pause state is kept in each browser and is not synced yet.
 
 **Settings → Backup and restore** downloads everything saved in the browser as one JSON file (`it-ticket-board-backup-YYYY-MM-DD.json`) and can restore from one. Restoring compares the file with what's in the browser and checks the file first, so a bad file changes nothing. It keeps the replaced data, so the last restore can be undone with **Put it back**.
 
-File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets, deletedTickets, assets, stock }, settings }`. The code is in `app/src/backup.ts`.
+File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets, deletedTickets, assets, stock }, settings }`. The code is in `app/src/lib/backup.ts`.
 
 ## What is in the source
 
@@ -206,12 +208,13 @@ File format (`format: 1`): `{ app, format, createdAt, counts, records: { tickets
 - **Home and Explore** (`HomePopouts.tsx`, `HomeInsights.tsx`, `ExplorePage.tsx`): dashboard cards, insights and queue drill-down.
 - **Inventory** (`pages/InventoryPage.tsx`, `InventoryView.tsx`): assets and stock.
 - **Knowledge base** (`pages/KnowledgePage.tsx`, `lib/kb.ts`): articles kept in the browser like tickets; AI calls go through `api/ai.ts`.
+- **Look** (`styles/binboard-theme.css`, `styles/design-system.css`, `components/BinboardLogo.tsx`): the Material UI style (blue, Roboto, 4px corners). Roboto is bundled so the single file works offline. `app/scripts/postcss-binboard.js` recolours the older stylesheets at build time; removing it from `postcss.config.js` brings back the original look.
 - **Page addresses** (`lib/route.ts`): `#/home`, `#/tickets`, `#/inventory`, `#/kb`, `#/search`, `#/explore/…`, `#/escalation` and `#/signin`. Back, Forward, refresh and bookmarks all work.
 - **Backend** (`server/src/api/`): `auth`, `teams`, `escalation-matrix` (uploads are stored in Postgres, up to 10 MB each), `escalation-advanced` (groups, rules, thresholds), and AI: `ai-providers` (admin-managed providers, keys encrypted by `utils/secretBox.ts`), `kb` (draft and ask), and the older `gemini` and `suggest-fix` routes. All of them call `utils/aiProviders.ts`, which picks the default provider (or `GEMINI_API_KEY`) and blocks custom URLs that point at private networks.
 
 ## Automated tests
 
-The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: Home and Explore, every popup, page addresses, insights, opening tickets, SLA pause and resume, the State dropdown, Find resolution, team pages and thresholds, Inventory, every export, backups, sign-in, workspaces and sync. Each test starts with a fresh browser profile. Tests that need a server talk to stand-ins (`tests/fake-supabase.ts` and per-test fake backends), so they need no account and no network.
+The browser tests in `tests/` open the real `index.html` in Chrome and click through the app: Home and Explore, every popup, page addresses, insights, opening tickets, SLA pause and resume, the State dropdown, Find resolution, team pages and thresholds, Inventory, every export, backups, sign-in, workspaces and sync, and the header layout from phone to desktop widths. Each test starts with a fresh browser profile. Tests that need a server talk to stand-ins (`tests/fake-supabase.ts` and per-test fake backends), so they need no account and no network.
 
 ```bash
 cd tests && npm ci && npm test
