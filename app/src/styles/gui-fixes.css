@@ -42,6 +42,40 @@
 /* Header button labels are wrapped in a span; an old rule enlarges any span inside .primary-button. */
 .topbar .topbar-label { font-size: inherit; line-height: inherit; font-weight: inherit; }
 
+/* Header, main navigation. The logo and nav never shrink, so the header buttons can no longer slide over
+   the nav links; on the hosted site the sync badge is what gives way (its label ends in "…"). */
+.topbar { column-gap: 16px; }
+.topbar .brand-area { flex: none; }
+.topbar .top-actions { min-width: 0; }
+.topbar .top-actions > * { flex-shrink: 0; }
+.topbar .top-actions > .sync-badge { flex-shrink: 1; min-width: 0; }
+
+/* Below 1240px the six nav links do not fit beside the Binboard header buttons (measured: the one-row header
+   needs 1208px with the "Local mock data" label), and they used to run underneath them (Escalation was half
+   hidden at phone width). So the nav gets its own full-width row under the logo and buttons. Every link
+   stays visible. If the links ever don't fit (a very narrow screen or larger text), the row scrolls sideways
+   instead of the page, and a soft shadow at the edge shows there is more. */
+@media (max-width: 1239px) {
+  .topbar { --topbar-pad: 22px; --nav-link-pad: 13px; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'brand actions' 'nav nav'; align-items: center; height: auto; min-height: 0; padding: 0 var(--topbar-pad); }
+  .topbar .brand-area { display: contents; }
+  .topbar .brand-home-button { grid-area: brand; min-height: 56px; }
+  .topbar .top-actions { grid-area: actions; justify-content: flex-end; flex-wrap: nowrap; padding-block: 9px; }
+  .topbar .primary-nav { grid-area: nav; gap: 2px; height: 44px; margin-inline: calc(-1 * var(--topbar-pad)); padding-inline: calc(var(--topbar-pad) - var(--nav-link-pad)); border-top: 1px solid #edf1f2; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    background: linear-gradient(90deg, #fff 40%, rgb(255 255 255 / 0)) left / 28px 100% no-repeat local, linear-gradient(270deg, #fff 40%, rgb(255 255 255 / 0)) right / 28px 100% no-repeat local, radial-gradient(farthest-side at 0 50%, rgb(23 71 91 / 22%), transparent) left / 12px 100% no-repeat scroll, radial-gradient(farthest-side at 100% 50%, rgb(23 71 91 / 22%), transparent) right / 12px 100% no-repeat scroll, #fff; }
+  .topbar .primary-nav::-webkit-scrollbar { display: none; }
+  /* min-height: 0 undoes Binboard's 48px tab height, which would poke the links up into the button row. */
+  .topbar .primary-nav button { flex: none; height: 100%; min-height: 0; padding-inline: var(--nav-link-pad); white-space: nowrap; }
+  .topbar .primary-nav button.active::after { left: var(--nav-link-pad); right: var(--nav-link-pad); bottom: 0; }
+}
+@media (max-width: 780px) { .topbar { --topbar-pad: 16px; --nav-link-pad: 9px; } }
+/* Phones: the links share the row evenly, like tabs. */
+@media (max-width: 600px) {
+  .topbar { --topbar-pad: 12px; --nav-link-pad: 6px; }
+  .topbar .brand-home-button { min-height: 54px; }
+  .topbar .primary-nav { padding-inline: 4px; }
+  .topbar .primary-nav button { flex: 1 0 auto; font-size: 12px; }
+}
+
 /* Phones: the header buttons show just their icons so Settings, Tools and New task fit on one row. */
 @media (max-width: 600px) {
   .topbar .topbar-label { display: none; }

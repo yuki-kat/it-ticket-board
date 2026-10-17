@@ -166,10 +166,10 @@ test.describe('AI providers', () => {
   })
 })
 
-test('on a phone the Knowledge base is in the Tools menu', async ({ page }) => {
+test('on a phone the Knowledge base is in the nav row and the Tools menu', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await openApp(page)
-  await expect(page.locator('.primary-nav .nav-kb')).toBeHidden()
+  await expect(page.locator('.primary-nav .nav-kb')).toBeVisible()
   await page.locator('.header-tools-trigger').click()
   await page.getByRole('button', { name: /^Knowledge base/ }).click()
   await expect(page).toHaveURL(/#\/kb$/)
