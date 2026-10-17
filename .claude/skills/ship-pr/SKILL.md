@@ -1,6 +1,6 @@
 ---
 name: ship-pr
-description: Ship a finished branch of the IT Ticket Board to the live site. Opens a pull request using the repo's template, waits for the browser-tests check, merges when it is green (guarded by the head commit), then confirms that Render deployed both the backend and the frontend. Use this whenever the user says "ship it", "open a PR", "merge it when CI finishes", "merge it", "get this live" or "has it deployed", or once a change is committed and the next step is getting it onto main, even if they only name one of those steps.
+description: Ship a finished branch of Binboard (the IT Ticket Board) to the live site. Opens a pull request using the repo's template, waits for the browser-tests check, merges when it is green (guarded by the head commit), then confirms that Render deployed both the backend and the frontend. Use this whenever the user says "ship it", "open a PR", "merge it when CI finishes", "merge it", "get this live" or "has it deployed", or once a change is committed and the next step is getting it onto main, even if they only name one of those steps.
 ---
 
 # Ship a pull request

@@ -4,7 +4,7 @@ import { AiError } from '../utils/aiError.js';
 import { generateText, parseJsonObject } from '../utils/aiProviders.js';
 
 // "Suggest fix": asks the active AI provider for likely causes and troubleshooting steps for one ticket.
-// Ported from the former Vercel function (app/api/suggest-fix.ts); the key stays on the server.
+// The AI provider key stays on the server.
 const router = Router();
 router.use(authMiddleware);
 

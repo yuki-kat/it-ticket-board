@@ -1,6 +1,6 @@
 # WAF (Web Application Firewall) Setup
 
-Application-layer protection for IT Ticket Board using Nginx + ModSecurity + OWASP CRS.
+Application-layer protection for Binboard using Nginx + ModSecurity + OWASP CRS.
 
 ## What it protects against
 
@@ -56,7 +56,7 @@ sudo tail -f /var/log/modsecurity/audit.log
        ▼
 ┌─────────────────────┐
 │  Node.js App        │
-│  (IT Ticket Board)  │
+│  (Binboard)         │
 └─────────────────────┘
        │
        ▼

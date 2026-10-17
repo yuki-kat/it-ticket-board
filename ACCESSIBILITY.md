@@ -1,6 +1,6 @@
 # Accessibility
 
-IT Ticket Board is designed with accessibility in mind to serve all users, including those with disabilities. This page documents our accessibility features and commitment.
+Binboard is designed with accessibility in mind to serve all users, including those with disabilities. This page documents our accessibility features and commitment.
 
 ## Features
 
@@ -31,7 +31,6 @@ IT Ticket Board is designed with accessibility in mind to serve all users, inclu
 
 ## Known Limitations
 
-- **Vercel authentication** (optional sign-in feature) may have different accessibility standards
 - **Excel export** creates files that require a separate desktop application to open
 - **PDF generation** (if added in future) may require additional accessible format support
 

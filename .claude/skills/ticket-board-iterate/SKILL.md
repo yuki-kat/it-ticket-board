@@ -1,9 +1,9 @@
 ---
 name: ticket-board-iterate
-description: Change, fix and deliver the IT Ticket Board (also called Ops Kanban; GitHub repo yuki-kat/it-ticket-board) end to end - edit the React source, rebuild the single-file index.html, run the browser tests, take before/after screenshots on desktop and phone, commit on a branch, and hand back the updated file and the test link. Use this whenever the user asks to fix, change, restyle, add to or test anything in the ticket board (Home, Tickets, Inventory, Explore tickets, popups, New task, insight cards, phone layout), reports that something in it "looks weird" or "doesn't work", or asks for the latest file, link or screenshots of it - even if they don't name the repo.
+description: Change, fix and deliver Binboard, the IT ticket board (formerly IT Ticket Board and Ops Kanban; GitHub repo yuki-kat/it-ticket-board) end to end - edit the React source, rebuild the single-file index.html, run the browser tests, take before/after screenshots on desktop and phone, commit on a branch, and hand back the updated file and the test link. Use this whenever the user asks to fix, change, restyle, add to or test anything in the ticket board (Home, Tickets, Inventory, Explore tickets, popups, New task, insight cards, phone layout), reports that something in it "looks weird" or "doesn't work", or asks for the latest file, link or screenshots of it - even if they don't name the repo.
 ---
 
-# IT Ticket Board: change, check, deliver
+# Binboard: change, check, deliver
 
 The user iterates on this app in short loops: they point at something on screen, you change it, and they want to *see* the result straight away (screenshots, then the file or link to click through). Every loop follows the same steps below. The value is in the checking and the handover, not just the code edit.
 

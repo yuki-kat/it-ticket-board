@@ -1,4 +1,4 @@
-# IT Ticket Board - Operational Status Report
+# Binboard - Operational Status Report
 ## ✅ FULLY OPERATIONAL
 
 **Date:** 2026-10-01  
@@ -87,7 +87,6 @@ open index.html
 Choose from:
 - **Railway** (Recommended) - Full stack, $4-5/month
 - **Render** - Generous free tier
-- **Vercel** - Frontend only (free)
 - **Oracle Cloud** - Always free tier
 
 See `FREE_DEPLOYMENT_OPTIONS.md` for detailed setup.
