@@ -1,6 +1,6 @@
-# IT Ticket Board Backend
+# Binboard Backend
 
-Express.js + PostgreSQL backend for the IT Ticket Board.
+Express.js + PostgreSQL backend for Binboard.
 
 ## Quick Start
 

@@ -1,6 +1,6 @@
-# IT Ticket Board — Source
+# Binboard — Source
 
-The React + TypeScript source for IT Ticket Board. Builds into a single self-contained HTML file for offline use or team collaboration.
+The React + TypeScript source for Binboard. Builds into a single self-contained HTML file for offline use or team collaboration.
 
 ## Quick Start
 
