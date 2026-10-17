@@ -34,6 +34,37 @@ test('Kanban Detailed cards give the title real width', async ({ page }) => {
   expect(box!.height).toBeLessThan(120)
 })
 
+// Regression: a fixed 400px card scrolled its front inside itself, and the pinned action row covered the SLA box
+// and Next step; the move arrow was also pushed past the card's edge and clipped.
+test('Kanban Detailed cards fit their content without overlaps', async ({ page }) => {
+  await openApp(page)
+  await page.locator('.primary-nav button', { hasText: 'Tickets' }).click()
+  await page.getByRole('group', { name: 'View' }).getByRole('button', { name: 'Kanban detailed', exact: true }).click()
+  for (const width of [1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(page.locator('.ticket-card').first()).toBeVisible()
+    const problems = await page.evaluate(() => {
+      const found: string[] = []
+      const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+      for (const card of document.querySelectorAll<HTMLElement>('.ticket-card:not(.expanded)')) {
+        const id = card.querySelector('.ticket-id-link')?.textContent
+        const front = card.querySelector<HTMLElement>('.ticket-card-front')!
+        if (front.scrollHeight > front.clientHeight + 1) found.push(`${id}: front scrolls`)
+        const rect = (selector: string) => card.querySelector(selector)!.getBoundingClientRect()
+        const [sla, next, actions] = ['.resolution-sla', '.next-action', '.card-actions'].map(rect)
+        if (overlap(sla, actions) || overlap(next, actions) || overlap(sla, next)) found.push(`${id}: SLA, Next step and actions overlap`)
+        const box = card.getBoundingClientRect()
+        for (const button of card.querySelectorAll('.card-actions button')) {
+          const r = button.getBoundingClientRect()
+          if (r.left < box.left - 0.5 || r.right > box.right + 0.5 || r.bottom > box.bottom + 0.5) found.push(`${id}: ${button.textContent || button.getAttribute('aria-label')} clipped`)
+        }
+      }
+      return found
+    })
+    expect(problems, `at ${width}px`).toEqual([])
+  }
+})
+
 // The build-time recolour must not touch Binboard's own stylesheets: MUI info blue sits inside its teal hue window.
 test('P3 chips keep the info colours and kanban lanes keep 8px corners', async ({ page }) => {
   await openApp(page)
