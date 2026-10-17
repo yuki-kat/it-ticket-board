@@ -10,7 +10,9 @@
 
 The repository, hosting addresses and file names still use the project's original name, `it-ticket-board`.
 
-**Try it:** open the **[live demo](https://yuki-kat.github.io/it-ticket-board/)**. It starts with sample tickets and assets, and your changes stay in your browser. You can also download [`index.html`](index.html) and open it, or use the [hosted site with sign-in](https://it-ticket-board-frontend.onrender.com) (free hosting, so the first visit can take about a minute to wake up).
+**Try it:** open the **[live demo](https://yuki-kat.github.io/it-ticket-board/)**. It starts with sample tickets and assets, and your changes stay in your browser. You can also download [`index.html`](index.html) and open it, or use the [hosted site with sign-in](https://it-ticket-board-frontend.onrender.com) (free hosting, so the first visit can take about a minute to wake up). Every version is listed under [Releases](https://github.com/yuki-kat/it-ticket-board/releases).
+
+<p align="center"><img src="docs/demo.gif" alt="Binboard in 16 seconds: the home dashboard, tickets with live SLA timers, the Kanban board, importing an escalation matrix from Excel, and finding a device by serial number" width="960"></p>
 
 <table>
   <tr>
@@ -42,7 +44,10 @@ The repository, hosting addresses and file names still use the project's origina
 - **⚡ Quick actions**: a page that learns which commands you use most (on your device only) and suggests what you usually do next, so common steps are one click away
 - **📝 Work notes for escalation**: a large view of a ticket's notes with its priority, state, tier and owner, a box for timestamped notes, and **Copy all** to paste the handover into an email or Teams
 - **🏠 Operations dashboard**: KPI cards, insights, and an Explore page for drilling into queues
-- **🚨 Escalation**: teams with admin and member roles, assignment groups, escalation rules, time thresholds per priority, and uploaded reference documents (escalation and SLA matrices)
+- **🚨 Escalation**: teams with admin and member roles, assignment groups, escalation rules, time thresholds per priority, and uploaded reference documents (escalation and SLA matrices, including Excel)
+- **📥 Import your escalation matrix**: load an Excel workbook in **Tools → Escalation matrix** and the board uses its priorities, routing by ticket type and contacts, including in escalation emails
+- **⏳ Time with each team**: next to the customer's SLA, every ticket shows how long each assignment group has held it (the internal OLA view)
+- **⚖️ Legal hold**: put a device or ticket on hold so it can't be reissued, retired or deleted, with every step logged
 - **📦 Asset & stock inventory**: assign and return devices, track history, device health and stock levels, and link assets to tickets. **Quick scan** finds a device by serial or asset tag (or checks a batch back in), **bulk actions** work on shift-click selections, and **Leaver transfer** moves everything a departing person holds in one step
 - **📧 Email-to-ticket**: draft a ticket from pasted email text
 - **📊 Exports**: CSV and two-sheet Excel workbooks
