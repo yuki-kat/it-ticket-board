@@ -1,6 +1,6 @@
 # Accessibility
 
-IT Ticket Board is designed with accessibility in mind to serve all users, including those with disabilities. This page documents our accessibility features and commitment.
+Binboard is designed with accessibility in mind to serve all users, including those with disabilities. This page documents our accessibility features and commitment.
 
 ## Features
 

@@ -1,6 +1,6 @@
 ---
 name: dependency-triage
-description: Triage and fix npm security alerts in the IT Ticket Board. Audits every package (app, server, tests, root), sorts each finding into "reaches users" vs "build or test only", applies only safe fixes, tests major upgrades against the feature that uses them, proves nothing else changed, and ships with ship-pr. Use this whenever the user mentions Dependabot, security alerts, vulnerabilities, npm audit, a Dependabot PR, outdated or vulnerable packages, or GitHub's "found N vulnerabilities" message after a push, even if they only ask "what are these alerts?" or "can you fix the Dependabot stuff".
+description: Triage and fix npm security alerts in Binboard (the IT Ticket Board). Audits every package (app, server, tests, root), sorts each finding into "reaches users" vs "build or test only", applies only safe fixes, tests major upgrades against the feature that uses them, proves nothing else changed, and ships with ship-pr. Use this whenever the user mentions Dependabot, security alerts, vulnerabilities, npm audit, a Dependabot PR, outdated or vulnerable packages, or GitHub's "found N vulnerabilities" message after a push, even if they only ask "what are these alerts?" or "can you fix the Dependabot stuff".
 ---
 
 # Dependency triage

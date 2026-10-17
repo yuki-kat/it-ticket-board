@@ -132,4 +132,4 @@ By contributing, you agree your work will be licensed under the MIT License (see
 
 ---
 
-**Thanks for helping make IT Ticket Board better!** 🎉
+**Thanks for helping make Binboard better!** 🎉
