@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { goTo, kpiCard, openApp } from './helpers'
 
-// The small extras around the edges of the app: page arrows, Settings, the corner ×, All Views,
+// The small extras around the edges of the app: Settings, the corner ×, All Views,
 // screen patterns and the debug log. These run against both index.html and the React source.
 
 async function openTools(page: Page, item: RegExp) {
@@ -9,36 +9,15 @@ async function openTools(page: Page, item: RegExp) {
   await page.getByRole('button', { name: item }).first().click()
 }
 
-test.describe('Quick page arrows', () => {
-  test.beforeEach(async ({ page }) => openApp(page))
-
-  test('name the pages they lead to', async ({ page }) => {
-    const nav = page.getByRole('navigation', { name: 'Quick page navigation' })
-    await expect(nav.getByRole('button', { name: 'Previous page: Inventory' })).toBeVisible()
-    await expect(nav.getByRole('button', { name: 'Next page: Tickets' })).toBeVisible()
-    await nav.getByRole('button', { name: 'Next page: Tickets' }).click()
-    await expect(page.locator('.primary-nav button.active')).toHaveText('Tickets')
-    await expect(nav.getByRole('button', { name: 'Previous page: Home' })).toBeVisible()
-    await expect(nav.getByRole('button', { name: 'Next page: Search' })).toBeVisible()
-  })
-
-  test('go round Home, Tickets and Inventory and back to Home', async ({ page }) => {
-    const nav = page.getByRole('navigation', { name: 'Quick page navigation' })
-    const seen: string[] = []
-    for (let step = 0; step < 5; step++) {
-      await nav.getByRole('button', { name: /^Next page/ }).click()
-      seen.push((await page.locator('.primary-nav button.active').innerText()).trim())
-    }
-    expect(seen).toEqual(['Tickets', 'Search', 'Inventory', 'Home', 'Tickets'])
-    await nav.getByRole('button', { name: /^Previous page/ }).click()
-    await expect(page.locator('.primary-nav button.active')).toHaveText('Home')
-  })
-})
-
 test.describe('Settings and dialogs', () => {
   test.beforeEach(async ({ page }) => openApp(page))
 
   test('the Settings button in the header opens Settings', async ({ page }) => {
+    await page.locator('.top-actions').getByRole('button', { name: 'Settings', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible()
+  })
+
+  test('Customize home on Home also opens Settings', async ({ page }) => {
     await page.getByRole('button', { name: 'Customize home' }).click()
     await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible()
   })
@@ -47,7 +26,7 @@ test.describe('Settings and dialogs', () => {
     ['Settings', async (page) => page.getByRole('button', { name: 'Customize home' }).click(), /Settings/, 'Close settings', true],
     ['Reports', (page) => openTools(page, /^Reports/), /Reports|Operations report|Report/, 'Close reports', true],
     ['the Escalation matrix', (page) => openTools(page, /^Escalation matrix/), /Escalation/, 'Close matrix', true],
-    ['a new task', async (page) => page.getByRole('button', { name: 'New task' }).click(), /Create a task/, 'Close form', false],
+    ['a new ticket', async (page) => page.getByRole('button', { name: 'New ticket' }).click(), /Create a ticket/, 'Close form', false],
   ]
   for (const [name, open, title, closeLabel, isDialog] of dialogs) {
     test(`${name} closes with Escape`, async ({ page }) => {
