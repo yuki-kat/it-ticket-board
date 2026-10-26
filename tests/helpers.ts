@@ -68,10 +68,10 @@ export async function numberIn(locator: Locator, selector = 'strong, b'): Promis
   return Number(text.match(/\d+/)?.[0])
 }
 
-/** How many tickets the Tickets page is currently showing ("10 of 16 records" or "16 records"). */
+/** How many tickets the Tickets page is currently showing ("10 of 16 tickets" or "16 tickets"). */
 export async function ticketsShown(page: Page): Promise<number> {
   const text = await page.locator('.ticket-total').innerText()
-  const match = text.match(/^(\d+)(?: of \d+)? records/)
+  const match = text.match(/^(\d+)(?: of \d+)? tickets/)
   if (!match) throw new Error(`Unexpected ticket count text: "${text}"`)
   return Number(match[1])
 }

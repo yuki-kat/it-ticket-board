@@ -16,12 +16,6 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Previous / next page arrows: a small pair in the bottom-right corner instead of two buttons at
-   mid-height on both edges, where they covered cards, filters and the table. */
-.quick-page-nav { inset: auto calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) auto; gap: 8px; padding: 0; transform: none; }
-.quick-page-nav button { width: 40px; height: 40px; }
-@media (max-width: 600px) { .quick-page-nav { gap: 6px; }.quick-page-nav button { width: 38px; height: 38px; } }
-
 /* Ticket list columns. The checkbox column is the first column, so every width below is one
    column further along than in the older rules (which gave "Number" the description's width). */
 .task-table { min-width: 1325px; }
@@ -50,12 +44,12 @@
 .topbar .top-actions > * { flex-shrink: 0; }
 .topbar .top-actions > .sync-badge { flex-shrink: 1; min-width: 0; }
 
-/* Below 1240px the six nav links do not fit beside the Binboard header buttons (measured: the one-row header
-   needs 1208px with the "Local mock data" label), and they used to run underneath them (Escalation was half
+/* Below 1340px the six nav links do not fit beside the Binboard header buttons (measured: the one-row header
+   needs about 1314px with the "Local mock data" label and the Settings gear), and they used to run underneath them (Escalation was half
    hidden at phone width). So the nav gets its own full-width row under the logo and buttons. Every link
    stays visible. If the links ever don't fit (a very narrow screen or larger text), the row scrolls sideways
    instead of the page, and a soft shadow at the edge shows there is more. */
-@media (max-width: 1239px) {
+@media (max-width: 1339px) {
   .topbar { --topbar-pad: 22px; --nav-link-pad: 13px; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'brand actions' 'nav nav'; align-items: center; height: auto; min-height: 0; padding: 0 var(--topbar-pad); }
   .topbar .brand-area { display: contents; }
   .topbar .brand-home-button { grid-area: brand; min-height: 56px; }
@@ -76,7 +70,7 @@
   .topbar .primary-nav button { flex: 1 0 auto; font-size: 12px; }
 }
 
-/* Phones: the header buttons show just their icons so Settings, Tools and New task fit on one row. */
+/* Phones: the header buttons show just their icons so Quick actions, Tools, Settings and New ticket fit on one row. */
 @media (max-width: 600px) {
   .topbar .topbar-label { display: none; }
   .top-actions { gap: 6px; flex-wrap: nowrap; }
@@ -107,7 +101,7 @@
 .home-chart-grid > .extended-insight-card .extended-insight-metric strong { font-size: 32px; }
 .home-chart-grid > .extended-insight-card .extended-insight-note { display: none; }
 
-/* New task form. With plain 1fr columns a long option in "Linked asset" made the grid wider than the panel,
+/* New ticket form. With plain 1fr columns a long option in "Linked asset" made the grid wider than the panel,
    so the panel scrolled sideways and cut fields off; these columns can shrink. Labels and their "*" or
    "Optional" also stay on one line instead of stacking. */
 .form-panel .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -124,7 +118,7 @@
    panel's own ×, which it sat on top of, is hidden. Exception: ticket-record-panel keeps its close button. */
 .import-overlay .panel-header .close-button { display: none; }
 
-/* New task page: full-page layout instead of a slide-over panel. */
+/* New ticket page: full-page layout instead of a slide-over panel. */
 .new-task-page { display: flex; flex-direction: column; align-items: center; padding: 32px 16px 80px; }
 .new-task-page .form-panel { width: 100%; max-width: 760px; box-shadow: 0 1px 4px rgba(0,0,0,.08); border-radius: 10px; padding: 28px; }
 .new-task-page .panel-header .close-button { display: none; }
@@ -209,3 +203,39 @@
 .team-history tr.current th, .team-history tr.current td { background: #f2f8f9; }
 .team-reassign { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; font-weight: 600; color: #33525e; }
 .team-reassign select { min-height: 34px; min-width: 0; max-width: 100%; padding: 0 10px; border: 1px solid #cfdade; border-radius: 8px; background: #fff; color: #12313d; font: inherit; font-weight: 500; }
+
+/* ---- Simpler screens (phase 1) ------------------------------------------------------------------------- */
+
+/* Home banner: one compact row (mark, date, greeting, Explore tickets) instead of a third of the first screen. */
+.home-hero { display: flex; align-items: center; gap: 18px; min-height: 0; padding: 18px 24px; }
+.home-hero .home-hero-mark { margin-left: 0; }
+.home-hero-copy { flex: 1; min-width: 0; }
+.home-hero .home-hero-kicker { font-size: 13px; font-weight: 500; letter-spacing: 0.2px; text-transform: none; }
+.home-hero h1 { margin: 2px 0 0; font-size: 26px; line-height: 1.2; letter-spacing: -0.5px; }
+.home-hero button:not(.bb-animated) { flex: none; margin-top: 0; }
+@media (max-width: 600px) {
+  .home-hero { flex-wrap: wrap; gap: 12px; padding: 16px; }
+  .home-hero h1 { font-size: 22px; }
+}
+
+/* Tickets page: "Tickets" is the page heading, set at the size the old "Task board" label had. */
+.board-label h1 { margin: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+/* Filters shows how many of its filters are on, so a filter set from Home is easy to spot. */
+.board-filters-button.active { border-color: #1976d2; background: rgba(25, 118, 210, 0.08); color: #1565c0; }
+
+/* Settings gear in the header, the same height as Tools beside it. */
+.header-settings-button { display: inline-grid; place-items: center; width: 40px; min-height: 40px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.23); border-radius: 4px; background: #fff; color: rgba(0, 0, 0, 0.87); cursor: pointer; }
+.header-settings-button:hover { border-color: rgba(0, 0, 0, 0.87); background: rgba(0, 0, 0, 0.04); }
+
+/* Home "Recently created": each row is wrapped with its SLA timer, so the row rules sit on the wrapper.
+   The older rules aimed at ".home-recent-list > button" and stopped matching, which stacked the arrow on its own line. */
+.home-recent-item { padding: 9px 0; border-bottom: 1px solid #edf1f2; }
+.home-recent-item:last-child { border-bottom: 0; }
+.home-recent-item > button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.home-recent-item > button:hover b { color: #2c788d; }
+.home-recent-sla { margin-top: 4px; padding-left: 17px; font-size: 12px; }
+/* The priority dot is 7px, so it needs the solid colour, not the pale badge tint. */
+.home-recent-priority.p1 { background: #d32f2f; }
+.home-recent-priority.p2 { background: #ed6c02; }
+.home-recent-priority.p3 { background: #0288d1; }
+.home-recent-priority.p4 { background: #9e9e9e; }

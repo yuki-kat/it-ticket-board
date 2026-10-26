@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test'
 import { openApp } from './helpers'
 
 // The main navigation in the header used to run underneath the header buttons on narrower screens
-// (at phone width "Escalation" was half hidden under Quick actions). Below 1240px it now has its own
-// row under the logo and the buttons; from 1240px it sits beside them. 1200/1240 sit either side of that line.
+// (at phone width "Escalation" was half hidden under Quick actions). Below 1340px it now has its own
+// row under the logo and the buttons; from 1340px it sits beside them. 1300/1340 sit either side of that line.
 
 type NavReport = { link: string; problem: string }[]
 
@@ -31,13 +31,13 @@ async function navProblems(page: Page): Promise<NavReport> {
 
 const pageScrollsSideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
 
-/** The header buttons (Quick actions, Tools, New task, sync badge) all sit on one line. */
+/** The header buttons (sync badge, Quick actions, Tools, Settings, New ticket) all sit on one line. */
 const headerButtonsOnOneLine = (page: Page) => page.locator('.top-actions').evaluate((actions) => {
   const tops = [...actions.children].map((child) => child.getBoundingClientRect()).filter((box) => box.width > 0 && box.height > 0).map((box) => box.top + box.height / 2)
   return Math.max(...tops) - Math.min(...tops) <= 2
 })
 
-for (const width of [320, 390, 600, 768, 1024, 1200, 1240, 1440]) {
+for (const width of [320, 390, 600, 768, 1024, 1240, 1300, 1340, 1440]) {
   test.describe(`Header at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
     test.beforeEach(async ({ page }) => openApp(page))
@@ -73,7 +73,7 @@ test.describe('Header with room to grow', () => {
 })
 
 // On the hosted site a sync badge ("Saved to <workspace>", up to 240px) joins the header buttons.
-for (const width of [700, 1024, 1240, 1300]) {
+for (const width of [700, 1024, 1300, 1340, 1440]) {
   test.describe(`Header with a sync badge at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
     test.beforeEach(async ({ page }) => openApp(page))

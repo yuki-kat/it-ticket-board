@@ -56,15 +56,15 @@ code, pre, kbd, samp { font-family: 'Roboto Mono', ui-monospace, SFMono-Regular,
 .header-quick-button svg { color: #ed6c02; }
 .header-quick-button.active { border-color: var(--bb-primary); background: var(--bb-primary-wash); color: var(--bb-primary-hover); }
 
-/* ---- Buttons ------------------------------------------------------------------------------------------------- */
-.primary-button, .kb-primary, .ai-primary { min-height: 40px; padding: 0 20px; border: 0; border-radius: 4px; background: var(--bb-primary); color: #fff; font-size: 14px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: var(--bb-e2); }
+/* ---- Buttons (normal case, not MUI's all caps: easier to read) -------------------------------------------- */
+.primary-button, .kb-primary, .ai-primary { min-height: 40px; padding: 0 20px; border: 0; border-radius: 4px; background: var(--bb-primary); color: #fff; font-size: 14px; font-weight: 500; letter-spacing: 0.1px; text-transform: none; box-shadow: var(--bb-e2); }
 .primary-button:hover, .kb-page .kb-primary:hover:not(:disabled), .ai-providers-panel .ai-primary:hover { background: var(--bb-primary-hover); }
 .primary-button:active { background: var(--bb-primary-pressed); }
 .primary-button span { font-size: inherit; }
 .topbar .primary-button { min-height: 40px; }
 /* Outlined blue (MUI "outlined" variant) */
 .home-reports-link, .inventory-heading-button, .export-csv-button, .saved-view-save, .kb-heading-actions > button:not(.kb-primary), .ai-add {
-  min-height: 40px; padding: 0 16px; border: 1px solid rgba(25, 118, 210, 0.5); border-radius: 4px; background: var(--bb-surface); color: var(--bb-primary-hover); font-size: 14px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: none;
+  min-height: 40px; padding: 0 16px; border: 1px solid rgba(25, 118, 210, 0.5); border-radius: 4px; background: var(--bb-surface); color: var(--bb-primary-hover); font-size: 14px; font-weight: 500; letter-spacing: 0.1px; text-transform: none; box-shadow: none;
 }
 .home-reports-link:hover, .inventory-heading-button:hover, .export-csv-button:hover, .saved-view-save:hover { border-color: var(--bb-primary); background: var(--bb-primary-wash); }
 /* Outlined neutral (filters, starred, views) */
@@ -183,7 +183,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--bb-primary); }
 /* ---- Escalation (Tailwind utilities, re-pointed from orange to the primary blue) ------------------------------ */
 .escalation-page h1 { font-size: 28px; font-weight: 400; color: var(--bb-text); }
 .escalation-page .text-orange-600, .escalation-page .text-orange-700 { color: var(--bb-primary-hover); }
-.escalation-page .bg-orange-600 { background-color: var(--bb-primary); border-radius: 4px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: var(--bb-e2); }
+.escalation-page .bg-orange-600 { background-color: var(--bb-primary); border-radius: 4px; font-weight: 500; letter-spacing: 0.1px; text-transform: none; box-shadow: var(--bb-e2); }
 .escalation-page .hover\:bg-orange-700:hover { background-color: var(--bb-primary-hover); }
 .escalation-page .border-orange-600 { border-color: var(--bb-primary); }
 .escalation-page .focus\:ring-orange-500:focus { --tw-ring-color: var(--bb-primary); }

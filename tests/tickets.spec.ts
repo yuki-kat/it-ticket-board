@@ -18,7 +18,7 @@ test.describe('Opening a ticket', () => {
   test('"See all" opens the Tickets page with every ticket', async ({ page }) => {
     await page.locator('.home-recent-card .home-chart-heading button', { hasText: 'See all' }).click()
     await expect(page.locator('.primary-nav button.active')).toHaveText('Tickets')
-    await expect(page.locator('.ticket-total')).toHaveText(/^\d+ records$/)
+    await expect(page.locator('.ticket-total')).toHaveText(/^\d+ tickets$/)
   })
 
   test('the Tickets page can be searched by ticket number', async ({ page }) => {
