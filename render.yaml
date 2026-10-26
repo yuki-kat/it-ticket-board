@@ -12,10 +12,11 @@ services:
         value: 3001
       - key: LOG_LEVEL
         value: info
+      # The database is on Neon's free plan (Render's free Postgres expires after 30 days).
+      # Paste Neon's direct connection string (with ?sslmode=require) in the Render dashboard.
+      # sync: false means Blueprint syncs leave that value alone.
       - key: DATABASE_URL
-        fromDatabase:
-          name: postgres
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: JWT_EXPIRY
@@ -50,6 +51,8 @@ services:
       - key: VITE_API_URL
         value: https://it-ticket-board-backend.onrender.com
 
+# The old Render database. Nothing uses it once DATABASE_URL points at Neon; it stays listed only until
+# its data has been copied to Neon. Then remove this block and delete the database in the dashboard.
 databases:
   - name: postgres
     databaseName: ticket_board_db
